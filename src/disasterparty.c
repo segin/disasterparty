@@ -369,19 +369,33 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             fflush(stderr);
         }
         
-        char* event_end = strstr(current_event_start, "\n\n");
+        char* event_end_lf = strstr(current_event_start, "\n\n");
+        char* event_end_crlf = strstr(current_event_start, "\r\n\r\n");
+        char* event_end = NULL;
+        size_t separator_len = 0;
+
+        if (event_end_lf && event_end_crlf) {
+            event_end = (event_end_lf < event_end_crlf) ? event_end_lf : event_end_crlf;
+        } else if (event_end_lf) {
+            event_end = event_end_lf;
+        } else {
+            event_end = event_end_crlf;
+        }
+
+        if (event_end == event_end_lf && event_end_lf) separator_len = 2; // "\n\n"
+        else if (event_end == event_end_crlf && event_end_crlf) separator_len = 4; // "\r\n\r\n"
+
 
         if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
             if (event_end) {
-                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Found '\\n\\n' at offset %ld from current_event_start.\n", event_end - current_event_start);
+                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Found event separator (len %zu) at offset %ld from current_event_start.\n", separator_len, event_end - current_event_start);
             } else {
-                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Did NOT find '\\n\\n'. Will break from SSE processing loop.\n");
+                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Did NOT find event separator. Will break from SSE processing loop.\n");
             }
             fflush(stderr);
         }
 
         if (!event_end) {
-            // No complete SSE event found in the current buffer segment
             break; 
         }
 
@@ -397,17 +411,22 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         strncpy(event_data_segment, current_event_start, event_len);
         event_data_segment[event_len] = '\0';
         
-        // Advance pointers for next iteration or buffer shifting
-        current_event_start = event_end + 2; // Move past the processed event and its "\n\n"
-        remaining_in_buffer -= (event_len + 2);
+        current_event_start = event_end + separator_len; 
+        remaining_in_buffer -= (event_len + separator_len);
 
         char* line = event_data_segment;
         char* extracted_token_str = NULL; 
         bool is_final_for_this_event = false;
 
-        while (line && *line) { // Process each line within the SSE event (e.g., "data: ...", "id: ...")
+        while (line && *line) { 
             char* next_line = strchr(line, '\n');
-            if (next_line) *next_line = '\0'; // Null-terminate current line for processing
+            if (next_line) {
+                *next_line = '\0'; 
+                if (*(next_line - 1) == '\r') { // Handle CRLF within the event line itself
+                    *(next_line - 1) = '\0';
+                }
+            }
+
 
             if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
@@ -420,7 +439,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
                     if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup("done_marker");
-                    break; // Break from inner while loop (processing lines of current event)
+                    break; 
                 }
 
                 cJSON *json_chunk = cJSON_Parse(json_str);
@@ -431,9 +450,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                         fflush(stderr);
                     }
                 } else {
-                    // ... (cJSON parsing logic as in disasterparty_c_v8, with debug prints) ...
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-                        // ... (OpenAI parsing) ...
                          cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
                         if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
                             cJSON *choice = cJSON_GetArrayItem(choices, 0);
@@ -502,8 +519,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                             }
                                         }
                                         if (current_event_accumulated_text) {
-                                            // This token is for the current SSE event being processed
-                                            free(extracted_token_str); // Free previous if any from same event (should not happen with current logic)
+                                            free(extracted_token_str); 
                                             extracted_token_str = current_event_accumulated_text; 
                                             fprintf(stderr, "[DEBUG-GEMINI-PARSE] Final accumulated token for this event: '%s'\n", extracted_token_str);
                                         } else {
@@ -532,12 +548,11 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                     }
                     cJSON_Delete(json_chunk);
                 } 
-            } // End "data: " line processing
-            if (next_line) line = next_line + 1; else break; // Move to next line in event_data_segment
-        } // End while loop for lines in event_data_segment
+            } 
+            if (next_line) line = next_line + strlen("\0") + (*(next_line-1) == '\r' ? 1 : 0) ; else break;
+        } 
         free(event_data_segment);
 
-        // Call user callback if a token was extracted for this event, or if it's a final event marker
         if (extracted_token_str) {
             if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
                  fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with token: '%s', is_final: %d\n", extracted_token_str, is_final_for_this_event);
@@ -547,8 +562,8 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 processor->stop_streaming_signal = true;
             }
             free(extracted_token_str);
-            extracted_token_str = NULL; // Reset for next potential event in buffer
-        } else if (is_final_for_this_event) { // E.g. [DONE] marker or finish_reason without text
+            extracted_token_str = NULL; 
+        } else if (is_final_for_this_event) { 
             if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
                 fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with NULL token (final event marker).\n");
                 fflush(stderr);
@@ -557,15 +572,14 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 processor->stop_streaming_signal = true;
             }
         }
-        if (is_final_for_this_event) processor->stop_streaming_signal = true; // Stop processing further SSE events
-    } // End while(true) loop for processing events in buffer
+        if (is_final_for_this_event) processor->stop_streaming_signal = true; 
+    } 
 
-    // Shift unprocessed data to the beginning of the buffer
     if (remaining_in_buffer > 0 && current_event_start > processor->buffer) {
         memmove(processor->buffer, current_event_start, remaining_in_buffer);
     }
     processor->buffer_size = remaining_in_buffer;
-    if (processor->buffer_size < processor->buffer_capacity) { // Ensure null termination
+    if (processor->buffer_size < processor->buffer_capacity) { 
         processor->buffer[processor->buffer_size] = '\0'; 
     }
     return realsize;
