@@ -1,62 +1,49 @@
-#define _GNU_SOURCE 
-#include "diasterparty.h" // Updated include
+#define _GNU_SOURCE // For asprintf if not C23, though cJSON might reduce its need
+#include "diasterparty.h"
 #include <curl/curl.h>
+#include <cjson/cJSON.h> // Include cJSON
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const char* DIASTERPARTY_USER_AGENT = "diasterparty_c/" DIASTERPARTY_VERSION;
+const char* DIASTERPARTY_USER_AGENT = "disasterparty_c/" DP_VERSION;
 
-
-// Internal structure for the client context
-struct dpt_context_s { // Renamed 
-    dpt_provider_type_t provider;
+// Internal context structure
+struct dp_context_s {
+    dp_provider_type_t provider;
     char* api_key;
     char* api_base_url;
-    CURL* curl_handle; 
+    // CURL handle is now managed per-request for simplicity
 };
 
+// For non-streaming curl response
 typedef struct {
     char* memory;
     size_t size;
 } memory_struct_t;
 
+// For streaming state
 typedef struct {
-    dpt_stream_callback_t user_callback; // Updated type
+    dp_stream_callback_t user_callback;
     void* user_data;
-    char* buffer; 
+    char* buffer;
     size_t buffer_size;
     size_t buffer_capacity;
-    dpt_provider_type_t provider; // Updated type
-    char* finish_reason_capture; 
-    bool stop_streaming_signal; 
-    char* accumulated_error_during_stream; 
+    dp_provider_type_t provider;
+    char* finish_reason_capture;
+    bool stop_streaming_signal;
+    char* accumulated_error_during_stream;
 } stream_processor_t;
 
-
-const char* dpt_get_version(void) {
-    return DIASTERPARTY_VERSION;
+const char* dp_get_version(void) {
+    return DP_VERSION;
 }
 
-static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
-    size_t realsize = size * nmemb;
-    memory_struct_t* mem = (memory_struct_t*)userp;
-    char* ptr = realloc(mem->memory, mem->size + realsize + 1);
-    if (ptr == NULL) {
-        fprintf(stderr, "write_memory_callback: not enough memory (realloc returned NULL)\n");
-        return 0; 
-    }
-    mem->memory = ptr;
-    memcpy(&(mem->memory[mem->size]), contents, realsize);
-    mem->size += realsize;
-    mem->memory[mem->size] = 0;
-    return realsize;
-}
-
-static char* duplicate_string(const char* s) {
+// Helper to duplicate string, cJSON uses its own allocators internally but we need this for our structs
+static char* dp_internal_strdup(const char* s) {
     if (!s) return NULL;
     size_t len = strlen(s) + 1;
     char* new_s = malloc(len);
@@ -65,388 +52,286 @@ static char* duplicate_string(const char* s) {
     return new_s;
 }
 
-static char* escape_json_string(const char* input) {
-    if (!input) return NULL;
-    size_t input_len = strlen(input);
-    char* escaped_str = malloc(input_len * 6 + 3); 
-    if (!escaped_str) return NULL;
-    char* p_out = escaped_str;
-    *p_out++ = '"';
-    for (size_t i = 0; i < input_len; ++i) {
-        unsigned char c = input[i];
-        switch (c) {
-            case '"':  *p_out++ = '\\'; *p_out++ = '"';  break;
-            case '\\': *p_out++ = '\\'; *p_out++ = '\\'; break;
-            case '\b': *p_out++ = '\\'; *p_out++ = 'b';  break;
-            case '\f': *p_out++ = '\\'; *p_out++ = 'f';  break;
-            case '\n': *p_out++ = '\\'; *p_out++ = 'n';  break;
-            case '\r': *p_out++ = '\\'; *p_out++ = 'r';  break;
-            case '\t': *p_out++ = '\\'; *p_out++ = 't';  break;
-            default:
-                if (c < 32 || c >= 127) { 
-                    snprintf(p_out, 7, "\\u%04x", c); p_out += 6; 
-                } else { *p_out++ = c; }
-                break;
-        }
+// Libcurl write callback for non-streaming responses
+static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t realsize = size * nmemb;
+    memory_struct_t* mem = (memory_struct_t*)userp;
+    char* ptr = realloc(mem->memory, mem->size + realsize + 1);
+    if (!ptr) {
+        fprintf(stderr, "write_memory_callback: not enough memory (realloc returned NULL)\n");
+        return 0;
     }
-    *p_out++ = '"';
-    *p_out = '\0';
-    return escaped_str;
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+    return realsize;
 }
 
-dpt_context_t* dpt_init_context(dpt_provider_type_t provider,
-                              const char* api_key,
-                              const char* api_base_url) {
+dp_context_t* dp_init_context(dp_provider_type_t provider, const char* api_key, const char* api_base_url) {
     if (!api_key) {
-        fprintf(stderr, "API key is required.\n");
+        fprintf(stderr, "API key is required for Disaster Party context.\n");
         return NULL;
     }
-    dpt_context_t* context = calloc(1, sizeof(dpt_context_t));
+    dp_context_t* context = calloc(1, sizeof(dp_context_t));
     if (!context) {
-        perror("Failed to allocate context");
+        perror("Failed to allocate Disaster Party context");
         return NULL;
     }
     context->provider = provider;
-    context->api_key = duplicate_string(api_key);
+    context->api_key = dp_internal_strdup(api_key);
     if (api_base_url) {
-        context->api_base_url = duplicate_string(api_base_url);
+        context->api_base_url = dp_internal_strdup(api_base_url);
     } else {
-        context->api_base_url = duplicate_string(
-            provider == DPT_PROVIDER_OPENAI_COMPATIBLE ? DEFAULT_OPENAI_API_BASE_URL : DEFAULT_GEMINI_API_BASE_URL
-        );
+        context->api_base_url = dp_internal_strdup(
+            provider == DP_PROVIDER_OPENAI_COMPATIBLE ? DEFAULT_OPENAI_API_BASE_URL : DEFAULT_GEMINI_API_BASE_URL);
     }
     if (!context->api_key || !context->api_base_url) {
-        perror("Failed to allocate API key or base URL");
-        free(context->api_key); free(context->api_base_url); free(context);
+        perror("Failed to allocate API key or base URL in Disaster Party context");
+        free(context->api_key);
+        free(context->api_base_url);
+        free(context);
         return NULL;
     }
-    context->curl_handle = NULL; 
     return context;
 }
 
-void dpt_destroy_context(dpt_context_t* context) {
+void dp_destroy_context(dp_context_t* context) {
     if (!context) return;
-    if (context->curl_handle) curl_easy_cleanup(context->curl_handle); 
     free(context->api_key);
     free(context->api_base_url);
     free(context);
 }
 
-static char* build_openai_json_payload(const dpt_request_config_t* request_config) {
-    char* payload = NULL;
-    char* messages_json_array = NULL;
-    size_t current_messages_len = 0;
-    
-    messages_json_array = duplicate_string("[");
-    if (!messages_json_array) return NULL;
-    current_messages_len = 1;
+// --- cJSON PAYLOAD BUILDERS ---
+static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+
+    cJSON_AddStringToObject(root, "model", request_config->model);
+    cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
+    if (request_config->max_tokens > 0) {
+        cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens);
+    }
+    if (request_config->stream) {
+        cJSON_AddTrueToObject(root, "stream");
+    }
+
+    cJSON *messages_array = cJSON_AddArrayToObject(root, "messages");
+    if (!messages_array) {
+        cJSON_Delete(root);
+        return NULL;
+    }
 
     for (size_t i = 0; i < request_config->num_messages; ++i) {
-        const dpt_message_t* msg = &request_config->messages[i]; 
-        char* role_str = NULL;
-        switch (msg->role) { 
-            case DPT_ROLE_SYSTEM: role_str = "system"; break;
-            case DPT_ROLE_USER: role_str = "user"; break;
-            case DPT_ROLE_ASSISTANT: role_str = "assistant"; break;
-            case DPT_ROLE_TOOL: role_str = "tool"; break;
-            default: role_str = "user"; 
+        const dp_message_t* msg = &request_config->messages[i];
+        cJSON *msg_obj = cJSON_CreateObject();
+        if (!msg_obj) { cJSON_Delete(root); return NULL; }
+
+        const char* role_str = NULL;
+        switch (msg->role) {
+            case DP_ROLE_SYSTEM: role_str = "system"; break;
+            case DP_ROLE_USER: role_str = "user"; break;
+            case DP_ROLE_ASSISTANT: role_str = "assistant"; break;
+            case DP_ROLE_TOOL: role_str = "tool"; break;
+            default: role_str = "user";
         }
+        cJSON_AddStringToObject(msg_obj, "role", role_str);
 
-        char* content_json = NULL;
-        if (msg->num_parts == 1 && msg->parts[0].type == DPT_CONTENT_PART_TEXT) { 
-            char* escaped_text = escape_json_string(msg->parts[0].text);
-            if (!escaped_text) { free(messages_json_array); return NULL; }
-            if (asprintf(&content_json, "\"content\": %s", escaped_text) < 0) {
-                free(escaped_text); free(messages_json_array); return NULL;
-            }
-            free(escaped_text);
-        } else { 
-            char* content_array_str = duplicate_string("[");
-            size_t current_content_array_len = 1;
-            if (!content_array_str) { free(messages_json_array); return NULL; }
-
+        if (msg->num_parts == 1 && msg->parts[0].type == DP_CONTENT_PART_TEXT) {
+            cJSON_AddStringToObject(msg_obj, "content", msg->parts[0].text);
+        } else {
+            cJSON *content_array = cJSON_AddArrayToObject(msg_obj, "content");
+            if (!content_array) { cJSON_Delete(root); return NULL; }
             for (size_t j = 0; j < msg->num_parts; ++j) {
-                char* part_json = NULL;
-                if (msg->parts[j].type == DPT_CONTENT_PART_TEXT) { 
-                    char* escaped_text = escape_json_string(msg->parts[j].text);
-                    if(!escaped_text) { free(content_array_str); free(messages_json_array); return NULL; }
-                    if (asprintf(&part_json, "{\"type\": \"text\", \"text\": %s}", escaped_text) < 0) {
-                        free(escaped_text); free(content_array_str); free(messages_json_array); return NULL;
-                    }
-                    free(escaped_text);
-                } else if (msg->parts[j].type == DPT_CONTENT_PART_IMAGE_URL) { 
-                    char* escaped_url = escape_json_string(msg->parts[j].image_url);
-                     if(!escaped_url) { free(content_array_str); free(messages_json_array); return NULL; }
-                    if (asprintf(&part_json, "{\"type\": \"image_url\", \"image_url\": {\"url\": %s}}", escaped_url) < 0) {
-                        free(escaped_url); free(content_array_str); free(messages_json_array); return NULL;
-                    }
-                    free(escaped_url);
+                const dp_content_part_t* part = &msg->parts[j];
+                cJSON *part_obj = cJSON_CreateObject();
+                if (!part_obj) { cJSON_Delete(root); return NULL; }
+                if (part->type == DP_CONTENT_PART_TEXT) {
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", part->text);
+                } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
+                    cJSON_AddStringToObject(part_obj, "type", "image_url");
+                    cJSON *img_url_obj = cJSON_CreateObject();
+                    cJSON_AddStringToObject(img_url_obj, "url", part->image_url);
+                    cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
-                if (part_json) {
-                    size_t part_json_len = strlen(part_json);
-                    char* temp_content_array = realloc(content_array_str, current_content_array_len + part_json_len + (j > 0 ? 1 : 0) + 1);
-                    if (!temp_content_array) { free(part_json); free(content_array_str); free(messages_json_array); return NULL; }
-                    content_array_str = temp_content_array;
-                    if (j > 0) strcat(content_array_str, ",");
-                    strcat(content_array_str, part_json);
-                    current_content_array_len += part_json_len + (j > 0 ? 1 : 0);
-                    free(part_json);
-                }
+                // Note: OpenAI direct base64 in messages is less common for chat/completions,
+                // but if needed, structure is: {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
+                // This library's dp_content_part_t separates base64, more aligned with Gemini.
+                // For OpenAI, if base64 is required this way, it would need to be formatted into a data URI.
+                cJSON_AddItemToArray(content_array, part_obj);
             }
-            char* temp_content_array = realloc(content_array_str, current_content_array_len + 1 + 1); 
-            if (!temp_content_array) { free(content_array_str); free(messages_json_array); return NULL; }
-            content_array_str = temp_content_array;
-            strcat(content_array_str, "]");
-            current_content_array_len++;
-            
-            if (asprintf(&content_json, "\"content\": %s", content_array_str) < 0) {
-                free(content_array_str); free(messages_json_array); return NULL;
-            }
-            free(content_array_str);
         }
-        
-        char* message_obj_str;
-        if (asprintf(&message_obj_str, "{\"role\": \"%s\", %s}", role_str, content_json) < 0) {
-            free(content_json); free(messages_json_array); return NULL;
-        }
-        free(content_json);
-
-        size_t message_obj_len = strlen(message_obj_str);
-        char* temp_messages_array = realloc(messages_json_array, current_messages_len + message_obj_len + (i > 0 ? 1 : 0) + 1);
-        if (!temp_messages_array) { free(message_obj_str); free(messages_json_array); return NULL; }
-        messages_json_array = temp_messages_array;
-
-        if (i > 0) strcat(messages_json_array, ",");
-        strcat(messages_json_array, message_obj_str);
-        current_messages_len += message_obj_len + (i > 0 ? 1 : 0);
-        free(message_obj_str);
+        cJSON_AddItemToArray(messages_array, msg_obj);
     }
-    char* temp_messages_array = realloc(messages_json_array, current_messages_len + 1 + 1); 
-    if (!temp_messages_array) { free(messages_json_array); return NULL; }
-    messages_json_array = temp_messages_array;
-    strcat(messages_json_array, "]");
 
-    char stream_json_part[20]; 
-    if (request_config->stream) {
-        strcpy(stream_json_part, ", \"stream\": true");
-    } else {
-        stream_json_part[0] = '\0';
-    }
-    
-    if (asprintf(&payload, "{\"model\": \"%s\", \"messages\": %s, \"temperature\": %.2f, \"max_tokens\": %d%s}",
-             request_config->model, messages_json_array, request_config->temperature,
-             request_config->max_tokens > 0 ? request_config->max_tokens : 1024, 
-             stream_json_part) < 0) {
-        payload = NULL;
-    }
-    free(messages_json_array);
-    return payload;
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string; // Caller must free this
 }
 
-static char* build_gemini_json_payload(const dpt_request_config_t* request_config) {
-    char* payload = NULL;
-    char* contents_json_array = NULL;
-    size_t current_contents_len = 0;
+static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* request_config) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
 
-    contents_json_array = duplicate_string("[");
-    if (!contents_json_array) return NULL;
-    current_contents_len = 1;
+    cJSON *contents_array = cJSON_AddArrayToObject(root, "contents");
+    if (!contents_array) { cJSON_Delete(root); return NULL; }
 
     for (size_t i = 0; i < request_config->num_messages; ++i) {
-        const dpt_message_t* msg = &request_config->messages[i]; 
-        char* role_str = (msg->role == DPT_ROLE_ASSISTANT) ? "model" : "user"; 
+        const dp_message_t* msg = &request_config->messages[i];
+        cJSON *content_obj = cJSON_CreateObject();
+        if (!content_obj) { cJSON_Delete(root); return NULL; }
 
-        char* parts_json_array = duplicate_string("[");
-        size_t current_parts_len = 1;
-        if (!parts_json_array) { free(contents_json_array); return NULL; }
+        const char* role_str = (msg->role == DP_ROLE_ASSISTANT) ? "model" : "user";
+        cJSON_AddStringToObject(content_obj, "role", role_str);
+
+        cJSON *parts_array = cJSON_AddArrayToObject(content_obj, "parts");
+        if (!parts_array) { cJSON_Delete(root); return NULL; }
 
         for (size_t j = 0; j < msg->num_parts; ++j) {
-            const dpt_content_part_t* part = &msg->parts[j]; 
-            char* part_json = NULL;
-            if (part->type == DPT_CONTENT_PART_TEXT) { 
-                char* escaped_text = escape_json_string(part->text);
-                if (!escaped_text) { free(parts_json_array); free(contents_json_array); return NULL; }
-                if (asprintf(&part_json, "{\"text\": %s}", escaped_text) < 0) {
-                     free(escaped_text); free(parts_json_array); free(contents_json_array); return NULL;
-                }
-                free(escaped_text);
-            } else if (part->type == DPT_CONTENT_PART_IMAGE_BASE64) { 
-                char* escaped_mimetype = escape_json_string(part->image_base64.mime_type);
-                char* escaped_data = escape_json_string(part->image_base64.data); 
-                if (!escaped_mimetype || !escaped_data) {
-                    free(escaped_mimetype); free(escaped_data);
-                    free(parts_json_array); free(contents_json_array); return NULL;
-                }
-                if (asprintf(&part_json, "{\"inline_data\": {\"mime_type\": %s, \"data\": %s}}",
-                         escaped_mimetype, escaped_data) < 0) {
-                    free(escaped_mimetype); free(escaped_data);
-                    free(parts_json_array); free(contents_json_array); return NULL;
-                }
-                free(escaped_mimetype); free(escaped_data);
-            } else if (part->type == DPT_CONTENT_PART_IMAGE_URL) { 
-                char* url_as_text;
-                if (asprintf(&url_as_text, "Image at URL: %s (Note: direct URL processing may vary by Gemini model)", part->image_url) < 0) {
-                    free(parts_json_array); free(contents_json_array); return NULL;
-                }
-                char* escaped_text = escape_json_string(url_as_text);
-                free(url_as_text);
-                if (!escaped_text) { free(parts_json_array); free(contents_json_array); return NULL; }
-                if (asprintf(&part_json, "{\"text\": %s}", escaped_text) < 0) {
-                     free(escaped_text); free(parts_json_array); free(contents_json_array); return NULL;
-                }
-                free(escaped_text);
+            const dp_content_part_t* part = &msg->parts[j];
+            cJSON *part_obj = cJSON_CreateObject();
+            if (!part_obj) { cJSON_Delete(root); return NULL; }
+
+            if (part->type == DP_CONTENT_PART_TEXT) {
+                cJSON_AddStringToObject(part_obj, "text", part->text);
+            } else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
+                cJSON *inline_data_obj = cJSON_CreateObject();
+                cJSON_AddStringToObject(inline_data_obj, "mime_type", part->image_base64.mime_type);
+                cJSON_AddStringToObject(inline_data_obj, "data", part->image_base64.data); // Data is already base64
+                cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
+            } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
+                // Gemini prefers inline_data or GCS URIs. Convert external URL to a text part.
+                char temp_text[512];
+                snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
+                cJSON_AddStringToObject(part_obj, "text", temp_text);
             }
-
-            if (part_json) {
-                size_t part_json_len = strlen(part_json);
-                char* temp_parts_array = realloc(parts_json_array, current_parts_len + part_json_len + (j > 0 ? 1 : 0) + 1);
-                if (!temp_parts_array) { free(part_json); free(parts_json_array); free(contents_json_array); return NULL; }
-                parts_json_array = temp_parts_array;
-                if (j > 0) strcat(parts_json_array, ",");
-                strcat(parts_json_array, part_json);
-                current_parts_len += part_json_len + (j > 0 ? 1 : 0);
-                free(part_json);
-            }
+            cJSON_AddItemToArray(parts_array, part_obj);
         }
-        char* temp_parts_array = realloc(parts_json_array, current_parts_len + 1 + 1);
-        if(!temp_parts_array) { free(parts_json_array); free(contents_json_array); return NULL; }
-        parts_json_array = temp_parts_array;
-        strcat(parts_json_array, "]");
-        current_parts_len++;
-        
-        char* content_obj_str;
-        if (asprintf(&content_obj_str, "{\"parts\": %s, \"role\": \"%s\"}", parts_json_array, role_str) < 0) {
-            free(parts_json_array); free(contents_json_array); return NULL;
-        }
-        free(parts_json_array);
-
-        size_t content_obj_len = strlen(content_obj_str);
-        char* temp_contents_array = realloc(contents_json_array, current_contents_len + content_obj_len + (i > 0 ? 1 : 0) + 1);
-        if(!temp_contents_array) { free(content_obj_str); free(contents_json_array); return NULL; }
-        contents_json_array = temp_contents_array;
-
-        if (i > 0) strcat(contents_json_array, ",");
-        strcat(contents_json_array, content_obj_str);
-        current_contents_len += content_obj_len + (i > 0 ? 1 : 0);
-        free(content_obj_str);
+        cJSON_AddItemToArray(contents_array, content_obj);
     }
-    char* temp_contents_array = realloc(contents_json_array, current_contents_len + 1 + 1);
-    if(!temp_contents_array) { free(contents_json_array); return NULL; }
-    contents_json_array = temp_contents_array;
-    strcat(contents_json_array, "]");
 
-    char generation_config_json[256];
-    snprintf(generation_config_json, sizeof(generation_config_json),
-             "\"generationConfig\": {\"temperature\": %.2f, \"maxOutputTokens\": %d}",
-             request_config->temperature, 
-             request_config->max_tokens > 0 ? request_config->max_tokens : 1024); 
-
-    if (asprintf(&payload, "{\"contents\": %s, %s}", contents_json_array, generation_config_json) < 0) {
-        payload = NULL; 
+    cJSON *gen_config = cJSON_AddObjectToObject(root, "generationConfig");
+    if (!gen_config) { cJSON_Delete(root); return NULL; }
+    cJSON_AddNumberToObject(gen_config, "temperature", request_config->temperature);
+    if (request_config->max_tokens > 0) {
+        cJSON_AddNumberToObject(gen_config, "maxOutputTokens", request_config->max_tokens);
     }
-    free(contents_json_array);
-    return payload;
+
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string; // Caller must free this
 }
 
-static char* extract_text_from_full_response_json(const char* json_response, dpt_provider_type_t provider) {
-    if (!json_response) return NULL;
-    char* text = NULL;
-    if (provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-        const char* choices_key = "\"choices\": [";
-        char* choices_start = strstr(json_response, choices_key);
-        if (choices_start) {
-            const char* message_key = "\"message\": {";
-            char* message_start = strstr(choices_start, message_key);
-            if (message_start) {
-                const char* content_key = "\"content\": \"";
-                char* content_start = strstr(message_start, content_key);
-                if (content_start) {
-                    content_start += strlen(content_key);
-                    char* content_end = strchr(content_start, '"');
-                    if (content_end) {
-                        size_t len = content_end - content_start;
-                        text = malloc(len + 1);
-                        if (text) {
-                            strncpy(text, content_start, len);
-                            text[len] = '\0';
-                            char *r = text, *w = text; while (*r) { if (*r == '\\' && *(r+1)) { r++; switch(*r) { case 'n': *w++ = '\n'; break; case '"': *w++ = '"'; break; case '\\': *w++ = '\\'; break; case 't': *w++ = '\t'; break; default: *w++ = '\\'; *w++ = *r; break; } } else { *w++ = *r; } r++; } *w = '\0';
-                        }
+// --- cJSON RESPONSE PARSERS ---
+static char* extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
+    if (finish_reason_out) *finish_reason_out = NULL;
+    if (!json_response_str) return NULL;
+
+    cJSON *root = cJSON_Parse(json_response_str);
+    if (!root) {
+        fprintf(stderr, "cJSON_Parse error: %s\n", cJSON_GetErrorPtr());
+        return NULL;
+    }
+
+    char* extracted_text = NULL;
+    cJSON *choices_array = NULL;
+    cJSON *candidates_array = NULL;
+
+    if (provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        choices_array = cJSON_GetObjectItemCaseSensitive(root, "choices");
+        if (cJSON_IsArray(choices_array) && cJSON_GetArraySize(choices_array) > 0) {
+            cJSON *first_choice = cJSON_GetArrayItem(choices_array, 0);
+            if (first_choice) {
+                cJSON *message = cJSON_GetObjectItemCaseSensitive(first_choice, "message");
+                if (message) {
+                    cJSON *content = cJSON_GetObjectItemCaseSensitive(message, "content");
+                    if (cJSON_IsString(content) && content->valuestring) {
+                        extracted_text = dp_internal_strdup(content->valuestring);
+                    }
+                }
+                if (finish_reason_out) {
+                    cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_choice, "finish_reason");
+                    if (cJSON_IsString(reason_item) && reason_item->valuestring) {
+                        *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
                     }
                 }
             }
         }
-    } else if (provider == DPT_PROVIDER_GOOGLE_GEMINI) {
-        const char* candidates_key = "\"candidates\": [";
-        char* candidates_start = strstr(json_response, candidates_key);
-        if (candidates_start) {
-            const char* content_key_gemini = "\"content\": {"; 
-            char* content_start_gemini = strstr(candidates_start, content_key_gemini);
-            if (content_start_gemini) {
-                const char* parts_key = "\"parts\": [";
-                char* parts_start = strstr(content_start_gemini, parts_key);
-                if (parts_start) {
-                    const char* text_key = "\"text\": \"";
-                    char* text_start = strstr(parts_start, text_key);
-                    if (text_start) {
-                        text_start += strlen(text_key);
-                        char* text_end = strchr(text_start, '"');
-                        if (text_end) {
-                            size_t len = text_end - text_start;
-                            text = malloc(len + 1);
-                            if (text) {
-                                strncpy(text, text_start, len);
-                                text[len] = '\0';
-                                char *r = text, *w = text; while (*r) { if (*r == '\\' && *(r+1)) { r++; switch(*r) { case 'n': *w++ = '\n'; break; case '"': *w++ = '"'; break; case '\\': *w++ = '\\'; break; case 't': *w++ = '\t'; break; default: *w++ = '\\'; *w++ = *r; break; } } else { *w++ = *r; } r++; } *w = '\0';
+    } else if (provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        candidates_array = cJSON_GetObjectItemCaseSensitive(root, "candidates");
+        if (cJSON_IsArray(candidates_array) && cJSON_GetArraySize(candidates_array) > 0) {
+            cJSON *first_candidate = cJSON_GetArrayItem(candidates_array, 0);
+            if (first_candidate) {
+                cJSON *content = cJSON_GetObjectItemCaseSensitive(first_candidate, "content");
+                if (content) {
+                    cJSON *parts_array = cJSON_GetObjectItemCaseSensitive(content, "parts");
+                    if (cJSON_IsArray(parts_array) && cJSON_GetArraySize(parts_array) > 0) {
+                        cJSON *first_part = cJSON_GetArrayItem(parts_array, 0);
+                        if (first_part) {
+                            cJSON *text_item = cJSON_GetObjectItemCaseSensitive(first_part, "text");
+                            if (cJSON_IsString(text_item) && text_item->valuestring) {
+                                extracted_text = dp_internal_strdup(text_item->valuestring);
                             }
                         }
                     }
                 }
+                if (finish_reason_out) { // Gemini finish reason is often in promptFeedback or candidate
+                     cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_candidate, "finishReason"); // path candidates[0].finishReason
+                     if (cJSON_IsString(reason_item) && reason_item->valuestring) {
+                         *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                     }
+                }
+            }
+        }
+         // Fallback for Gemini finish reason if not in candidate (e.g. promptFeedback)
+        if (finish_reason_out && !*finish_reason_out) {
+            cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(root, "promptFeedback");
+            if (prompt_feedback) {
+                cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
+                if (cJSON_IsString(reason_item) && reason_item->valuestring) {
+                    *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                }
             }
         }
     }
-    return text;
-}
-
-static char* extract_openai_finish_reason(const char* json_chunk) {
-    const char* reason_key = "\"finish_reason\": \"";
-    char* reason_start = strstr(json_chunk, reason_key);
-    if (reason_start) {
-        reason_start += strlen(reason_key);
-        char* reason_end = strchr(reason_start, '"');
-        if (reason_end) {
-            size_t len = reason_end - reason_start;
-            if (len == 4 && strncmp(reason_start, "null", 4) == 0) {
-                return NULL; 
-            }
-            char* reason = malloc(len + 1);
-            if (reason) {
-                strncpy(reason, reason_start, len);
-                reason[len] = '\0';
-                return reason;
+    
+    // Check for top-level error object if no content found
+    if (!extracted_text) {
+        cJSON *error_obj = cJSON_GetObjectItemCaseSensitive(root, "error");
+        if (error_obj) {
+            cJSON *message_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
+            if (cJSON_IsString(message_item) && message_item->valuestring) {
+                // This function is for extracting primary text, not error messages.
+                // Error message handling will be done in the calling function.
+                // For now, we just indicate no primary text was found.
             }
         }
     }
-    return NULL; 
+
+    cJSON_Delete(root);
+    return extracted_text;
 }
 
+
+// Libcurl write callback for streaming data
 static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
-    if (processor->stop_streaming_signal) {
-        return 0; 
-    }
+    if (processor->stop_streaming_signal) return 0;
 
     size_t needed_capacity = processor->buffer_size + realsize + 1;
     if (processor->buffer_capacity < needed_capacity) {
         size_t new_capacity = needed_capacity > processor->buffer_capacity * 2 ? needed_capacity : processor->buffer_capacity * 2;
-        if (new_capacity < 256) new_capacity = 256; 
+        if (new_capacity < 256) new_capacity = 256;
         char* new_buf = realloc(processor->buffer, new_capacity);
         if (!new_buf) {
-            const char* err_msg = "Memory allocation failed in stream buffer";
+            const char* err_msg = "Stream buffer memory allocation failed";
             processor->user_callback(NULL, processor->user_data, true, err_msg);
-            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = duplicate_string(err_msg);
-            return 0; 
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
+            return 0;
         }
         processor->buffer = new_buf;
         processor->buffer_capacity = new_capacity;
@@ -456,210 +341,183 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     processor->buffer[processor->buffer_size] = '\0';
 
     char* current_event_start = processor->buffer;
-    size_t remaining_buffer_size = processor->buffer_size;
+    size_t processed_total = 0;
 
     while (true) {
         if (processor->stop_streaming_signal) break;
-        char* extracted_token = NULL;
-        bool is_final_callback_for_chunk = false;
-        char* parse_error = NULL;
+        char* event_end = strstr(current_event_start, "\n\n");
+        if (!event_end) break; // Incomplete event
 
-        // Unified SSE parsing for OpenAI and Gemini (when alt=sse)
-        if (processor->provider == DPT_PROVIDER_OPENAI_COMPATIBLE || 
-            (processor->provider == DPT_PROVIDER_GOOGLE_GEMINI)) { 
-            
-            char* event_end = strstr(current_event_start, "\n\n");
-            if (!event_end) break; 
+        size_t event_len = event_end - current_event_start;
+        char* event_data_segment = malloc(event_len + 1);
+        if (!event_data_segment) { /* error handling */ break; }
+        strncpy(event_data_segment, current_event_start, event_len);
+        event_data_segment[event_len] = '\0';
+        
+        processed_total += (event_len + 2); // +2 for "\n\n"
+        current_event_start = event_end + 2;
 
-            size_t event_len = event_end - current_event_start;
-            // Using malloc for temp_event_data to avoid VLA issues with some compilers/standards
-            char* temp_event_data = malloc(event_len + 1);
-            if (!temp_event_data) { parse_error = "Memory allocation for event data failed"; is_final_callback_for_chunk = true; break; }
-            strncpy(temp_event_data, current_event_start, event_len);
-            temp_event_data[event_len] = '\0';
+        char* line = event_data_segment;
+        char* extracted_token_str = NULL;
+        bool is_final_for_this_event = false;
 
-            current_event_start = event_end + 2; 
-            remaining_buffer_size -= (event_len + 2);
+        while (line && *line) {
+            char* next_line = strchr(line, '\n');
+            if (next_line) *next_line = '\0';
 
-            char* line = temp_event_data;
-            while (line && *line) {
-                char* next_line = strchr(line, '\n');
-                if (next_line) *next_line = '\0'; 
+            if (strncmp(line, "data: ", 6) == 0) {
+                char* json_str = line + 6;
+                if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
+                    is_final_for_this_event = true;
+                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup("done_marker");
+                    break;
+                }
 
-                if (strncmp(line, "data: ", 6) == 0) {
-                    char* json_data = line + 6;
-                    if (strcmp(json_data, "[DONE]") == 0 && processor->provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-                        is_final_callback_for_chunk = true;
-                        if (!processor->finish_reason_capture) processor->finish_reason_capture = duplicate_string("done_marker");
-                        break; 
-                    }
-                    
-                    const char* delta_key = "\"delta\":"; 
-                    const char* content_key_openai = "\"content\": \"";
-                    const char* text_key_gemini = "\"text\": \""; 
-                    
-                    char* token_start = NULL;
-                    char* token_end = NULL;
-
-                    if (processor->provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-                        char* delta_start = strstr(json_data, delta_key);
-                        if (delta_start) {
-                            token_start = strstr(delta_start, content_key_openai);
-                            if (token_start) {
-                                token_start += strlen(content_key_openai);
-                                token_end = strchr(token_start, '"');
+                cJSON *json_chunk = cJSON_Parse(json_str);
+                if (json_chunk) {
+                    if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+                        cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
+                        if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
+                            cJSON *choice = cJSON_GetArrayItem(choices, 0);
+                            cJSON *delta = cJSON_GetObjectItemCaseSensitive(choice, "delta");
+                            if (delta) {
+                                cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
+                                if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
+                                    extracted_token_str = dp_internal_strdup(content->valuestring);
+                                }
                             }
-                        }
-                         if (!processor->finish_reason_capture) {
-                            char* fr = extract_openai_finish_reason(json_data);
-                            if (fr) {
-                                processor->finish_reason_capture = fr;
-                                is_final_callback_for_chunk = true; 
-                            }
-                        }
-                    } else if (processor->provider == DPT_PROVIDER_GOOGLE_GEMINI) {
-                        const char* candidates_key = "\"candidates\":";
-                        char* candidates_start = strstr(json_data, candidates_key);
-                        if(candidates_start) {
-                            token_start = strstr(candidates_start, text_key_gemini);
-                            if (token_start) {
-                                token_start += strlen(text_key_gemini);
-                                token_end = strchr(token_start, '"');
-                            }
-                        }
-                        const char* finish_reason_key_gemini = "\"finishReason\": \"";
-                        char* fr_start_gemini = strstr(json_data, finish_reason_key_gemini); 
-                        if (fr_start_gemini && !processor->finish_reason_capture) {
-                            fr_start_gemini += strlen(finish_reason_key_gemini);
-                            char* fr_end_gemini = strchr(fr_start_gemini, '"');
-                            if (fr_end_gemini) {
-                                size_t fr_len = fr_end_gemini - fr_start_gemini;
-                                processor->finish_reason_capture = malloc(fr_len + 1);
-                                if (processor->finish_reason_capture) {
-                                    strncpy(processor->finish_reason_capture, fr_start_gemini, fr_len);
-                                    (processor->finish_reason_capture)[fr_len] = '\0';
-                                    is_final_callback_for_chunk = true;
+                            if (!processor->finish_reason_capture) {
+                                cJSON *reason = cJSON_GetObjectItemCaseSensitive(choice, "finish_reason");
+                                if (cJSON_IsString(reason) && reason->valuestring) {
+                                    processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                    is_final_for_this_event = true;
                                 }
                             }
                         }
-                    }
-
-                    if (token_start && token_end) {
-                        size_t token_len = token_end - token_start;
-                        if (token_len > 0) { 
-                            extracted_token = malloc(token_len + 1);
-                            if (extracted_token) {
-                                strncpy(extracted_token, token_start, token_len);
-                                extracted_token[token_len] = '\0';
-                                char *r = extracted_token, *w = extracted_token; while (*r) { if (*r == '\\' && *(r+1)) { r++; switch(*r) { case 'n': *w++ = '\n'; break; case '"': *w++ = '"'; break; case '\\': *w++ = '\\'; break; case 't': *w++ = '\t'; break; default: *w++ = '\\'; *w++ = *r; break; } } else { *w++ = *r; } r++; } *w = '\0';
-                            } else { parse_error = "Memory allocation failed for token"; }
+                    } else if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) { // Gemini SSE (alt=sse)
+                        cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
+                        if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
+                            cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
+                            cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
+                            if (content) {
+                                cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
+                                if (cJSON_IsArray(parts) && cJSON_GetArraySize(parts) > 0) {
+                                    cJSON *part = cJSON_GetArrayItem(parts, 0);
+                                    cJSON *text = cJSON_GetObjectItemCaseSensitive(part, "text");
+                                    if (cJSON_IsString(text) && text->valuestring && strlen(text->valuestring) > 0) {
+                                        extracted_token_str = dp_internal_strdup(text->valuestring);
+                                    }
+                                }
+                            }
+                            // Gemini finish reason might be in candidate or promptFeedback
+                            if (!processor->finish_reason_capture) {
+                                cJSON *reason = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
+                                if (cJSON_IsString(reason) && reason->valuestring) {
+                                    processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                    is_final_for_this_event = true;
+                                }
+                            }
+                        }
+                        if (!processor->finish_reason_capture) { // Check promptFeedback
+                             cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(json_chunk, "promptFeedback");
+                             if (prompt_feedback) {
+                                 cJSON *reason = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
+                                 if (cJSON_IsString(reason) && reason->valuestring) {
+                                     processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                     is_final_for_this_event = true;
+                                 }
+                             }
                         }
                     }
+                    cJSON_Delete(json_chunk);
+                } else {
+                     // Could be an error JSON not conforming to SSE data structure
+                     // For now, ignore if not parsable as a primary chunk.
                 }
-                if (next_line) line = next_line + 1; else break;
             }
-            free(temp_event_data); // Free malloc'd event data
+            if (next_line) line = next_line + 1; else break;
         }
+        free(event_data_segment);
 
-        if (parse_error) {
-            if (processor->user_callback(NULL, processor->user_data, true, parse_error) != 0) {
+        if (extracted_token_str) {
+            if (processor->user_callback(extracted_token_str, processor->user_data, is_final_for_this_event, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
-            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = duplicate_string(parse_error);
-             // parse_error is a literal, no free
-        } else if (extracted_token) {
-            if (processor->user_callback(extracted_token, processor->user_data, is_final_callback_for_chunk, NULL) != 0) {
-                processor->stop_streaming_signal = true;
-            }
-            free(extracted_token);
-        } else if (is_final_callback_for_chunk) { 
+            free(extracted_token_str);
+        } else if (is_final_for_this_event) { // Signal final even if no token in this specific event
             if (processor->user_callback(NULL, processor->user_data, true, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
         }
-        if (is_final_callback_for_chunk) processor->stop_streaming_signal = true; 
-    } 
-
-    if (remaining_buffer_size > 0 && current_event_start > processor->buffer) {
-        memmove(processor->buffer, current_event_start, remaining_buffer_size);
-    }
-    processor->buffer_size = remaining_buffer_size;
-    if (processor->buffer_size < processor->buffer_capacity) { // Ensure null termination if space allows
-        processor->buffer[processor->buffer_size] = '\0'; 
+        if (is_final_for_this_event) processor->stop_streaming_signal = true; // Stop after final indication
     }
 
+    // Shift unprocessed data
+    if (processed_total < processor->buffer_size) {
+        memmove(processor->buffer, processor->buffer + processed_total, processor->buffer_size - processed_total);
+    }
+    processor->buffer_size -= processed_total;
+    processor->buffer[processor->buffer_size] = '\0';
 
-    return realsize; 
+    return realsize;
 }
 
-
-int dpt_perform_completion(dpt_context_t* context,
-                          const dpt_request_config_t* request_config,
-                          dpt_response_t* response) {
+// --- Core API Functions ---
+int dp_perform_completion(dp_context_t* context, const dp_request_config_t* request_config, dp_response_t* response) {
     if (!context || !request_config || !response) {
-        if (response) response->error_message = duplicate_string("Invalid arguments to dpt_perform_completion.");
+        if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_completion.");
         return -1;
     }
     if (request_config->stream) {
-        if (response) response->error_message = duplicate_string("dpt_perform_completion called with stream=true. Use dpt_perform_streaming_completion instead.");
+        if (response) response->error_message = dp_internal_strdup("dp_perform_completion called with stream=true. Use dp_perform_streaming_completion instead.");
         return -1;
     }
+    memset(response, 0, sizeof(dp_response_t));
 
-    memset(response, 0, sizeof(dpt_response_t)); 
-
-    CURL* curl = curl_easy_init(); 
+    CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = duplicate_string("Failed to initialize curl handle for non-streaming.");
+        response->error_message = dp_internal_strdup("curl_easy_init() failed for Disaster Party completion.");
         return -1;
     }
 
-    CURLcode res;
-    struct curl_slist* headers = NULL;
-    memory_struct_t chunk_mem;
-    chunk_mem.memory = malloc(1); 
-    chunk_mem.size = 0;
-    if (!chunk_mem.memory) {
-        response->error_message = duplicate_string("Failed to allocate memory for response buffer.");
-        curl_easy_cleanup(curl); 
+    char* json_payload_str = NULL;
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        json_payload_str = build_openai_json_payload_with_cjson(request_config);
+    } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        json_payload_str = build_gemini_json_payload_with_cjson(request_config);
+    }
+    if (!json_payload_str) {
+        response->error_message = dp_internal_strdup("Failed to build JSON payload for Disaster Party.");
+        curl_easy_cleanup(curl);
         return -1;
     }
 
-    char* json_payload = NULL;
     char url[1024];
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
 
-    if (context->provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload = build_openai_json_payload(request_config); 
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
         snprintf(url, sizeof(url), "%s/chat/completions", context->api_base_url);
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-        char auth_header[256];
+        char auth_header[512]; // Increased size for safety
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", context->api_key);
         headers = curl_slist_append(headers, auth_header);
-    } else if (context->provider == DPT_PROVIDER_GOOGLE_GEMINI) {
-        json_payload = build_gemini_json_payload(request_config);
+    } else { // Gemini
         snprintf(url, sizeof(url), "%s/models/%s:generateContent?key=%s",
                  context->api_base_url, request_config->model, context->api_key);
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-    } else {
-        response->error_message = duplicate_string("Unsupported LLM provider.");
-        free(chunk_mem.memory); curl_easy_cleanup(curl); 
-        return -1;
     }
 
-    if (!json_payload) {
-        response->error_message = duplicate_string("Failed to build JSON payload.");
-        free(chunk_mem.memory); curl_slist_free_all(headers); curl_easy_cleanup(curl); 
-        return -1;
-    }
+    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    if (!chunk_mem.memory) { /* handle error */ free(json_payload_str); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; }
+    chunk_mem.memory[0] = '\0';
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DIASTERPARTY_USER_AGENT); 
-    // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DIASTERPARTY_USER_AGENT);
 
-    res = curl_easy_perform(curl);
+    CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
     if (res != CURLE_OK) {
@@ -667,101 +525,60 @@ int dpt_perform_completion(dpt_context_t* context,
                  curl_easy_strerror(res), response->http_status_code);
     } else {
         if (response->http_status_code >= 200 && response->http_status_code < 300) {
-            char* extracted_text = extract_text_from_full_response_json(chunk_mem.memory, context->provider);
+            char* extracted_text = extract_text_from_full_response_with_cjson(chunk_mem.memory, context->provider, &response->finish_reason);
             if (extracted_text) {
-                response->parts = calloc(1, sizeof(dpt_response_part_t)); 
+                response->parts = calloc(1, sizeof(dp_response_part_t));
                 if (response->parts) {
                     response->num_parts = 1;
-                    response->parts[0].type = DPT_CONTENT_PART_TEXT; 
-                    response->parts[0].text = extracted_text; 
+                    response->parts[0].type = DP_CONTENT_PART_TEXT;
+                    response->parts[0].text = extracted_text; // Ownership transferred
                 } else {
-                    free(extracted_text);
-                    response->error_message = duplicate_string("Failed to allocate memory for response part.");
+                    free(extracted_text); // Failed to allocate parts array
+                    response->error_message = dp_internal_strdup("Failed to allocate memory for response part structure.");
                 }
-                if (context->provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-                    const char* choices_key = "\"choices\": [";
-                    char* choices_start = strstr(chunk_mem.memory, choices_key);
-                    if(choices_start) { // Search within the choices array for finish_reason
-                        response->finish_reason = extract_openai_finish_reason(choices_start);
-                    }
-                }
-                if (context->provider == DPT_PROVIDER_GOOGLE_GEMINI) {
-                    const char* feedback_key = "\"promptFeedback\":"; // Gemini specific
-                    char* feedback_start = strstr(chunk_mem.memory, feedback_key);
-                    if (feedback_start) {
-                        const char* reason_key = "\"finishReason\": \"";
-                        char* reason_start = strstr(feedback_start, reason_key);
-                        if (reason_start) {
-                            reason_start += strlen(reason_key);
-                            char* reason_end = strchr(reason_start, '"');
-                            if (reason_end) {
-                                size_t len = reason_end - reason_start;
-                                response->finish_reason = malloc(len + 1);
-                                if (response->finish_reason) {
-                                    strncpy(response->finish_reason, reason_start, len);
-                                    (response->finish_reason)[len] = '\0';
-                                }
-                            }
+            } else { // No text extracted, check for API error in JSON body
+                cJSON* error_root = cJSON_Parse(chunk_mem.memory);
+                if (error_root) {
+                    cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(error_root, "error");
+                    if (error_obj) {
+                        cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
+                        if (cJSON_IsString(msg_item) && msg_item->valuestring) {
+                             asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
                         }
                     }
+                    cJSON_Delete(error_root);
                 }
-            } else { 
-                const char* error_key_marker = "\"error\""; 
-                char* error_json_start = strstr(chunk_mem.memory, error_key_marker);
-                if (error_json_start) {
-                    const char* message_key = "\"message\": \"";
-                    char* message_start = strstr(error_json_start, message_key);
-                    if (message_start) {
-                        message_start += strlen(message_key);
-                        char* message_end = strchr(message_start, '"');
-                        if (message_end) {
-                            size_t len = message_end - message_start;
-                            char* api_err_msg = malloc(len + 1);
-                            if (api_err_msg) {
-                                strncpy(api_err_msg, message_start, len); api_err_msg[len] = '\0';
-                                asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, api_err_msg);
-                                free(api_err_msg);
-                            }
-                        }
-                    }
-                }
-                if (!response->error_message) { 
-                    asprintf(&response->error_message, "Failed to parse successful response (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                if (!response->error_message) { // Generic if specific error not parsed
+                    asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(empty)");
                 }
             }
-        } else { 
-            asprintf(&response->error_message, "HTTP error %ld: %.500s", response->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+        } else { // HTTP error
+            asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
         }
     }
 
-    free(json_payload);
+    free(json_payload_str);
     free(chunk_mem.memory);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    
     return response->error_message ? -1 : 0;
 }
 
-
-int dpt_perform_streaming_completion(dpt_context_t* context,
-                                    const dpt_request_config_t* request_config,
-                                    dpt_stream_callback_t callback,
-                                    void* user_data,
-                                    dpt_response_t* response) {
+int dp_perform_streaming_completion(dp_context_t* context, const dp_request_config_t* request_config,
+                                    dp_stream_callback_t callback, void* user_data, dp_response_t* response) {
     if (!context || !request_config || !callback || !response) {
-        if (response) response->error_message = duplicate_string("Invalid arguments to dpt_perform_streaming_completion.");
+        if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_streaming_completion.");
         return -1;
     }
-    if (context->provider == DPT_PROVIDER_OPENAI_COMPATIBLE && !request_config->stream) {
-         if (response) response->error_message = duplicate_string("dpt_perform_streaming_completion for OpenAI requires stream=true in config.");
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE && !request_config->stream) {
+         if (response) response->error_message = dp_internal_strdup("dp_perform_streaming_completion for OpenAI requires stream=true in config.");
         return -1;
     }
+    memset(response, 0, sizeof(dp_response_t));
 
-    memset(response, 0, sizeof(dpt_response_t));
-
-    CURL* curl = curl_easy_init(); 
+    CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = duplicate_string("Failed to initialize curl handle for streaming.");
+        response->error_message = dp_internal_strdup("curl_easy_init() failed for Disaster Party streaming.");
         return -1;
     }
 
@@ -769,195 +586,160 @@ int dpt_perform_streaming_completion(dpt_context_t* context,
     processor.user_callback = callback;
     processor.user_data = user_data;
     processor.provider = context->provider;
-    processor.buffer_capacity = 4096; // Increased initial buffer for streams
+    processor.buffer_capacity = 8192; // Larger initial buffer for streaming
     processor.buffer = malloc(processor.buffer_capacity);
-    if (!processor.buffer) {
-        response->error_message = duplicate_string("Failed to allocate stream processor buffer.");
-        curl_easy_cleanup(curl); 
-        return -1;
-    }
+    if (!processor.buffer) { /* handle error */ curl_easy_cleanup(curl); response->error_message = dp_internal_strdup("Stream processor buffer alloc failed."); return -1; }
     processor.buffer[0] = '\0';
 
-    char* json_payload = NULL;
+    char* json_payload_str = NULL;
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        json_payload_str = build_openai_json_payload_with_cjson(request_config); // stream=true will be set
+    } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        json_payload_str = build_gemini_json_payload_with_cjson(request_config);
+    }
+     if (!json_payload_str) { /* handle error */ free(processor.buffer); curl_easy_cleanup(curl); response->error_message = dp_internal_strdup("Payload build failed for streaming."); return -1; }
+
+
     char url[1024];
     struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
 
-    if (context->provider == DPT_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload = build_openai_json_payload(request_config);
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
         snprintf(url, sizeof(url), "%s/chat/completions", context->api_base_url);
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-        char auth_header[256];
+        char auth_header[512];
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", context->api_key);
         headers = curl_slist_append(headers, auth_header);
-    } else if (context->provider == DPT_PROVIDER_GOOGLE_GEMINI) {
-        json_payload = build_gemini_json_payload(request_config); 
-        snprintf(url, sizeof(url), "%s/models/%s:streamGenerateContent?key=%s&alt=sse", 
+    } else { // Gemini streaming
+        snprintf(url, sizeof(url), "%s/models/%s:streamGenerateContent?key=%s&alt=sse",
                  context->api_base_url, request_config->model, context->api_key);
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-    } else {
-        response->error_message = duplicate_string("Unsupported LLM provider for streaming.");
-        free(processor.buffer); curl_easy_cleanup(curl); 
-        return -1;
-    }
-    
-    if (!json_payload) {
-        response->error_message = duplicate_string("Failed to build JSON payload for streaming.");
-        free(processor.buffer); curl_slist_free_all(headers); curl_easy_cleanup(curl); 
-        return -1;
     }
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DIASTERPARTY_USER_AGENT); 
-    // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DIASTERPARTY_USER_AGENT);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
-    if (!processor.stop_streaming_signal && res == CURLE_OK && response->http_status_code >= 200 && response->http_status_code < 300) {
-        // If stream ended cleanly from server side but callback hasn't been told it's final (e.g. no [DONE] or explicit finish_reason)
-        // Call it one last time.
-        processor.user_callback(NULL, processor.user_data, true, processor.accumulated_error_during_stream);
-    } else if (res != CURLE_OK) {
-        char curl_err_buf[CURL_ERROR_SIZE];
-        snprintf(curl_err_buf, CURL_ERROR_SIZE, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        if (!processor.stop_streaming_signal) { 
-             processor.user_callback(NULL, processor.user_data, true, curl_err_buf);
+    // Final callback invocation if stream didn't signal finality itself or an error occurred
+    if (!processor.stop_streaming_signal) {
+        const char* final_stream_error = processor.accumulated_error_during_stream;
+        if (res != CURLE_OK && !final_stream_error) {
+            final_stream_error = curl_easy_strerror(res);
+        } else if (response->http_status_code < 200 || response->http_status_code >= 300 && !final_stream_error) {
+            // Use buffer content as potential error message from server
+            final_stream_error = processor.buffer_size > 0 ? processor.buffer : "HTTP error during stream";
         }
-        if (!response->error_message) response->error_message = duplicate_string(curl_err_buf);
-    } else if (response->http_status_code < 200 || response->http_status_code >= 300) {
-        char http_err_buf[1024]; 
-        snprintf(http_err_buf, sizeof(http_err_buf), "HTTP error %ld. Response body hint: %.500s", 
-                response->http_status_code, 
-                processor.buffer_size > 0 ? processor.buffer : "(empty/processed)");
-        if (!processor.stop_streaming_signal) {
-            processor.user_callback(NULL, processor.user_data, true, http_err_buf);
-        }
-        if (!response->error_message) response->error_message = duplicate_string(http_err_buf);
+        processor.user_callback(NULL, processor.user_data, true, final_stream_error);
     }
-
+    
     if (processor.finish_reason_capture) {
-        response->finish_reason = processor.finish_reason_capture; 
-    } else if (res == CURLE_OK && response->http_status_code >=200 && response->http_status_code < 300 && !processor.accumulated_error_during_stream && !response->finish_reason) {
-        // If stream finished cleanly (HTTP OK, no stream errors) but no specific reason was parsed, mark as completed.
-        response->finish_reason = duplicate_string("completed");
+        response->finish_reason = processor.finish_reason_capture; // Ownership transferred
+    } else if (res == CURLE_OK && response->http_status_code >= 200 && response->http_status_code < 300 && !processor.accumulated_error_during_stream && !response->finish_reason) {
+        response->finish_reason = dp_internal_strdup("completed");
     }
 
+
+    if (res != CURLE_OK && !response->error_message) {
+        asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+    } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
+         asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer_size > 0 ? processor.buffer : "(empty)");
+    }
 
     if (processor.accumulated_error_during_stream) {
-        if (response->error_message) { 
-            char* temp_err;
-            // Concatenate, ensuring not to duplicate if it's the same error reported at HTTP level
-            if (strstr(response->error_message, processor.accumulated_error_during_stream) == NULL) {
-                 asprintf(&temp_err, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
-                 free(response->error_message);
-                 response->error_message = temp_err;
-            }
-            free(processor.accumulated_error_during_stream); 
+        if (response->error_message) {
+             char* combined_error;
+             asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
+             free(response->error_message);
+             response->error_message = combined_error;
+             free(processor.accumulated_error_during_stream);
         } else {
-            response->error_message = processor.accumulated_error_during_stream; 
+            response->error_message = processor.accumulated_error_during_stream; // Ownership transferred
         }
     }
 
-    free(json_payload);
+    free(json_payload_str);
     free(processor.buffer);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    
     return response->error_message ? -1 : 0;
 }
 
-
-void dpt_free_response_content(dpt_response_t* response) {
+void dp_free_response_content(dp_response_t* response) {
     if (!response) return;
     if (response->parts) {
         for (size_t i = 0; i < response->num_parts; ++i) {
-            free(response->parts[i].text);
+            free(response->parts[i].text); // Only text part supported for full response parts
         }
         free(response->parts);
-        response->parts = NULL;
-        response->num_parts = 0;
     }
     free(response->error_message);
-    response->error_message = NULL;
     free(response->finish_reason);
-    response->finish_reason = NULL;
+    memset(response, 0, sizeof(dp_response_t)); // Clear struct
 }
 
-void dpt_free_messages(dpt_message_t* messages, size_t num_messages) {
+void dp_free_messages(dp_message_t* messages, size_t num_messages) {
     if (!messages) return;
     for (size_t i = 0; i < num_messages; ++i) {
         if (messages[i].parts) {
             for (size_t j = 0; j < messages[i].num_parts; ++j) {
-                dpt_content_part_t* part = &messages[i].parts[j]; 
-                free(part->text); 
+                dp_content_part_t* part = &messages[i].parts[j];
+                free(part->text);
                 free(part->image_url);
-                if (part->type == DPT_CONTENT_PART_IMAGE_BASE64) { 
+                if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
                     free(part->image_base64.mime_type);
                     free(part->image_base64.data);
                 }
             }
             free(messages[i].parts);
-            messages[i].parts = NULL;
-            messages[i].num_parts = 0;
         }
     }
+    // Note: The 'messages' array itself is managed by the caller.
 }
 
-static bool dpt_message_add_part_internal(dpt_message_t* message, dpt_content_part_type_t type, 
-                                   const char* text_content, 
-                                   const char* image_url_content, 
+static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
+                                   const char* text_content, const char* image_url_content,
                                    const char* mime_type_content, const char* base64_data_content) {
     if (!message) return false;
-
-    dpt_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dpt_content_part_t));
+    dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
     if (!new_parts_array) return false;
     message->parts = new_parts_array;
 
-    dpt_content_part_t* new_part = &message->parts[message->num_parts];
-    memset(new_part, 0, sizeof(dpt_content_part_t)); 
+    dp_content_part_t* new_part = &message->parts[message->num_parts];
+    memset(new_part, 0, sizeof(dp_content_part_t));
     new_part->type = type;
-
     bool success = false;
-    if (type == DPT_CONTENT_PART_TEXT && text_content) {
-        new_part->text = duplicate_string(text_content);
+
+    if (type == DP_CONTENT_PART_TEXT && text_content) {
+        new_part->text = dp_internal_strdup(text_content);
         success = (new_part->text != NULL);
-    } else if (type == DPT_CONTENT_PART_IMAGE_URL && image_url_content) {
-        new_part->image_url = duplicate_string(image_url_content);
+    } else if (type == DP_CONTENT_PART_IMAGE_URL && image_url_content) {
+        new_part->image_url = dp_internal_strdup(image_url_content);
         success = (new_part->image_url != NULL);
-    } else if (type == DPT_CONTENT_PART_IMAGE_BASE64 && mime_type_content && base64_data_content) {
-        new_part->image_base64.mime_type = duplicate_string(mime_type_content);
-        new_part->image_base64.data = duplicate_string(base64_data_content); 
+    } else if (type == DP_CONTENT_PART_IMAGE_BASE64 && mime_type_content && base64_data_content) {
+        new_part->image_base64.mime_type = dp_internal_strdup(mime_type_content);
+        new_part->image_base64.data = dp_internal_strdup(base64_data_content);
         success = (new_part->image_base64.mime_type != NULL && new_part->image_base64.data != NULL);
         if (!success) {
             free(new_part->image_base64.mime_type); new_part->image_base64.mime_type = NULL;
             free(new_part->image_base64.data); new_part->image_base64.data = NULL;
         }
-    } else {
-        return false; 
     }
-
-    if (success) {
-        message->num_parts++;
-    } else {
-        fprintf(stderr, "Failed to allocate memory for content part.\n");
-    }
+    if (success) message->num_parts++;
+    else fprintf(stderr, "Failed to allocate memory for Disaster Party message content part.\n");
     return success;
 }
 
-
-bool dpt_message_add_text_part(dpt_message_t* message, const char* text) {
-    return dpt_message_add_part_internal(message, DPT_CONTENT_PART_TEXT, text, NULL, NULL, NULL);
+bool dp_message_add_text_part(dp_message_t* message, const char* text) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL);
 }
-
-bool dpt_message_add_image_url_part(dpt_message_t* message, const char* image_url) {
-    return dpt_message_add_part_internal(message, DPT_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL);
+bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL);
 }
-
-bool dpt_message_add_base64_image_part(dpt_message_t* message, const char* mime_type, const char* base64_data) {
-    return dpt_message_add_part_internal(message, DPT_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
+bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
 }
 
