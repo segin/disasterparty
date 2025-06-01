@@ -48,9 +48,9 @@
         printf("Disaster Party Context Initialized for Streaming Test.\n");
 
         dp_request_config_t request_config = {0};
-        request_config.model = "gemini-1.5-flash-latest"; 
+        request_config.model = "gemini-2.5-flash-latest"; // Updated model name
         request_config.temperature = 0.5;
-        request_config.max_tokens = 300; // Increased max_tokens
+        request_config.max_tokens = 300; 
         
         dp_message_t messages[1];
         request_config.messages = messages;
@@ -59,7 +59,7 @@
         messages[0].role = DP_ROLE_USER;
         messages[0].num_parts = 0;
         messages[0].parts = NULL;
-        if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) { // Updated prompt
+        if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) { 
             fprintf(stderr, "Failed to add text part to Gemini message.\n");
             dp_free_messages(messages, request_config.num_messages);
             dp_destroy_context(context);
