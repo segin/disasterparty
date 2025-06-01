@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h> // For isprint
+#include <ctype.h> 
 
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
@@ -165,7 +165,7 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                         cJSON_AddStringToObject(img_url_obj, "url", data_uri);
                         free(data_uri);
                     } else {
-                        fprintf(stderr, "Error: malloc failed for data_uri in OpenAI payload.\n");
+                        // fprintf(stderr, "Error: malloc failed for data_uri in OpenAI payload.\n"); // Debug removed
                         cJSON_Delete(img_url_obj); 
                         cJSON_Delete(part_obj);    
                         cJSON_Delete(root);        
@@ -316,58 +316,53 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
-    if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        fprintf(stderr, "[DEBUG-GEMINI-LIBCURL-CHUNK] Received %zu bytes from libcurl. Current buffer size: %zu\n", realsize, processor->buffer_size);
-        // fwrite(contents, 1, realsize, stderr); // Print raw bytes
-        // fprintf(stderr, "\n[DEBUG-GEMINI-LIBCURL-CHUNK-END]\n");
-        // fflush(stderr);
-    }
+    // Early debug for Gemini to see raw chunks from libcurl
+    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+    //     fprintf(stderr, "[DEBUG-GEMINI-LIBCURL-CHUNK] Received %zu bytes from libcurl. Current buffer size: %zu\n", realsize, processor->buffer_size);
+    //     // fwrite(contents, 1, realsize, stderr); // Optional: Print raw bytes
+    //     // fprintf(stderr, "\n[DEBUG-GEMINI-LIBCURL-CHUNK-END]\n");
+    //     // fflush(stderr);
+    // }
 
-    if (processor->stop_streaming_signal) return 0; // User signaled to stop
+    if (processor->stop_streaming_signal) return 0;
 
-    // Append new data to processor's buffer
-    size_t needed_capacity = processor->buffer_size + realsize + 1; // +1 for null terminator
+    size_t needed_capacity = processor->buffer_size + realsize + 1;
     if (processor->buffer_capacity < needed_capacity) {
         size_t new_capacity = needed_capacity > processor->buffer_capacity * 2 ? needed_capacity : processor->buffer_capacity * 2;
-        if (new_capacity < 1024) new_capacity = 1024; // Ensure a minimum reasonable capacity
+        if (new_capacity < 1024) new_capacity = 1024;
         char* new_buf = realloc(processor->buffer, new_capacity);
         if (!new_buf) {
             const char* err_msg = "Stream buffer memory re-allocation failed";
             processor->user_callback(NULL, processor->user_data, true, err_msg);
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
-            return 0; // Signal error to libcurl
+            return 0;
         }
         processor->buffer = new_buf;
         processor->buffer_capacity = new_capacity;
     }
     memcpy(processor->buffer + processor->buffer_size, contents, realsize);
     processor->buffer_size += realsize;
-    processor->buffer[processor->buffer_size] = '\0'; // Null-terminate the buffer
+    processor->buffer[processor->buffer_size] = '\0';
 
-    if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        fprintf(stderr, "[DEBUG-GEMINI-BUFFER-CONTENT-START] Accumulated buffer (size %zu):\n<", processor->buffer_size);
-        for(size_t k=0; k < processor->buffer_size; ++k) {
-            char c = processor->buffer[k];
-            if (c == '\n') fprintf(stderr, "\\n");
-            else if (c == '\r') fprintf(stderr, "\\r");
-            else if (isprint(c)) fprintf(stderr, "%c", c);
-            else fprintf(stderr, "[%02X]", (unsigned char)c);
-        }
-        fprintf(stderr, ">\n[DEBUG-GEMINI-BUFFER-CONTENT-END]\n");
-        fflush(stderr);
-    }
-
+    // Debug: Print entire accumulated buffer content (for Gemini)
+    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+    //     fprintf(stderr, "[DEBUG-GEMINI-BUFFER-CONTENT-START] Accumulated buffer (size %zu):\n<", processor->buffer_size);
+    //     for(size_t k=0; k < processor->buffer_size; ++k) {
+    //         char c = processor->buffer[k];
+    //         if (c == '\n') fprintf(stderr, "\\n");
+    //         else if (c == '\r') fprintf(stderr, "\\r");
+    //         else if (isprint(c)) fprintf(stderr, "%c", c);
+    //         else fprintf(stderr, "[%02X]", (unsigned char)c);
+    //     }
+    //     fprintf(stderr, ">\n[DEBUG-GEMINI-BUFFER-CONTENT-END]\n");
+    //     fflush(stderr);
+    // }
 
     char* current_event_start = processor->buffer;
     size_t remaining_in_buffer = processor->buffer_size;
 
     while (true) {
         if (processor->stop_streaming_signal) break;
-
-        if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-            fprintf(stderr, "[DEBUG-GEMINI-SSE-LOOP-TOP] current_event_start points to: <%.30s> remaining_in_buffer: %zu\n", current_event_start, remaining_in_buffer);
-            fflush(stderr);
-        }
         
         char* event_end_lf = strstr(current_event_start, "\n\n");
         char* event_end_crlf = strstr(current_event_start, "\r\n\r\n");
@@ -382,18 +377,8 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             event_end = event_end_crlf;
         }
 
-        if (event_end == event_end_lf && event_end_lf) separator_len = 2; // "\n\n"
-        else if (event_end == event_end_crlf && event_end_crlf) separator_len = 4; // "\r\n\r\n"
-
-
-        if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-            if (event_end) {
-                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Found event separator (len %zu) at offset %ld from current_event_start.\n", separator_len, event_end - current_event_start);
-            } else {
-                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Did NOT find event separator. Will break from SSE processing loop.\n");
-            }
-            fflush(stderr);
-        }
+        if (event_end == event_end_lf && event_end_lf) separator_len = 2;
+        else if (event_end == event_end_crlf && event_end_crlf) separator_len = 4;
 
         if (!event_end) {
             break; 
@@ -422,19 +407,13 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             char* next_line = strchr(line, '\n');
             if (next_line) {
                 *next_line = '\0'; 
-                if (*(next_line - 1) == '\r') { // Handle CRLF within the event line itself
+                if ((next_line > line) && (*(next_line - 1) == '\r')) { 
                     *(next_line - 1) = '\0';
                 }
             }
 
-
             if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
-
-                if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                    fprintf(stderr, "[DEBUG-GEMINI-RAW-JSON-LINE]: <%s>\n", json_str);
-                    fflush(stderr);
-                }
 
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
@@ -444,11 +423,11 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
 
                 cJSON *json_chunk = cJSON_Parse(json_str);
                 if (!json_chunk) {
-                    if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                        const char *error_ptr = cJSON_GetErrorPtr();
-                        fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string from 'data:' line. Error near: %s. JSON was: <%s>\n", error_ptr ? error_ptr : "unknown", json_str);
-                        fflush(stderr);
-                    }
+                    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                    //     const char *error_ptr = cJSON_GetErrorPtr();
+                    //     fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string from 'data:' line. Error near: %s. JSON was: <%s>\n", error_ptr ? error_ptr : "unknown", json_str);
+                    //     fflush(stderr);
+                    // }
                 } else {
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
                          cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
@@ -472,30 +451,20 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                             }
                         }
                     } else if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) { 
-                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Successfully parsed JSON chunk from 'data:' line.\n");
                         cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
-                        if (!cJSON_IsArray(candidates) || cJSON_GetArraySize(candidates) == 0) {
-                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'candidates' array not found or empty in JSON chunk.\n");
-                        } else {
+                        if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
                             cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
-                            if (!candidate) fprintf(stderr, "[DEBUG-GEMINI-PARSE] First candidate is NULL in JSON chunk.\n");
-                            else {
+                            if (candidate) {
                                 cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
-                                if (!content) fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'content' in candidate not found.\n");
-                                else {
+                                if (content) {
                                     cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
-                                    if (!cJSON_IsArray(parts)) { 
-                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'parts' in content not found or not an array.\n");
-                                    } else {
-                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Found 'parts' array, size: %d\n", cJSON_GetArraySize(parts));
+                                    if (cJSON_IsArray(parts)) {
                                         cJSON* part_item_iter = NULL;
                                         char* current_event_accumulated_text = NULL; 
-
                                         cJSON_ArrayForEach(part_item_iter, parts) { 
                                             if(part_item_iter){
                                                 cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item_iter, "text");
                                                 if (cJSON_IsString(text) && text->valuestring) {
-                                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text from a part: '%s' (len: %zu)\n", text->valuestring, strlen(text->valuestring));
                                                     if (strlen(text->valuestring) > 0) {
                                                         if (!current_event_accumulated_text) { 
                                                             current_event_accumulated_text = dp_internal_strdup(text->valuestring);
@@ -509,27 +478,20 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                                                 free(old_text);
                                                             } else { 
                                                                 current_event_accumulated_text = old_text; 
-                                                                fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Malloc failed for concatenating token.\n");
                                                             }
                                                         }
                                                     }
-                                                } else {
-                                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'text' field not found or not a string in a part.\n");
                                                 }
                                             }
                                         }
                                         if (current_event_accumulated_text) {
                                             free(extracted_token_str); 
                                             extracted_token_str = current_event_accumulated_text; 
-                                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] Final accumulated token for this event: '%s'\n", extracted_token_str);
-                                        } else {
-                                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] No text accumulated from parts for this event.\n");
                                         }
                                     }
                                 }
                                 cJSON *reason_cand = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
                                 if (cJSON_IsString(reason_cand) && reason_cand->valuestring) {
-                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] Candidate finishReason: '%s'\n", reason_cand->valuestring);
                                     if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_cand->valuestring);
                                     is_final_for_this_event = true;
                                 }
@@ -539,35 +501,25 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                         if (prompt_feedback) {
                             cJSON *reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
                             if (cJSON_IsString(reason_pf) && reason_pf->valuestring) {
-                                fprintf(stderr, "[DEBUG-GEMINI-PARSE] PromptFeedback finishReason: '%s'\n", reason_pf->valuestring);
                                 if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_pf->valuestring);
                                 is_final_for_this_event = true;
                             }
                         }
-                        fflush(stderr); 
                     }
                     cJSON_Delete(json_chunk);
                 } 
             } 
-            if (next_line) line = next_line + strlen("\0") + (*(next_line-1) == '\r' ? 1 : 0) ; else break;
+            if (next_line) line = next_line + 1 + (*(next_line-1) == '\r' ? -1 : 0) ; else break; // Adjusted for CRLF line endings in event
         } 
         free(event_data_segment);
 
         if (extracted_token_str) {
-            if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                 fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with token: '%s', is_final: %d\n", extracted_token_str, is_final_for_this_event);
-                 fflush(stderr);
-            }
             if (processor->user_callback(extracted_token_str, processor->user_data, is_final_for_this_event, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
             free(extracted_token_str);
             extracted_token_str = NULL; 
         } else if (is_final_for_this_event) { 
-            if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with NULL token (final event marker).\n");
-                fflush(stderr);
-            }
             if (processor->user_callback(NULL, processor->user_data, true, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
@@ -584,6 +536,10 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     }
     return realsize;
 }
+
+// ... (rest of the file: dp_perform_completion, dp_perform_streaming_completion, free functions, message adders remain the same) ...
+// Ensure these functions are present from disasterparty_c_v8 or your latest working version.
+// The ... (rest of the file) ... part will be identical to the previous disasterparty_c_v8.
 
 int dp_perform_completion(dp_context_t* context, const dp_request_config_t* request_config, dp_response_t* response) {
     if (!context || !request_config || !response) {
