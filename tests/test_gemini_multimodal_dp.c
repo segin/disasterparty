@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
-#include <stdint.h> // Added for uint32_t
+#include <stdint.h> 
 
 char* base64_encode(const unsigned char *data, size_t input_length) {
     const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gemini-1.5-flash-latest"; 
+    request_config.model = "gemini-2.5-flash-preview-05-20"; // Updated model name
     request_config.temperature = 0.4;
     request_config.max_tokens = 256;
     request_config.stream = false;

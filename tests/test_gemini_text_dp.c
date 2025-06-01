@@ -29,7 +29,7 @@
         printf("Disaster Party Context Initialized.\n");
 
         dp_request_config_t request_config = {0};
-        request_config.model = "gemini-1.5-flash-latest"; 
+        request_config.model = "gemini-2.5-flash-preview-05-20"; 
         request_config.temperature = 0.8;
         request_config.max_tokens = 300; // Increased max_tokens
         request_config.stream = false;
