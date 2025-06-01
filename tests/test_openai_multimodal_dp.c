@@ -1,4 +1,4 @@
-#include "diasterparty.h" 
+#include "disasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
@@ -32,7 +32,7 @@ int main() {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gpt-4o"; // Or "gpt-4-vision-preview"
+    request_config.model = "gpt-4o"; 
     request_config.temperature = 0.5;
     request_config.max_tokens = 300;
     request_config.stream = false;
@@ -53,7 +53,6 @@ int main() {
         return 1;
     }
 
-    // A publicly accessible image URL for testing
     const char* image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/640px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
     if (!dp_message_add_image_url_part(&messages[0], image_url)) {
         fprintf(stderr, "Failed to add image URL part to multimodal message.\n");

@@ -1,14 +1,13 @@
-#include "diasterparty.h" 
+#include "disasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
-#include <unistd.h> // For usleep, optional
+#include <unistd.h> 
 
-// Callback function to handle streamed tokens for OpenAI
 int openai_stream_handler_dp(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
         fprintf(stderr, "\nStream Error: %s\n", error_msg);
-        return 1; // Signal to stop if error
+        return 1; 
     }
     if (token) {
         printf("%s", token);
@@ -17,7 +16,7 @@ int openai_stream_handler_dp(const char* token, void* user_data, bool is_final, 
     if (is_final) {
         printf("\n[STREAM END - OpenAI with Disaster Party]\n");
     }
-    return 0; // Continue streaming
+    return 0; 
 }
 
 int main() {
@@ -52,7 +51,7 @@ int main() {
     request_config.model = "gpt-3.5-turbo"; 
     request_config.temperature = 0.7;
     request_config.max_tokens = 200;
-    request_config.stream = true; // CRITICAL: Enable streaming
+    request_config.stream = true; 
 
     dp_message_t messages[1];
     request_config.messages = messages;
@@ -76,16 +75,16 @@ int main() {
     
     int result = dp_perform_streaming_completion(context, &request_config, openai_stream_handler_dp, NULL, &response_status);
 
-    printf("\n---\n"); // Ensure this newline is after all streamed output
-    if (result == 0) { // dp_perform_streaming_completion returns 0 if setup was OK and stream ended (even with handled API errors)
+    printf("\n---\n"); 
+    if (result == 0) { 
         printf("Streaming completed. HTTP Status: %ld\n", response_status.http_status_code);
         if (response_status.finish_reason) {
             printf("Finish Reason: %s\n", response_status.finish_reason);
         }
-        if (response_status.error_message) { // This would be setup errors or unhandled stream errors.
+        if (response_status.error_message) { 
              fprintf(stderr, "Overall operation reported an error: %s\n", response_status.error_message);
         }
-    } else { // result != 0 means a significant setup/transport error before or during stream start
+    } else { 
         fprintf(stderr, "Streaming request setup failed. HTTP Status: %ld\n", response_status.http_status_code);
         if (response_status.error_message) {
             fprintf(stderr, "Error: %s\n", response_status.error_message);
@@ -97,8 +96,6 @@ int main() {
     dp_destroy_context(context);
     curl_global_cleanup();
     printf("OpenAI streaming test (Disaster Party) finished.\n");
-    // Main should return 0 if the test logic considers it a pass, even if the API call had an error handled.
-    // For simplicity, returning based on dp_perform_streaming_completion result.
     return (result == 0 && response_status.error_message == NULL) ? 0 : 1;
 }
 

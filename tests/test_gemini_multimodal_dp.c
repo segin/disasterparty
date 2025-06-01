@@ -1,9 +1,8 @@
-#include "diasterparty.h" 
+#include "disasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
 
-// Simple Base64 encoder (from previous versions, ensure it's suitable or use a robust one)
 char* base64_encode(const unsigned char *data, size_t input_length) {
     const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     size_t output_length = 4 * ((input_length + 2) / 3);
@@ -71,7 +70,7 @@ int main(int argc, char *argv[]) {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gemini-1.5-flash-latest"; // Or "gemini-pro-vision"
+    request_config.model = "gemini-1.5-flash-latest"; 
     request_config.temperature = 0.4;
     request_config.max_tokens = 256;
     request_config.stream = false;
@@ -86,6 +85,7 @@ int main(int argc, char *argv[]) {
 
     if (!dp_message_add_text_part(&messages[0], "Describe this image.")) {
         fprintf(stderr, "Failed to add text part to Gemini multimodal message.\n");
+        dp_free_messages(messages, request_config.num_messages);
         dp_destroy_context(context); curl_global_cleanup(); return 1;
     }
 
@@ -103,12 +103,12 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Failed to add base64 image part to Gemini message.\n");
                 } else { printf("Added base64 image part (MIME: %s)\n", mime_type); }
             } else { fprintf(stderr, "Failed to base64 encode image data from %s.\n", image_path); }
-            free(image_buffer); // Free buffer after encoding
+            free(image_buffer); 
         } else { fprintf(stderr, "Failed to read image file %s.\n", image_path); }
     } else { printf("No image path provided. Sending text-only request to multimodal endpoint.\n"); }
 
     printf("Sending multimodal request to Gemini model: %s\n", request_config.model);
-    if (messages[0].num_parts > 0 && messages[0].parts[0].text) { // Check if text part exists
+    if (messages[0].num_parts > 0 && messages[0].parts[0].text) { 
       printf("Text prompt: %s\n", messages[0].parts[0].text);
     }
 

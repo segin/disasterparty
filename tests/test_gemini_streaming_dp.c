@@ -1,13 +1,12 @@
-#include "diasterparty.h" 
+#include "disasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
 
-// Callback function to handle streamed tokens for Gemini
 int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
         fprintf(stderr, "\nStream Error: %s\n", error_msg);
-        return 1; // Signal to stop
+        return 1; 
     }
     if (token) {
         printf("%s", token);
@@ -16,7 +15,7 @@ int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, 
     if (is_final) {
         printf("\n[STREAM END - Gemini (SSE) with Disaster Party]\n");
     }
-    return 0; // Continue streaming
+    return 0; 
 }
 
 int main() {
@@ -47,9 +46,7 @@ int main() {
     request_config.model = "gemini-1.5-flash-latest"; 
     request_config.temperature = 0.5;
     request_config.max_tokens = 250; 
-    // request_config.stream is not explicitly used by Gemini payload builder, 
-    // but dp_perform_streaming_completion uses the streaming endpoint for Gemini.
-
+    
     dp_message_t messages[1];
     request_config.messages = messages;
     request_config.num_messages = 1;
@@ -71,7 +68,7 @@ int main() {
     dp_response_t response_status = {0};
     int result = dp_perform_streaming_completion(context, &request_config, gemini_stream_handler_dp, NULL, &response_status);
 
-    printf("\n---\n"); // Ensure this newline is after all streamed output
+    printf("\n---\n"); 
     if (result == 0) {
         printf("Gemini Streaming completed. HTTP Status: %ld\n", response_status.http_status_code);
          if (response_status.finish_reason) {

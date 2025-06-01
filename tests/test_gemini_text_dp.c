@@ -1,4 +1,4 @@
-#include "diasterparty.h" 
+#include "disasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
