@@ -161,6 +161,12 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                         snprintf(data_uri, data_uri_len, "data:%s;base64,%s", part->image_base64.mime_type, part->image_base64.data);
                         cJSON_AddStringToObject(img_url_obj, "url", data_uri);
                         free(data_uri);
+                    } else {
+                        // Handle malloc failure for data_uri if necessary
+                        cJSON_Delete(part_obj); // Clean up partially created part_obj
+                        cJSON_Delete(img_url_obj);
+                        cJSON_Delete(root);
+                        return NULL;
                     }
                     cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
@@ -269,13 +275,12 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                 if (content) {
                     cJSON *parts_array = cJSON_GetObjectItemCaseSensitive(content, "parts");
                     if (cJSON_IsArray(parts_array) && cJSON_GetArraySize(parts_array) > 0) {
-                        // Iterate through parts to find a text part, in case there are multiple parts
                         cJSON* part_item = NULL;
                         cJSON_ArrayForEach(part_item, parts_array) {
                             cJSON *text_item = cJSON_GetObjectItemCaseSensitive(part_item, "text");
                             if (cJSON_IsString(text_item) && text_item->valuestring) {
                                 extracted_text = dp_internal_strdup(text_item->valuestring);
-                                break; // Found a text part
+                                break; 
                             }
                         }
                     }
@@ -360,6 +365,14 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
 
             if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
+
+                // ---- START GEMINI DEBUGGING ----
+                if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                    fprintf(stderr, "\n[DEBUG-GEMINI-RAW-JSON]: <%s>\n", json_str);
+                    fflush(stderr);
+                }
+                // ---- END GEMINI DEBUGGING ----
+
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
                     if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup("done_marker");
@@ -367,12 +380,18 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 }
 
                 cJSON *json_chunk = cJSON_Parse(json_str);
-                if (json_chunk) {
+                if (!json_chunk) {
+                    if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                        const char *error_ptr = cJSON_GetErrorPtr();
+                        fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string. Error near: %s\n", error_ptr ? error_ptr : "unknown");
+                        fflush(stderr);
+                    }
+                } else {
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
                         cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
                         if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
                             cJSON *choice = cJSON_GetArrayItem(choices, 0);
-                            if(choice) { // Ensure choice is not null
+                            if(choice) {
                                 cJSON *delta = cJSON_GetObjectItemCaseSensitive(choice, "delta");
                                 if (delta) {
                                     cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
@@ -390,54 +409,74 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                             }
                         }
                     } else if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) { 
+                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Successfully parsed JSON chunk.\n");
                         cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
-                        if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
+                        if (!cJSON_IsArray(candidates) || cJSON_GetArraySize(candidates) == 0) {
+                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'candidates' array not found or empty.\n");
+                        } else {
                             cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
-                            if(candidate) { // Ensure candidate is not null
+                            if (!candidate) fprintf(stderr, "[DEBUG-GEMINI-PARSE] First candidate is NULL.\n");
+                            else {
                                 cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
-                                if (content) {
+                                if (!content) fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'content' in candidate not found.\n");
+                                else {
                                     cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
-                                    if (cJSON_IsArray(parts)) { // Iterate through parts
-                                        cJSON* part_item = NULL;
-                                        cJSON_ArrayForEach(part_item, parts) {
-                                            cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item, "text");
-                                            if (cJSON_IsString(text) && text->valuestring && strlen(text->valuestring) > 0) {
-                                                // Append if already have a token from this chunk (multiple text parts)
-                                                if (extracted_token_str) { 
-                                                    char* temp_token = extracted_token_str;
-                                                    size_t new_len = strlen(temp_token) + strlen(text->valuestring);
-                                                    extracted_token_str = malloc(new_len + 1);
-                                                    if (extracted_token_str) {
-                                                        strcpy(extracted_token_str, temp_token);
-                                                        strcat(extracted_token_str, text->valuestring);
+                                    if (!cJSON_IsArray(parts)) { // Check if it's an array
+                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'parts' in content not found or not an array.\n");
+                                    } else {
+                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Found 'parts' array, size: %d\n", cJSON_GetArraySize(parts));
+                                        cJSON* part_item_iter = NULL;
+                                        cJSON_ArrayForEach(part_item_iter, parts) { 
+                                            if(part_item_iter){
+                                                cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item_iter, "text");
+                                                if (cJSON_IsString(text) && text->valuestring) {
+                                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text from a part: '%s' (len: %zu)\n", text->valuestring, strlen(text->valuestring));
+                                                    if (strlen(text->valuestring) > 0) {
+                                                        if (!extracted_token_str) { 
+                                                            extracted_token_str = dp_internal_strdup(text->valuestring);
+                                                        } else { 
+                                                            char* old_token = extracted_token_str;
+                                                            size_t new_len = strlen(old_token) + strlen(text->valuestring);
+                                                            extracted_token_str = malloc(new_len + 1);
+                                                            if (extracted_token_str) {
+                                                                strcpy(extracted_token_str, old_token);
+                                                                strcat(extracted_token_str, text->valuestring);
+                                                                free(old_token);
+                                                            } else {
+                                                                extracted_token_str = old_token; 
+                                                                // Log malloc failure
+                                                                fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Malloc failed for concatenating token.\n");
+                                                            }
+                                                        }
+                                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Current accumulated token: '%s'\n", extracted_token_str ? extracted_token_str : "(null)");
+                                                    } else {
+                                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text is empty string.\n");
                                                     }
-                                                    free(temp_token);
                                                 } else {
-                                                    extracted_token_str = dp_internal_strdup(text->valuestring);
+                                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'text' field not found or not a string in a part.\n");
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                if (!processor->finish_reason_capture) {
-                                    cJSON *reason = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
-                                    if (cJSON_IsString(reason) && reason->valuestring) {
-                                        processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
-                                        is_final_for_this_event = true;
-                                    }
+                                cJSON *reason_cand = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
+                                if (cJSON_IsString(reason_cand) && reason_cand->valuestring) {
+                                    fprintf(stderr, "[DEBUG-GEMINI-PARSE] Candidate finishReason: '%s'\n", reason_cand->valuestring);
+                                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_cand->valuestring);
+                                    is_final_for_this_event = true;
                                 }
                             }
                         }
-                        if (!processor->finish_reason_capture) { 
-                             cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(json_chunk, "promptFeedback");
-                             if (prompt_feedback) {
-                                 cJSON *reason = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
-                                 if (cJSON_IsString(reason) && reason->valuestring) {
-                                     processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
-                                     is_final_for_this_event = true;
-                                 }
-                             }
+                        cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(json_chunk, "promptFeedback");
+                        if (prompt_feedback) {
+                            cJSON *reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
+                            if (cJSON_IsString(reason_pf) && reason_pf->valuestring) {
+                                fprintf(stderr, "[DEBUG-GEMINI-PARSE] PromptFeedback finishReason: '%s'\n", reason_pf->valuestring);
+                                if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_pf->valuestring);
+                                is_final_for_this_event = true;
+                            }
                         }
+                        fflush(stderr); 
                     }
                     cJSON_Delete(json_chunk);
                 } 
@@ -571,7 +610,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 if(error_obj){
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if(cJSON_IsString(msg_item) && msg_item->valuestring){
-                        api_err_detail = msg_item->valuestring; // Points into parsed cJSON, careful with lifetime
+                        api_err_detail = msg_item->valuestring; 
                     }
                 }
              }
