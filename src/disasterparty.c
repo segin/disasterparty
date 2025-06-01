@@ -1,5 +1,5 @@
 #define _GNU_SOURCE 
-#include "disasterparty.h" // Corrected include
+#include "disasterparty.h" 
 #include <curl/curl.h>
 #include <cjson/cJSON.h> 
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const char* DISASTERPARTY_USER_AGENT = "disasterparty_c/" DP_VERSION; // Corrected user agent name
+const char* DISASTERPARTY_USER_AGENT = "disasterparty_c/" DP_VERSION;
 
 
 // Internal context structure
@@ -151,12 +151,10 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                     cJSON_AddStringToObject(img_url_obj, "url", part->image_url);
                     cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
-                 // OpenAI base64 image handling: data URI in image_url part
                 else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
-                    cJSON_AddStringToObject(part_obj, "type", "image_url"); // Still image_url type
+                    cJSON_AddStringToObject(part_obj, "type", "image_url"); 
                     cJSON *img_url_obj = cJSON_CreateObject();
                     char* data_uri;
-                    // Max length: "data:" + mime_type_len + ";base64," + data_len + 1 for null
                     size_t data_uri_len = strlen("data:") + strlen(part->image_base64.mime_type) + strlen(";base64,") + strlen(part->image_base64.data) + 1;
                     data_uri = malloc(data_uri_len);
                     if (data_uri) {
@@ -235,7 +233,6 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
 
     cJSON *root = cJSON_Parse(json_response_str);
     if (!root) {
-        // fprintf(stderr, "cJSON_Parse error: %s\n", cJSON_GetErrorPtr()); // Useful for debugging
         return NULL;
     }
 
@@ -272,11 +269,13 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                 if (content) {
                     cJSON *parts_array = cJSON_GetObjectItemCaseSensitive(content, "parts");
                     if (cJSON_IsArray(parts_array) && cJSON_GetArraySize(parts_array) > 0) {
-                        cJSON *first_part = cJSON_GetArrayItem(parts_array, 0);
-                        if (first_part) {
-                            cJSON *text_item = cJSON_GetObjectItemCaseSensitive(first_part, "text");
+                        // Iterate through parts to find a text part, in case there are multiple parts
+                        cJSON* part_item = NULL;
+                        cJSON_ArrayForEach(part_item, parts_array) {
+                            cJSON *text_item = cJSON_GetObjectItemCaseSensitive(part_item, "text");
                             if (cJSON_IsString(text_item) && text_item->valuestring) {
                                 extracted_text = dp_internal_strdup(text_item->valuestring);
+                                break; // Found a text part
                             }
                         }
                     }
@@ -342,7 +341,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             const char* err_msg = "Event segment memory allocation failed";
              processor->user_callback(NULL, processor->user_data, true, err_msg);
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
-            processor->stop_streaming_signal = true; // Critical error, stop
+            processor->stop_streaming_signal = true; 
             break; 
         }
         strncpy(event_data_segment, current_event_start, event_len);
@@ -373,18 +372,20 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                         cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
                         if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
                             cJSON *choice = cJSON_GetArrayItem(choices, 0);
-                            cJSON *delta = cJSON_GetObjectItemCaseSensitive(choice, "delta");
-                            if (delta) {
-                                cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
-                                if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
-                                    extracted_token_str = dp_internal_strdup(content->valuestring);
+                            if(choice) { // Ensure choice is not null
+                                cJSON *delta = cJSON_GetObjectItemCaseSensitive(choice, "delta");
+                                if (delta) {
+                                    cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
+                                    if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
+                                        extracted_token_str = dp_internal_strdup(content->valuestring);
+                                    }
                                 }
-                            }
-                            if (!processor->finish_reason_capture) {
-                                cJSON *reason = cJSON_GetObjectItemCaseSensitive(choice, "finish_reason");
-                                if (cJSON_IsString(reason) && reason->valuestring) {
-                                    processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
-                                    is_final_for_this_event = true;
+                                if (!processor->finish_reason_capture) {
+                                    cJSON *reason = cJSON_GetObjectItemCaseSensitive(choice, "finish_reason");
+                                    if (cJSON_IsString(reason) && reason->valuestring) {
+                                        processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                        is_final_for_this_event = true;
+                                    }
                                 }
                             }
                         }
@@ -392,22 +393,38 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                         cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
                         if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
                             cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
-                            cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
-                            if (content) {
-                                cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
-                                if (cJSON_IsArray(parts) && cJSON_GetArraySize(parts) > 0) {
-                                    cJSON *part = cJSON_GetArrayItem(parts, 0);
-                                    cJSON *text = cJSON_GetObjectItemCaseSensitive(part, "text");
-                                    if (cJSON_IsString(text) && text->valuestring && strlen(text->valuestring) > 0) {
-                                        extracted_token_str = dp_internal_strdup(text->valuestring);
+                            if(candidate) { // Ensure candidate is not null
+                                cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
+                                if (content) {
+                                    cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
+                                    if (cJSON_IsArray(parts)) { // Iterate through parts
+                                        cJSON* part_item = NULL;
+                                        cJSON_ArrayForEach(part_item, parts) {
+                                            cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item, "text");
+                                            if (cJSON_IsString(text) && text->valuestring && strlen(text->valuestring) > 0) {
+                                                // Append if already have a token from this chunk (multiple text parts)
+                                                if (extracted_token_str) { 
+                                                    char* temp_token = extracted_token_str;
+                                                    size_t new_len = strlen(temp_token) + strlen(text->valuestring);
+                                                    extracted_token_str = malloc(new_len + 1);
+                                                    if (extracted_token_str) {
+                                                        strcpy(extracted_token_str, temp_token);
+                                                        strcat(extracted_token_str, text->valuestring);
+                                                    }
+                                                    free(temp_token);
+                                                } else {
+                                                    extracted_token_str = dp_internal_strdup(text->valuestring);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                            if (!processor->finish_reason_capture) {
-                                cJSON *reason = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
-                                if (cJSON_IsString(reason) && reason->valuestring) {
-                                    processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
-                                    is_final_for_this_event = true;
+                                if (!processor->finish_reason_capture) {
+                                    cJSON *reason = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
+                                    if (cJSON_IsString(reason) && reason->valuestring) {
+                                        processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                        is_final_for_this_event = true;
+                                    }
                                 }
                             }
                         }
@@ -554,7 +571,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 if(error_obj){
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if(cJSON_IsString(msg_item) && msg_item->valuestring){
-                        api_err_detail = msg_item->valuestring;
+                        api_err_detail = msg_item->valuestring; // Points into parsed cJSON, careful with lifetime
                     }
                 }
              }
@@ -648,7 +665,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !final_stream_error) {
             final_stream_error = processor.buffer_size > 0 ? processor.buffer : "HTTP error occurred during stream";
         }
-        // Call user callback one last time to signal end or error from transport/HTTP level
         processor.user_callback(NULL, processor.user_data, true, final_stream_error);
     }
     
@@ -658,7 +674,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         response->finish_reason = dp_internal_strdup("completed");
     }
 
-    // Populate response->error_message for overall function status
     if (res != CURLE_OK && !response->error_message) {
         asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
@@ -668,7 +683,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     if (processor.accumulated_error_during_stream) {
         if (response->error_message) {
              char* combined_error;
-             // Avoid duplicating error message if it's already part of the main error
              if (strstr(response->error_message, processor.accumulated_error_during_stream) == NULL) {
                 asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
                 free(response->error_message);
@@ -714,7 +728,7 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
                 }
             }
             free(messages[i].parts);
-            messages[i].parts = NULL; // Avoid double free if called again
+            messages[i].parts = NULL; 
             messages[i].num_parts = 0;
         }
     }
