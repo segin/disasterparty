@@ -1,0 +1,60 @@
+.\" Man page for dp_free_messages from libdisasterparty
+.TH DP_FREE_MESSAGES 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_free_messages \- free content of an array of Disaster Party messages
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_free_messages(dp_message_t *" messages ", size_t " num_messages ");"
+
+.SH DESCRIPTION
+The
+.B dp_free_messages()
+function deallocates the dynamically allocated memory within an array of
+.BR dp_message_t
+structures. For each message in the array, it frees the content of all its parts
+(e.g., text, image URLs, base64 data and mime types) and the array of parts itself.
+
+This function is useful for cleaning up messages that were constructed using functions like
+.BR dp_message_add_text_part (3),
+.BR dp_message_add_image_url_part (3),
+or
+.BR dp_message_add_base64_image_part (3),
+where internal strings and arrays are dynamically allocated.
+
+This function does not free the
+.I messages
+array itself if it was dynamically allocated by the caller; it only frees the
+contents pointed to by each element within the array.
+Passing a NULL
+.I messages
+pointer or a
+.I num_messages
+of 0 is handled safely.
+
+.SH PARAMETERS
+.TP
+.B dp_message_t *\fImessages\fP
+A pointer to the array of Disaster Party message structures. Can be NULL.
+.TP
+.B size_t \fInum_messages\fP
+The number of messages in the array.
+
+.SH RETURN VALUE
+This function does not return a value.
+
+.SH BUGS
+Report bugs to segin2005@gmail.com.
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_message_add_text_part (3),
+.BR dp_message_add_image_url_part (3),
+.BR dp_message_add_base64_image_part (3),
+.BR disasterparty (7)
+

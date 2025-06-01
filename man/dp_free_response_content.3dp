@@ -1,0 +1,60 @@
+.\" Man page for dp_free_response_content from libdisasterparty
+.TH DP_FREE_RESPONSE_CONTENT 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_free_response_content \- free content of a Disaster Party response structure
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_free_response_content(dp_response_t *" response ");"
+
+.SH DESCRIPTION
+The
+.B dp_free_response_content()
+function deallocates the dynamically allocated memory within a
+.BR dp_response_t
+structure. This includes freeing the text content of any response parts,
+the array of parts itself (if allocated for non-streaming responses),
+any error message string, and any finish reason string.
+
+This function should be called on any
+.BR dp_response_t
+structure that was passed to
+.BR dp_perform_completion (3)
+or
+.BR dp_perform_streaming_completion (3),
+regardless of whether the API call was successful or an error occurred,
+to prevent memory leaks.
+
+After calling this function, the pointers within the
+.I response
+structure (like
+.I response->parts ,
+.I response->error_message ,
+.I response->finish_reason )
+will be invalid. The structure itself is not freed if it was stack-allocated;
+only its internal dynamically allocated contents are freed.
+Passing a NULL pointer to this function is a safe no-op.
+
+.SH PARAMETERS
+.TP
+.B dp_response_t *\fIresponse\fP
+A pointer to the Disaster Party response structure whose content is to be freed.
+Can be NULL.
+
+.SH RETURN VALUE
+This function does not return a value.
+
+.SH BUGS
+Report bugs to segin2005@gmail.com.
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_perform_completion (3),
+.BR dp_perform_streaming_completion (3),
+.BR disasterparty (7)
+

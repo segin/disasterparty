@@ -1,0 +1,45 @@
+.\" Man page for dp_destroy_context from libdisasterparty
+.TH DP_DESTROY_CONTEXT 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_destroy_context \- destroy a Disaster Party LLM client context
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_destroy_context(dp_context_t *" context ");"
+
+.SH DESCRIPTION
+The
+.B dp_destroy_context()
+function deallocates a
+.BR dp_context_t
+previously created by
+.BR dp_init_context (3).
+It frees all resources associated with the context, including the stored API key
+and base URL.
+
+After calling this function, the
+.I context
+pointer should not be used again. Passing a NULL pointer to this function is a
+safe no-op.
+
+.SH PARAMETERS
+.TP
+.B dp_context_t *\fIcontext\fP
+A pointer to the Disaster Party context to be destroyed. Can be NULL.
+
+.SH RETURN VALUE
+This function does not return a value.
+
+.SH BUGS
+Report bugs to segin2005@gmail.com.
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR disasterparty (7)
+

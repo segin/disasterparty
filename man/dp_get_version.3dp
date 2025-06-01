@@ -1,0 +1,48 @@
+.\" Man page for dp_get_version from libdisasterparty
+.\" Process this file with:
+.\" groff -man -Tascii dp_get_version.3dp | less
+.\" or to generate for installation (often done by make):
+.\" groff -man dp_get_version.3dp > dp_get_version.3
+.TH DP_GET_VERSION 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_get_version \- get the version string of the Disaster Party library
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "const char *dp_get_version(void);"
+
+.SH DESCRIPTION
+The
+.B dp_get_version()
+function returns a constant string that represents the current version of the
+Disaster Party library. The version string follows a semantic versioning format
+(e.g., "0.1.0").
+
+.SH RETURN VALUE
+This function returns a pointer to a null-terminated string containing the
+library version. This string should not be modified or freed by the caller,
+as it points to static library data.
+
+.SH EXAMPLES
+.nf
+#include <stdio.h>
+#include <disasterparty.h>
+
+int main(void) {
+    printf("Using Disaster Party library version: %s\n", dp_get_version());
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR disasterparty (7) (if a general library man page exists)
+
+.SH BUGS
+No known bugs. Report bugs to segin2005@gmail.com.
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+
