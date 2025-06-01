@@ -1,6 +1,6 @@
 # Disaster Party LLM Client Library
 
-Version: 0.1.0
+Version: 0.1.1
 
 A C library for interacting with OpenAI-compatible and Google Gemini LLM APIs,
 with a focus on creating delightful chaos. Supports text and multimodal inputs,

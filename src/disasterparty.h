@@ -1,8 +1,8 @@
-#ifndef DISASTERPARTY_H // Corrected include guard
+#ifndef DISASTERPARTY_H 
 #define DISASTERPARTY_H
 
-#include <stddef.h> // For size_t
-#include <stdbool.h> // For bool
+#include <stddef.h> 
+#include <stdbool.h> 
 
 // Forward declaration for libcurl and cJSON
 typedef void CURL;
@@ -11,10 +11,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.1.0" // dp_ prefix for version macro is fine
+#define DP_VERSION "0.1.1" // Updated version
 #define DP_VERSION_MAJOR 0
 #define DP_VERSION_MINOR 1
-#define DP_VERSION_PATCH 0
+#define DP_VERSION_PATCH 1 // Updated patch version
 
 
 /**

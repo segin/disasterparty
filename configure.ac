@@ -1,6 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([Disaster Party], [0.1.0], [segin2005@gmail.com], [disasterparty], [https://example.com/disasterparty])
-# AC_DEFINE_UNQUOTED(DP_VERSION, "${PACKAGE_VERSION}", [Define to library version]) 
+AC_INIT([Disaster Party], [0.1.1], [segin2005@gmail.com], [disasterparty], [https://example.com/disasterparty]) # Updated version
 AC_CONFIG_SRCDIR([src/disasterparty.c]) 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -34,7 +33,11 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-DP_LT_VERSION="0:1:0" 
+# For version 0.1.1 (from 0.1.0): current=0, revision=2, age=0
+# Real library name: libdisasterparty.so.0.2.0
+# Soname:            libdisasterparty.so.0 (current - age)
+# Linker name:       libdisasterparty.so (symlink to soname)
+DP_LT_VERSION="0:2:0" # Updated libtool version (current:revision:age)
 AC_SUBST(DP_LT_VERSION)
 AC_SUBST(PACKAGE_VERSION) 
 
