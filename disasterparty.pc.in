@@ -8,5 +8,6 @@ Description: LLM Client Library for OpenAI & Gemini, causing delightful chaos.
 Version: @VERSION@
 Requires: libcurl >= 7.20.0, libcjson >= 1.7.10
 Libs: -L${libdir} -ldisasterparty
-Libs.private: # cURL and cJSON handled by Requires
+Libs.private: # Dependencies handled by Requires
 Cflags: -I${includedir}/disasterparty
+
