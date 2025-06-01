@@ -1,5 +1,5 @@
 #include "disasterparty.h" 
-#include <curl/curl.h> // Added for libcurl functions
+#include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
@@ -15,7 +15,10 @@ int openai_stream_handler_dp(const char* token, void* user_data, bool is_final, 
         fflush(stdout); 
     }
     if (is_final) {
-        printf("\n[STREAM END - OpenAI with Disaster Party]\n");
+        // Only print stream end if no error message, as error implies abrupt end.
+        if (!error_msg) {
+             printf("\n[STREAM END - OpenAI with Disaster Party]\n");
+        }
     }
     return 0; 
 }
@@ -49,7 +52,7 @@ int main() {
     printf("Disaster Party Context Initialized for Streaming Test.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gpt-3.5-turbo"; 
+    request_config.model = "gpt-4.1-nano"; // Updated model name
     request_config.temperature = 0.7;
     request_config.max_tokens = 200;
     request_config.stream = true; 
@@ -76,12 +79,21 @@ int main() {
     
     int result = dp_perform_streaming_completion(context, &request_config, openai_stream_handler_dp, NULL, &response_status);
 
+    // Newline after streaming output, before final status.
+    // The callback handles printing the [STREAM END] message.
+    // If no tokens were printed by the callback, ensure a newline is printed here.
+    // For simplicity, let's assume the callback's final message provides enough separation.
+    // We will just print a newline if one wasn't printed by the callback.
+    // However, the callback *does* print a newline in its [STREAM END] message.
     printf("\n---\n"); 
+    
     if (result == 0) { 
         printf("Streaming completed. HTTP Status: %ld\n", response_status.http_status_code);
         if (response_status.finish_reason) {
             printf("Finish Reason: %s\n", response_status.finish_reason);
         }
+        // error_message in response_status for streaming indicates setup/transport errors
+        // or unhandled errors propagated from the stream end.
         if (response_status.error_message) { 
              fprintf(stderr, "Overall operation reported an error: %s\n", response_status.error_message);
         }
@@ -97,6 +109,6 @@ int main() {
     dp_destroy_context(context);
     curl_global_cleanup();
     printf("OpenAI streaming test (Disaster Party) finished.\n");
-    return (result == 0 && response_status.error_message == NULL) ? 0 : 1;
+    return (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200) ? 0 : 1;
 }
 

@@ -1,5 +1,5 @@
 #include "disasterparty.h" 
-#include <curl/curl.h> // Added for libcurl functions
+#include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
@@ -33,7 +33,7 @@ int main() {
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gpt-3.5-turbo"; 
+    request_config.model = "gpt-4.1-nano"; // Updated model name
     request_config.temperature = 0.7;
     request_config.max_tokens = 150;
     request_config.stream = false; 
