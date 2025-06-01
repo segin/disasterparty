@@ -1,0 +1,114 @@
+.\" Man page for dp_list_models from libdisasterparty
+.TH DP_LIST_MODELS 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_list_models \- list available models from the LLM provider
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_list_models(dp_context_t *" context ", dp_model_list_t **" model_list_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_list_models()
+function retrieves a list of available models from the LLM provider configured
+in the given
+.BR dp_context_t .
+It makes a GET request to the appropriate API endpoint (e.g., /v1/models for OpenAI,
+/v1beta/models for Gemini) and parses the JSON response.
+
+The
+.I context
+argument must be an initialized Disaster Party context.
+
+The
+.I model_list_out
+argument is a pointer to a
+.BR dp_model_list_t* .
+If the function is successful, it allocates a
+.BR dp_model_list_t
+structure, populates it with the retrieved model information, and stores a pointer
+to this structure in
+.IR *model_list_out .
+The caller is responsible for freeing this structure and its contents using
+.BR dp_free_model_list (3)
+when it is no longer needed. This should be done even if the function returns an
+error but
+.IR *model_list_out
+is non-NULL, as it might contain error details.
+
+.SH PARAMETERS
+.TP
+.B dp_context_t *\fIcontext\fP
+An initialized Disaster Party context.
+.TP
+.B dp_model_list_t **\fImodel_list_out\fP
+A pointer to a `dp_model_list_t*` that will be updated to point to the
+retrieved list of models.
+
+.SH RETURN VALUE
+Returns 0 on success (API call made and response parsed, which might include an empty list of models).
+Returns -1 on critical errors (e.g., invalid arguments, memory allocation failure,
+libcurl error, or if the API returns an error HTTP status).
+If -1 is returned,
+.I (*model_list_out)->error_message
+and
+.I (*model_list_out)->http_status_code
+(if `*model_list_out` is not NULL) may contain details of the failure.
+
+.SH STRUCTURES
+The
+.BR dp_model_info_t
+structure contains the following fields:
+.RS
+.TP
+.B char *model_id
+The unique identifier for the model (e.g., "gpt-4.1-nano" or "models/gemini-2.0-flash").
+.TP
+.B char *display_name
+A user-friendly display name for the model (more common with Gemini).
+.TP
+.B char *version
+The specific version string of the model (more common with Gemini).
+.TP
+.B char *description
+A brief description of the model (more common with Gemini).
+.TP
+.B long input_token_limit
+The maximum number of input tokens the model supports. May be 0 if not provided by the API.
+.TP
+.B long output_token_limit
+The maximum number of output tokens the model can generate. May be 0 if not provided by the API.
+.RE
+.PP
+The
+.BR dp_model_list_t
+structure contains:
+.RS
+.TP
+.B dp_model_info_t *models
+A dynamically allocated array of `dp_model_info_t` structures.
+.TP
+.B size_t count
+The number of models in the `models` array.
+.TP
+.B char *error_message
+An error message if the operation failed.
+.TP
+.B long http_status_code
+The HTTP status code of the API call.
+.RE
+
+.SH BUGS
+Report bugs to segin2005@gmail.com.
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_free_model_list (3),
+.BR disasterparty (7)
+
