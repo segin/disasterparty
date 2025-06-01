@@ -1,20 +1,17 @@
 # We are building a library
-lib_LTLIBRARIES = libdiasterparty.la
+lib_LTLIBRARIES = libdisasterparty.la # Corrected library name
 
 # Sources for the library
-libdiasterparty_la_SOURCES = diasterparty.c diasterparty.h
+libdisasterparty_la_SOURCES = diasterparty.c diasterparty.h # Corrected filenames
 
 # Libtool versioning
-libdiasterparty_la_LDFLAGS = -version-info $(DIASTERPARTY_LT_VERSION)
+libdisasterparty_la_LDFLAGS = -version-info $(DP_LT_VERSION) $(CURL_LIBS) $(CJSON_LIBS)
 
 # Headers to install
 # pkgincludedir is $(includedir)/<packagename> as defined in configure.ac
-pkgincludedir = $(includedir)/diasterparty
-pkginclude_HEADERS = diasterparty.h
+pkgincludedir = $(includedir)/disasterparty # Corrected directory name
+pkginclude_HEADERS = diasterparty.h # Corrected header name
 
-# Linker flags for libcurl if needed directly by the library (usually not, but good practice)
-libdiasterparty_la_LIBADD = $(CURL_LIBS)
-
-# AM_CPPFLAGS can be used to add include paths, e.g. -I$(top_srcdir)/include
-AM_CPPFLAGS = -I$(top_srcdir)/src # Ensure diasterparty.h is found if not in current dir
+# AM_CPPFLAGS can be used to add include paths
+AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
 
