@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h> // For isprint
 
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
@@ -315,49 +316,72 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
-    // ---- START VERY EARLY DEBUG ----
     if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        fprintf(stderr, "[DEBUG-GEMINI-LIBCURL-CHUNK] Received %zu bytes from libcurl:\n", realsize);
-        fwrite(contents, 1, realsize, stderr); // Print raw bytes
-        fprintf(stderr, "\n[DEBUG-GEMINI-LIBCURL-CHUNK-END]\n");
-        fflush(stderr);
+        fprintf(stderr, "[DEBUG-GEMINI-LIBCURL-CHUNK] Received %zu bytes from libcurl. Current buffer size: %zu\n", realsize, processor->buffer_size);
+        // fwrite(contents, 1, realsize, stderr); // Print raw bytes
+        // fprintf(stderr, "\n[DEBUG-GEMINI-LIBCURL-CHUNK-END]\n");
+        // fflush(stderr);
     }
-    // ---- END VERY EARLY DEBUG ----
 
-    if (processor->stop_streaming_signal) return 0;
+    if (processor->stop_streaming_signal) return 0; // User signaled to stop
 
-    size_t needed_capacity = processor->buffer_size + realsize + 1;
+    // Append new data to processor's buffer
+    size_t needed_capacity = processor->buffer_size + realsize + 1; // +1 for null terminator
     if (processor->buffer_capacity < needed_capacity) {
         size_t new_capacity = needed_capacity > processor->buffer_capacity * 2 ? needed_capacity : processor->buffer_capacity * 2;
-        if (new_capacity < 256) new_capacity = 256;
+        if (new_capacity < 1024) new_capacity = 1024; // Ensure a minimum reasonable capacity
         char* new_buf = realloc(processor->buffer, new_capacity);
         if (!new_buf) {
-            const char* err_msg = "Stream buffer memory allocation failed";
+            const char* err_msg = "Stream buffer memory re-allocation failed";
             processor->user_callback(NULL, processor->user_data, true, err_msg);
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
-            return 0;
+            return 0; // Signal error to libcurl
         }
         processor->buffer = new_buf;
         processor->buffer_capacity = new_capacity;
     }
     memcpy(processor->buffer + processor->buffer_size, contents, realsize);
     processor->buffer_size += realsize;
-    processor->buffer[processor->buffer_size] = '\0';
+    processor->buffer[processor->buffer_size] = '\0'; // Null-terminate the buffer
+
+    if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        fprintf(stderr, "[DEBUG-GEMINI-BUFFER-CONTENT-START] Accumulated buffer (size %zu):\n<", processor->buffer_size);
+        for(size_t k=0; k < processor->buffer_size; ++k) {
+            char c = processor->buffer[k];
+            if (c == '\n') fprintf(stderr, "\\n");
+            else if (c == '\r') fprintf(stderr, "\\r");
+            else if (isprint(c)) fprintf(stderr, "%c", c);
+            else fprintf(stderr, "[%02X]", (unsigned char)c);
+        }
+        fprintf(stderr, ">\n[DEBUG-GEMINI-BUFFER-CONTENT-END]\n");
+        fflush(stderr);
+    }
+
 
     char* current_event_start = processor->buffer;
-    size_t processed_total = 0;
+    size_t remaining_in_buffer = processor->buffer_size;
 
     while (true) {
         if (processor->stop_streaming_signal) break;
+
+        if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+            fprintf(stderr, "[DEBUG-GEMINI-SSE-LOOP-TOP] current_event_start points to: <%.30s> remaining_in_buffer: %zu\n", current_event_start, remaining_in_buffer);
+            fflush(stderr);
+        }
+        
         char* event_end = strstr(current_event_start, "\n\n");
-        if (!event_end) {
-            // If it's Gemini and we have some data but no \n\n, it might be an incomplete JSON chunk
-            // or a final non-SSE compliant message (e.g. error).
-            // For now, we rely on \n\n for SSE.
-            if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI && processor->buffer_size > 0) {
-                 fprintf(stderr, "[DEBUG-GEMINI-BUFFER-NOCRLFCRLF] Buffer has %zu bytes but no \\n\\n found yet. Current buffer head: <%.50s>\n", processor->buffer_size, current_event_start);
-                 fflush(stderr);
+
+        if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+            if (event_end) {
+                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Found '\\n\\n' at offset %ld from current_event_start.\n", event_end - current_event_start);
+            } else {
+                fprintf(stderr, "[DEBUG-GEMINI-SSE-SEPARATOR] Did NOT find '\\n\\n'. Will break from SSE processing loop.\n");
             }
+            fflush(stderr);
+        }
+
+        if (!event_end) {
+            // No complete SSE event found in the current buffer segment
             break; 
         }
 
@@ -373,41 +397,44 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         strncpy(event_data_segment, current_event_start, event_len);
         event_data_segment[event_len] = '\0';
         
-        processed_total += (event_len + 2); 
-        current_event_start = event_end + 2;
+        // Advance pointers for next iteration or buffer shifting
+        current_event_start = event_end + 2; // Move past the processed event and its "\n\n"
+        remaining_in_buffer -= (event_len + 2);
 
         char* line = event_data_segment;
         char* extracted_token_str = NULL; 
         bool is_final_for_this_event = false;
 
-        while (line && *line) {
+        while (line && *line) { // Process each line within the SSE event (e.g., "data: ...", "id: ...")
             char* next_line = strchr(line, '\n');
-            if (next_line) *next_line = '\0';
+            if (next_line) *next_line = '\0'; // Null-terminate current line for processing
 
             if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
 
                 if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                    fprintf(stderr, "\n[DEBUG-GEMINI-RAW-JSON-LINE]: <%s>\n", json_str);
+                    fprintf(stderr, "[DEBUG-GEMINI-RAW-JSON-LINE]: <%s>\n", json_str);
                     fflush(stderr);
                 }
 
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
                     if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup("done_marker");
-                    break;
+                    break; // Break from inner while loop (processing lines of current event)
                 }
 
                 cJSON *json_chunk = cJSON_Parse(json_str);
                 if (!json_chunk) {
                     if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
                         const char *error_ptr = cJSON_GetErrorPtr();
-                        fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string. Error near: %s\n", error_ptr ? error_ptr : "unknown");
+                        fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string from 'data:' line. Error near: %s. JSON was: <%s>\n", error_ptr ? error_ptr : "unknown", json_str);
                         fflush(stderr);
                     }
                 } else {
+                    // ... (cJSON parsing logic as in disasterparty_c_v8, with debug prints) ...
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-                        cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
+                        // ... (OpenAI parsing) ...
+                         cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
                         if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
                             cJSON *choice = cJSON_GetArrayItem(choices, 0);
                             if(choice) {
@@ -428,13 +455,13 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                             }
                         }
                     } else if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) { 
-                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Successfully parsed JSON chunk.\n");
+                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Successfully parsed JSON chunk from 'data:' line.\n");
                         cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
                         if (!cJSON_IsArray(candidates) || cJSON_GetArraySize(candidates) == 0) {
-                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'candidates' array not found or empty.\n");
+                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'candidates' array not found or empty in JSON chunk.\n");
                         } else {
                             cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
-                            if (!candidate) fprintf(stderr, "[DEBUG-GEMINI-PARSE] First candidate is NULL.\n");
+                            if (!candidate) fprintf(stderr, "[DEBUG-GEMINI-PARSE] First candidate is NULL in JSON chunk.\n");
                             else {
                                 cJSON *content = cJSON_GetObjectItemCaseSensitive(candidate, "content");
                                 if (!content) fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'content' in candidate not found.\n");
@@ -445,7 +472,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                     } else {
                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Found 'parts' array, size: %d\n", cJSON_GetArraySize(parts));
                                         cJSON* part_item_iter = NULL;
-                                        char* current_chunk_text = NULL; 
+                                        char* current_event_accumulated_text = NULL; 
 
                                         cJSON_ArrayForEach(part_item_iter, parts) { 
                                             if(part_item_iter){
@@ -453,31 +480,31 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                                 if (cJSON_IsString(text) && text->valuestring) {
                                                     fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text from a part: '%s' (len: %zu)\n", text->valuestring, strlen(text->valuestring));
                                                     if (strlen(text->valuestring) > 0) {
-                                                        if (!current_chunk_text) { 
-                                                            current_chunk_text = dp_internal_strdup(text->valuestring);
+                                                        if (!current_event_accumulated_text) { 
+                                                            current_event_accumulated_text = dp_internal_strdup(text->valuestring);
                                                         } else { 
-                                                            char* old_text = current_chunk_text;
+                                                            char* old_text = current_event_accumulated_text;
                                                             size_t new_len = strlen(old_text) + strlen(text->valuestring);
-                                                            current_chunk_text = malloc(new_len + 1);
-                                                            if (current_chunk_text) {
-                                                                strcpy(current_chunk_text, old_text);
-                                                                strcat(current_chunk_text, text->valuestring);
+                                                            current_event_accumulated_text = malloc(new_len + 1);
+                                                            if (current_event_accumulated_text) {
+                                                                strcpy(current_event_accumulated_text, old_text);
+                                                                strcat(current_event_accumulated_text, text->valuestring);
                                                                 free(old_text);
                                                             } else { 
-                                                                current_chunk_text = old_text; 
+                                                                current_event_accumulated_text = old_text; 
                                                                 fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Malloc failed for concatenating token.\n");
                                                             }
                                                         }
-                                                    } else {
-                                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text part is empty string.\n");
                                                     }
                                                 } else {
                                                     fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'text' field not found or not a string in a part.\n");
                                                 }
                                             }
                                         }
-                                        if (current_chunk_text) {
-                                            extracted_token_str = current_chunk_text; 
+                                        if (current_event_accumulated_text) {
+                                            // This token is for the current SSE event being processed
+                                            free(extracted_token_str); // Free previous if any from same event (should not happen with current logic)
+                                            extracted_token_str = current_event_accumulated_text; 
                                             fprintf(stderr, "[DEBUG-GEMINI-PARSE] Final accumulated token for this event: '%s'\n", extracted_token_str);
                                         } else {
                                             fprintf(stderr, "[DEBUG-GEMINI-PARSE] No text accumulated from parts for this event.\n");
@@ -505,11 +532,12 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                     }
                     cJSON_Delete(json_chunk);
                 } 
-            }
-            if (next_line) line = next_line + 1; else break;
-        }
+            } // End "data: " line processing
+            if (next_line) line = next_line + 1; else break; // Move to next line in event_data_segment
+        } // End while loop for lines in event_data_segment
         free(event_data_segment);
 
+        // Call user callback if a token was extracted for this event, or if it's a final event marker
         if (extracted_token_str) {
             if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
                  fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with token: '%s', is_final: %d\n", extracted_token_str, is_final_for_this_event);
@@ -519,23 +547,25 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 processor->stop_streaming_signal = true;
             }
             free(extracted_token_str);
-        } else if (is_final_for_this_event) { 
+            extracted_token_str = NULL; // Reset for next potential event in buffer
+        } else if (is_final_for_this_event) { // E.g. [DONE] marker or finish_reason without text
             if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with NULL token (final event).\n");
+                fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with NULL token (final event marker).\n");
                 fflush(stderr);
             }
             if (processor->user_callback(NULL, processor->user_data, true, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
         }
-        if (is_final_for_this_event) processor->stop_streaming_signal = true; 
-    }
+        if (is_final_for_this_event) processor->stop_streaming_signal = true; // Stop processing further SSE events
+    } // End while(true) loop for processing events in buffer
 
-    if (processed_total < processor->buffer_size) {
-        memmove(processor->buffer, processor->buffer + processed_total, processor->buffer_size - processed_total);
+    // Shift unprocessed data to the beginning of the buffer
+    if (remaining_in_buffer > 0 && current_event_start > processor->buffer) {
+        memmove(processor->buffer, current_event_start, remaining_in_buffer);
     }
-    processor->buffer_size -= processed_total;
-    if (processor->buffer_size < processor->buffer_capacity) {
+    processor->buffer_size = remaining_in_buffer;
+    if (processor->buffer_size < processor->buffer_capacity) { // Ensure null termination
         processor->buffer[processor->buffer_size] = '\0'; 
     }
     return realsize;
@@ -730,37 +760,31 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
-    if (!processor.stop_streaming_signal) { // If stream wasn't stopped by user callback
+    if (!processor.stop_streaming_signal) { 
         const char* final_stream_error = processor.accumulated_error_during_stream;
-        if (res != CURLE_OK && !final_stream_error) { // Curl error happened, and no prior stream processing error
+        if (res != CURLE_OK && !final_stream_error) { 
             final_stream_error = curl_easy_strerror(res);
-        } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !final_stream_error) { // HTTP error, and no prior stream processing error
-            // Try to get a more specific error from the remaining buffer if it looks like JSON
+        } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !final_stream_error) { 
             cJSON* error_json = cJSON_Parse(processor.buffer);
             if (error_json) {
                 cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(error_json, "error");
                 if (error_obj) {
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                        final_stream_error = msg_item->valuestring; // This points into cJSON object, copy if needed outside
-                                                                    // For callback, it's fine. For response->error_message, copy.
-                        if (response->error_message == NULL) { // Only set if not already set by a more specific error
+                        final_stream_error = msg_item->valuestring; 
+                        if (response->error_message == NULL) { 
                            response->error_message = dp_internal_strdup(final_stream_error);
                         }
                     }
                 }
                 cJSON_Delete(error_json);
             }
-            if (!final_stream_error && processor.buffer_size > 0) { // Fallback if not JSON error
-                 final_stream_error = processor.buffer; // Buffer might contain plain text error
+            if (!final_stream_error && processor.buffer_size > 0) { 
+                 final_stream_error = processor.buffer; 
             } else if (!final_stream_error) {
                 final_stream_error = "HTTP error occurred during stream";
             }
         }
-        // Call user callback one last time to signal end or error from transport/HTTP level
-        // unless it was already called with is_final=true from within the SSE loop.
-        // The logic for is_final_for_this_event should ideally cover this.
-        // This final call ensures the user knows the stream is definitively over.
         processor.user_callback(NULL, processor.user_data, true, final_stream_error);
     }
     
@@ -770,11 +794,9 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         response->finish_reason = dp_internal_strdup("completed");
     }
 
-    // Populate response->error_message for overall function status if not already set by stream processing
     if (res != CURLE_OK && !response->error_message) {
         asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
-         // Attempt to parse error from body if not already done
          char* temp_err_msg = NULL;
          if (processor.buffer_size > 0) {
             cJSON* error_json = cJSON_Parse(processor.buffer);
