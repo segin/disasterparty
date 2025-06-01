@@ -1,12 +1,13 @@
-#include "disaster_party.h" // Renamed
+#include "diasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
 
-int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, const char* error_msg) { // Renamed
+// Callback function to handle streamed tokens for Gemini
+int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
         fprintf(stderr, "\nStream Error: %s\n", error_msg);
-        return 1; 
+        return 1; // Signal to stop
     }
     if (token) {
         printf("%s", token);
@@ -15,7 +16,7 @@ int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, 
     if (is_final) {
         printf("\n[STREAM END - Gemini (SSE) with Disaster Party]\n");
     }
-    return 0; 
+    return 0; // Continue streaming
 }
 
 int main() {
@@ -31,9 +32,10 @@ int main() {
         curl_global_cleanup();
         return 1;
     }
+    printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL); // Renamed
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for Gemini.\n");
         curl_global_cleanup();
@@ -41,23 +43,24 @@ int main() {
     }
     printf("Disaster Party Context Initialized for Streaming Test.\n");
 
-    dp_request_config_t request_config = {0}; // Renamed
+    dp_request_config_t request_config = {0};
     request_config.model = "gemini-1.5-flash-latest"; 
     request_config.temperature = 0.5;
     request_config.max_tokens = 250; 
-    // request_config.stream is implicitly true for this function with Gemini
+    // request_config.stream is not explicitly used by Gemini payload builder, 
+    // but dp_perform_streaming_completion uses the streaming endpoint for Gemini.
 
-    dp_message_t messages[1]; // Renamed
+    dp_message_t messages[1];
     request_config.messages = messages;
     request_config.num_messages = 1;
 
-    messages[0].role = DP_ROLE_USER; // Renamed
+    messages[0].role = DP_ROLE_USER;
     messages[0].num_parts = 0;
     messages[0].parts = NULL;
-    if (!dp_message_add_text_part(&messages[0], "Explain the concept of recursion in programming as if you are teaching a beginner. Use a simple analogy. Stream your response using Disaster Party.")) { // Renamed
+    if (!dp_message_add_text_part(&messages[0], "Explain the concept of recursion in programming as if you are teaching a beginner. Use a simple analogy. Stream your response using Disaster Party.")) {
         fprintf(stderr, "Failed to add text part to Gemini message.\n");
-        dp_free_messages(messages, request_config.num_messages); // Renamed
-        dp_destroy_context(context); // Renamed
+        dp_free_messages(messages, request_config.num_messages);
+        dp_destroy_context(context);
         curl_global_cleanup();
         return 1;
     }
@@ -65,27 +68,30 @@ int main() {
     printf("Sending streaming request to Gemini model: %s\n", request_config.model);
     printf("Prompt: %s\n---\nStreaming Response (Gemini via SSE with Disaster Party):\n", messages[0].parts[0].text);
 
-    dp_response_t response_status = {0}; // Renamed
-    int result = dp_perform_streaming_completion(context, &request_config, gemini_stream_handler_dp, NULL, &response_status); // Renamed
+    dp_response_t response_status = {0};
+    int result = dp_perform_streaming_completion(context, &request_config, gemini_stream_handler_dp, NULL, &response_status);
 
-    printf("\n---\n");
+    printf("\n---\n"); // Ensure this newline is after all streamed output
     if (result == 0) {
         printf("Gemini Streaming completed. HTTP Status: %ld\n", response_status.http_status_code);
          if (response_status.finish_reason) {
             printf("Finish Reason: %s\n", response_status.finish_reason);
         }
+        if (response_status.error_message) {
+             fprintf(stderr, "Overall operation reported an error: %s\n", response_status.error_message);
+        }
     } else {
-        fprintf(stderr, "Gemini Streaming request failed. HTTP Status: %ld\n", response_status.http_status_code);
+        fprintf(stderr, "Gemini Streaming request setup failed. HTTP Status: %ld\n", response_status.http_status_code);
         if (response_status.error_message) {
             fprintf(stderr, "Error: %s\n", response_status.error_message);
         }
     }
 
-    dp_free_response_content(&response_status); // Renamed
-    dp_free_messages(messages, request_config.num_messages); // Renamed
-    dp_destroy_context(context); // Renamed
+    dp_free_response_content(&response_status);
+    dp_free_messages(messages, request_config.num_messages);
+    dp_destroy_context(context);
     curl_global_cleanup();
     printf("Gemini streaming test (Disaster Party) finished.\n");
-    return result == 0 ? 0 : 1;
+    return (result == 0 && response_status.error_message == NULL) ? 0 : 1;
 }
 

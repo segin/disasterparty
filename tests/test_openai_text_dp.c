@@ -1,4 +1,4 @@
-#include "disaster_party.h" // Renamed include
+#include "diasterparty.h" // Corrected include
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
@@ -19,10 +19,10 @@ int main() {
         return 1;
     }
 
+    printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using OpenAI API Key: ***\n");
-    printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1"); // Using actual default
+    printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1");
 
-    // Use renamed functions and types
     dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, base_url);
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for OpenAI.\n");
@@ -35,7 +35,7 @@ int main() {
     request_config.model = "gpt-3.5-turbo"; 
     request_config.temperature = 0.7;
     request_config.max_tokens = 150;
-    request_config.stream = false; // Explicitly non-streaming
+    request_config.stream = false; 
 
     dp_message_t messages[2];
     request_config.messages = messages;
@@ -55,7 +55,7 @@ int main() {
     messages[1].role = DP_ROLE_USER;
     messages[1].num_parts = 0; 
     messages[1].parts = NULL;
-    if (!dp_message_add_text_part(&messages[1], "Hello! Can you tell me a short joke?")) {
+    if (!dp_message_add_text_part(&messages[1], "Hello! Can you tell me a short joke involving the phrase 'Disaster Party'?")) {
         fprintf(stderr, "Failed to add text part to user message.\n");
         dp_free_messages(messages, request_config.num_messages);
         dp_destroy_context(context);
@@ -87,8 +87,9 @@ int main() {
     dp_free_response_content(&response);
     dp_free_messages(messages, request_config.num_messages); 
     dp_destroy_context(context);
+    
     curl_global_cleanup();
     printf("OpenAI text test (Disaster Party) finished.\n");
-    return result == 0 ? 0 : 1; // Ensure main returns 0 on success
+    return result == 0 ? 0 : 1; 
 }
 

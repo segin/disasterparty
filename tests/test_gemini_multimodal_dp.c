@@ -1,9 +1,9 @@
-#include "disaster_party.h" // Renamed
+#include "diasterparty.h" 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
 
-// Simple Base64 encoder (same as before)
+// Simple Base64 encoder (from previous versions, ensure it's suitable or use a robust one)
 char* base64_encode(const unsigned char *data, size_t input_length) {
     const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     size_t output_length = 4 * ((input_length + 2) / 3);
@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
         curl_global_cleanup();
         return 1;
     }
+    printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
 
     const char* image_path = NULL;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
     else { image_path = getenv("GEMINI_TEST_IMAGE_PATH"); if (image_path) printf("Using image path from GEMINI_TEST_IMAGE_PATH: %s\n", image_path);
            else { fprintf(stderr, "Usage: %s [path_to_image.jpg/png] or set GEMINI_TEST_IMAGE_PATH\n", argv[0]);}}
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL); // Renamed
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for Gemini (Multimodal).\n");
         curl_global_cleanup();
@@ -69,23 +70,23 @@ int main(int argc, char *argv[]) {
     }
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
-    dp_request_config_t request_config = {0}; // Renamed
-    request_config.model = "gemini-1.5-flash-latest"; 
+    dp_request_config_t request_config = {0};
+    request_config.model = "gemini-1.5-flash-latest"; // Or "gemini-pro-vision"
     request_config.temperature = 0.4;
     request_config.max_tokens = 256;
     request_config.stream = false;
 
-    dp_message_t messages[1]; // Renamed
+    dp_message_t messages[1];
     request_config.messages = messages;
     request_config.num_messages = 1;
 
-    messages[0].role = DP_ROLE_USER; // Renamed
+    messages[0].role = DP_ROLE_USER;
     messages[0].num_parts = 0;
     messages[0].parts = NULL;
 
-    if (!dp_message_add_text_part(&messages[0], "Describe this image.")) { // Renamed
+    if (!dp_message_add_text_part(&messages[0], "Describe this image.")) {
         fprintf(stderr, "Failed to add text part to Gemini multimodal message.\n");
-        dp_destroy_context(context); curl_global_cleanup(); return 1; // Renamed
+        dp_destroy_context(context); curl_global_cleanup(); return 1;
     }
 
     char* base64_image_data = NULL;
@@ -98,20 +99,24 @@ int main(int argc, char *argv[]) {
             base64_image_data = base64_encode(image_buffer, image_size);
             if (base64_image_data) {
                 const char* mime_type = (strstr(image_path, ".png") || strstr(image_path, ".PNG")) ? "image/png" : "image/jpeg";
-                if (!dp_message_add_base64_image_part(&messages[0], mime_type, base64_image_data)) { // Renamed
+                if (!dp_message_add_base64_image_part(&messages[0], mime_type, base64_image_data)) {
                     fprintf(stderr, "Failed to add base64 image part to Gemini message.\n");
                 } else { printf("Added base64 image part (MIME: %s)\n", mime_type); }
             } else { fprintf(stderr, "Failed to base64 encode image data from %s.\n", image_path); }
+            free(image_buffer); // Free buffer after encoding
         } else { fprintf(stderr, "Failed to read image file %s.\n", image_path); }
     } else { printf("No image path provided. Sending text-only request to multimodal endpoint.\n"); }
 
     printf("Sending multimodal request to Gemini model: %s\n", request_config.model);
-    printf("Text prompt: %s\n", messages[0].parts[0].text);
+    if (messages[0].num_parts > 0 && messages[0].parts[0].text) { // Check if text part exists
+      printf("Text prompt: %s\n", messages[0].parts[0].text);
+    }
 
-    dp_response_t response = {0}; // Renamed
-    int result = dp_perform_completion(context, &request_config, &response); // Renamed
 
-    if (result == 0 && response.num_parts > 0 && response.parts[0].type == DP_CONTENT_PART_TEXT) { // Renamed
+    dp_response_t response = {0};
+    int result = dp_perform_completion(context, &request_config, &response);
+
+    if (result == 0 && response.num_parts > 0 && response.parts[0].type == DP_CONTENT_PART_TEXT) {
         printf("\n--- Gemini Multimodal Completion Response (HTTP %ld) ---\n", response.http_status_code);
         printf("%s\n", response.parts[0].text);
         if (response.finish_reason) printf("Finish Reason: %s\n", response.finish_reason);
@@ -123,11 +128,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "---------------------------------------------------\n");
     }
 
-    free(base64_image_data); 
-    free(image_buffer);      
-    dp_free_response_content(&response); // Renamed
-    dp_free_messages(messages, request_config.num_messages); // Renamed
-    dp_destroy_context(context); // Renamed
+    free(base64_image_data);      
+    dp_free_response_content(&response);
+    dp_free_messages(messages, request_config.num_messages);
+    dp_destroy_context(context);
     curl_global_cleanup();
     printf("Gemini multimodal test (Disaster Party) finished.\n");
     return result == 0 ? 0 : 1;
