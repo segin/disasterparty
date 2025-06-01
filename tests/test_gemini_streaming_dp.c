@@ -48,9 +48,9 @@
         printf("Disaster Party Context Initialized for Streaming Test.\n");
 
         dp_request_config_t request_config = {0};
-        request_config.model = "gemini-2.5-flash-preview-05-20"; // Updated model name
+        request_config.model = "gemini-2.0-flash";
         request_config.temperature = 0.5;
-        request_config.max_tokens = 300; 
+        request_config.max_tokens = 2048; 
         
         dp_message_t messages[1];
         request_config.messages = messages;

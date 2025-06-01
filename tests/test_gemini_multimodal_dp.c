@@ -72,9 +72,9 @@ int main(int argc, char *argv[]) {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gemini-2.5-flash-preview-05-20"; // Updated model name
+    request_config.model = "gemini-2.0-flash";
     request_config.temperature = 0.4;
-    request_config.max_tokens = 256;
+    request_config.max_tokens = 2048;
     request_config.stream = false;
 
     dp_message_t messages[1];
