@@ -3,9 +3,10 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: diasterparty
-Description: LLM Client Library for causing delightful chaos (OpenAI & Gemini)
+Name: Disaster Party
+Description: LLM Client Library for OpenAI & Gemini, causing delightful chaos.
 Version: @VERSION@
-Libs: -L${libdir} -ldiasterparty
-Libs.private: @LIBS@
-Cflags: -I${includedir}/diasterparty
+Requires: libcurl >= 7.20.0, libcjson >= 1.7.10
+Libs: -L${libdir} -ldisasterparty
+Libs.private: # cURL and cJSON handled by Requires
+Cflags: -I${includedir}/disasterparty
