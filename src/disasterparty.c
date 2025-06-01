@@ -10,7 +10,7 @@
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const char* DISASTERPARTY_USER_AGENT = "disasterparty_c/" DP_VERSION;
+const char* DISASTERPARTY_USER_AGENT = "disasterparty/" DP_VERSION; // Updated User-Agent
 
 
 // Internal context structure
@@ -165,7 +165,6 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                         cJSON_AddStringToObject(img_url_obj, "url", data_uri);
                         free(data_uri);
                     } else {
-                        // fprintf(stderr, "Error: malloc failed for data_uri in OpenAI payload.\n"); // Debug removed
                         cJSON_Delete(img_url_obj); 
                         cJSON_Delete(part_obj);    
                         cJSON_Delete(root);        
@@ -316,14 +315,6 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
-    // Early debug for Gemini to see raw chunks from libcurl
-    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-    //     fprintf(stderr, "[DEBUG-GEMINI-LIBCURL-CHUNK] Received %zu bytes from libcurl. Current buffer size: %zu\n", realsize, processor->buffer_size);
-    //     // fwrite(contents, 1, realsize, stderr); // Optional: Print raw bytes
-    //     // fprintf(stderr, "\n[DEBUG-GEMINI-LIBCURL-CHUNK-END]\n");
-    //     // fflush(stderr);
-    // }
-
     if (processor->stop_streaming_signal) return 0;
 
     size_t needed_capacity = processor->buffer_size + realsize + 1;
@@ -343,20 +334,6 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     memcpy(processor->buffer + processor->buffer_size, contents, realsize);
     processor->buffer_size += realsize;
     processor->buffer[processor->buffer_size] = '\0';
-
-    // Debug: Print entire accumulated buffer content (for Gemini)
-    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-    //     fprintf(stderr, "[DEBUG-GEMINI-BUFFER-CONTENT-START] Accumulated buffer (size %zu):\n<", processor->buffer_size);
-    //     for(size_t k=0; k < processor->buffer_size; ++k) {
-    //         char c = processor->buffer[k];
-    //         if (c == '\n') fprintf(stderr, "\\n");
-    //         else if (c == '\r') fprintf(stderr, "\\r");
-    //         else if (isprint(c)) fprintf(stderr, "%c", c);
-    //         else fprintf(stderr, "[%02X]", (unsigned char)c);
-    //     }
-    //     fprintf(stderr, ">\n[DEBUG-GEMINI-BUFFER-CONTENT-END]\n");
-    //     fflush(stderr);
-    // }
 
     char* current_event_start = processor->buffer;
     size_t remaining_in_buffer = processor->buffer_size;
@@ -423,11 +400,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
 
                 cJSON *json_chunk = cJSON_Parse(json_str);
                 if (!json_chunk) {
-                    // if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                    //     const char *error_ptr = cJSON_GetErrorPtr();
-                    //     fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Failed to parse JSON string from 'data:' line. Error near: %s. JSON was: <%s>\n", error_ptr ? error_ptr : "unknown", json_str);
-                    //     fflush(stderr);
-                    // }
+                    // Error parsing JSON
                 } else {
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
                          cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
@@ -509,7 +482,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                     cJSON_Delete(json_chunk);
                 } 
             } 
-            if (next_line) line = next_line + 1 + (*(next_line-1) == '\r' ? -1 : 0) ; else break; // Adjusted for CRLF line endings in event
+            if (next_line) line = next_line + 1 + ((next_line > line && *(next_line-1) == '\r') ? -1 : 0) ; else break;
         } 
         free(event_data_segment);
 
@@ -536,10 +509,6 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     }
     return realsize;
 }
-
-// ... (rest of the file: dp_perform_completion, dp_perform_streaming_completion, free functions, message adders remain the same) ...
-// Ensure these functions are present from disasterparty_c_v8 or your latest working version.
-// The ... (rest of the file) ... part will be identical to the previous disasterparty_c_v8.
 
 int dp_perform_completion(dp_context_t* context, const dp_request_config_t* request_config, dp_response_t* response) {
     if (!context || !request_config || !response) {
@@ -664,6 +633,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     curl_easy_cleanup(curl);
     return response->error_message ? -1 : 0;
 }
+
 
 int dp_perform_streaming_completion(dp_context_t* context, const dp_request_config_t* request_config,
                                     dp_stream_callback_t callback, void* user_data, dp_response_t* response) {
@@ -810,6 +780,253 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     curl_easy_cleanup(curl);
     return response->error_message ? -1 : 0;
 }
+
+void dp_free_response_content(dp_response_t* response) {
+    if (!response) return;
+    if (response->parts) {
+        for (size_t i = 0; i < response->num_parts; ++i) {
+            free(response->parts[i].text); 
+        }
+        free(response->parts);
+    }
+    free(response->error_message);
+    free(response->finish_reason);
+    memset(response, 0, sizeof(dp_response_t)); 
+}
+
+void dp_free_messages(dp_message_t* messages, size_t num_messages) {
+    if (!messages) return;
+    for (size_t i = 0; i < num_messages; ++i) {
+        if (messages[i].parts) {
+            for (size_t j = 0; j < messages[i].num_parts; ++j) {
+                dp_content_part_t* part = &messages[i].parts[j];
+                free(part->text);
+                free(part->image_url);
+                if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
+                    free(part->image_base64.mime_type);
+                    free(part->image_base64.data);
+                }
+            }
+            free(messages[i].parts);
+            messages[i].parts = NULL; 
+            messages[i].num_parts = 0;
+        }
+    }
+}
+
+static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
+                                   const char* text_content, const char* image_url_content,
+                                   const char* mime_type_content, const char* base64_data_content) {
+    if (!message) return false;
+    dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
+    if (!new_parts_array) return false;
+    message->parts = new_parts_array;
+
+    dp_content_part_t* new_part = &message->parts[message->num_parts];
+    memset(new_part, 0, sizeof(dp_content_part_t));
+    new_part->type = type;
+    bool success = false;
+
+    if (type == DP_CONTENT_PART_TEXT && text_content) {
+        new_part->text = dp_internal_strdup(text_content);
+        success = (new_part->text != NULL);
+    } else if (type == DP_CONTENT_PART_IMAGE_URL && image_url_content) {
+        new_part->image_url = dp_internal_strdup(image_url_content);
+        success = (new_part->image_url != NULL);
+    } else if (type == DP_CONTENT_PART_IMAGE_BASE64 && mime_type_content && base64_data_content) {
+        new_part->image_base64.mime_type = dp_internal_strdup(mime_type_content);
+        new_part->image_base64.data = dp_internal_strdup(base64_data_content);
+        success = (new_part->image_base64.mime_type != NULL && new_part->image_base64.data != NULL);
+        if (!success) {
+            free(new_part->image_base64.mime_type); new_part->image_base64.mime_type = NULL;
+            free(new_part->image_base64.data); new_part->image_base64.data = NULL;
+        }
+    }
+    if (success) message->num_parts++;
+    else fprintf(stderr, "Failed to allocate memory for Disaster Party message content part.\n");
+    return success;
+}
+
+bool dp_message_add_text_part(dp_message_t* message, const char* text) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL);
+}
+bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL);
+}
+bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
+}
+
+// Implementation for dp_list_models
+int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
+    if (!context || !model_list_out) {
+        if (model_list_out) *model_list_out = NULL;
+        return -1;
+    }
+
+    *model_list_out = calloc(1, sizeof(dp_model_list_t));
+    if (!*model_list_out) {
+        return -1; // Allocation failure
+    }
+    // Initialize to safe defaults
+    (*model_list_out)->models = NULL;
+    (*model_list_out)->count = 0;
+    (*model_list_out)->error_message = NULL;
+    (*model_list_out)->http_status_code = 0;
+
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        (*model_list_out)->error_message = dp_internal_strdup("curl_easy_init() failed for list_models.");
+        return -1;
+    }
+
+    char url[1024];
+    struct curl_slist* headers = NULL;
+    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    if (!chunk_mem.memory) {
+        (*model_list_out)->error_message = dp_internal_strdup("Memory allocation for list_models response chunk failed.");
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+    chunk_mem.memory[0] = '\0';
+
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        snprintf(url, sizeof(url), "%s/models", context->api_base_url);
+        char auth_header[512];
+        snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", context->api_key);
+        headers = curl_slist_append(headers, auth_header);
+    } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        snprintf(url, sizeof(url), "%s/models?key=%s", context->api_base_url, context->api_key);
+    } else {
+        (*model_list_out)->error_message = dp_internal_strdup("Unsupported provider for list_models.");
+        free(chunk_mem.memory);
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L); // Use GET request
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &(*model_list_out)->http_status_code);
+
+    int return_code = 0;
+
+    if (res != CURLE_OK) {
+        asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
+                 curl_easy_strerror(res), (*model_list_out)->http_status_code);
+        return_code = -1;
+    } else {
+        if ((*model_list_out)->http_status_code >= 200 && (*model_list_out)->http_status_code < 300) {
+            cJSON *root = cJSON_Parse(chunk_mem.memory);
+            if (!root) {
+                asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                return_code = -1;
+            } else {
+                cJSON *data_array = NULL;
+                if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+                    data_array = cJSON_GetObjectItemCaseSensitive(root, "data");
+                } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                    data_array = cJSON_GetObjectItemCaseSensitive(root, "models");
+                }
+
+                if (cJSON_IsArray(data_array)) {
+                    int array_size = cJSON_GetArraySize(data_array);
+                    (*model_list_out)->models = calloc(array_size, sizeof(dp_model_info_t));
+                    if (!(*model_list_out)->models) {
+                        (*model_list_out)->error_message = dp_internal_strdup("Failed to allocate memory for model info array.");
+                        return_code = -1;
+                    } else {
+                        (*model_list_out)->count = array_size;
+                        cJSON *model_json = NULL;
+                        int current_model_idx = 0;
+                        cJSON_ArrayForEach(model_json, data_array) {
+                            dp_model_info_t *info = &((*model_list_out)->models[current_model_idx]);
+                            // Initialize fields to NULL or 0
+                            memset(info, 0, sizeof(dp_model_info_t));
+
+                            cJSON *id_item = NULL;
+                            if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+                                id_item = cJSON_GetObjectItemCaseSensitive(model_json, "id");
+                            } else { // Gemini
+                                id_item = cJSON_GetObjectItemCaseSensitive(model_json, "name");
+                            }
+                            if (cJSON_IsString(id_item) && id_item->valuestring) {
+                                info->model_id = dp_internal_strdup(id_item->valuestring);
+                            }
+
+                            cJSON *display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "displayName");
+                            if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
+                                info->display_name = dp_internal_strdup(display_name_item->valuestring);
+                            }
+                            
+                            cJSON *version_item = cJSON_GetObjectItemCaseSensitive(model_json, "version");
+                            if (cJSON_IsString(version_item) && version_item->valuestring) {
+                                info->version = dp_internal_strdup(version_item->valuestring);
+                            }
+
+                            cJSON *description_item = cJSON_GetObjectItemCaseSensitive(model_json, "description");
+                            if (cJSON_IsString(description_item) && description_item->valuestring) {
+                                info->description = dp_internal_strdup(description_item->valuestring);
+                            }
+                            
+                            cJSON *input_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "inputTokenLimit");
+                            if(cJSON_IsNumber(input_limit_item)) {
+                                info->input_token_limit = (long)input_limit_item->valuedouble;
+                            }
+
+                            cJSON *output_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "outputTokenLimit");
+                             if(cJSON_IsNumber(output_limit_item)) {
+                                info->output_token_limit = (long)output_limit_item->valuedouble;
+                            }
+                            current_model_idx++;
+                        }
+                    }
+                } else {
+                     asprintf(&(*model_list_out)->error_message, "Expected an array for 'data' (OpenAI) or 'models' (Gemini) in list_models response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                    return_code = -1;
+                }
+                cJSON_Delete(root);
+            }
+        } else { // HTTP error
+            asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+            return_code = -1;
+        }
+    }
+
+    free(chunk_mem.memory);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (return_code == -1 && (*model_list_out)->models == NULL && (*model_list_out)->error_message == NULL) {
+        // Ensure error message is set if something went wrong before HTTP call or parsing
+         (*model_list_out)->error_message = dp_internal_strdup("Unknown error in dp_list_models before HTTP response processing.");
+    }
+    
+    return return_code;
+}
+
+void dp_free_model_list(dp_model_list_t* model_list) {
+    if (!model_list) return;
+
+    if (model_list->models) {
+        for (size_t i = 0; i < model_list->count; ++i) {
+            free(model_list->models[i].model_id);
+            free(model_list->models[i].display_name);
+            free(model_list->models[i].version);
+            free(model_list->models[i].description);
+        }
+        free(model_list->models);
+    }
+    free(model_list->error_message);
+    free(model_list);
+}
+
 
 void dp_free_response_content(dp_response_t* response) {
     if (!response) return;
