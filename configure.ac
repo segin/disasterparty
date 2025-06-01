@@ -1,6 +1,6 @@
 AC_PREREQ([2.69])
 AC_INIT([Disaster Party], [0.1.0], [your-email@example.com], [disasterparty], [https://example.com/disasterparty])
-AC_CONFIG_SRCDIR([src/diasterparty.c])
+AC_CONFIG_SRCDIR([src/diasterparty.c]) # This expects src/diasterparty.c (no underscore)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIRS([m4])
@@ -11,8 +11,8 @@ AM_SILENT_RULES([yes])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_LN_S
+AM_PROG_AR # Moved before LT_INIT
 LT_INIT # Initialize libtool
-AM_PROG_AR # Added to satisfy libtool's archiver requirement
 
 # Checks for libraries.
 # Check for libcurl
@@ -34,8 +34,6 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-# Version 0.1.0 -> current=0, revision=1, age=0 -> libdisasterparty.so.0.1.0
-# Soname: libdisasterparty.so.0 (current - age)
 DP_LT_VERSION="0:1:0" 
 AC_SUBST(DP_LT_VERSION)
 
