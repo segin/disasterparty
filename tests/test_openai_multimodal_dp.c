@@ -1,4 +1,5 @@
 #include "disasterparty.h" 
+#include <curl/curl.h> // Added for libcurl functions
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
