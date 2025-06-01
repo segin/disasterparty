@@ -148,12 +148,14 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                 } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
                     cJSON_AddStringToObject(part_obj, "type", "image_url");
                     cJSON *img_url_obj = cJSON_CreateObject();
+                    if (!img_url_obj) { cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
                     cJSON_AddStringToObject(img_url_obj, "url", part->image_url);
                     cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
                 else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
                     cJSON_AddStringToObject(part_obj, "type", "image_url"); 
                     cJSON *img_url_obj = cJSON_CreateObject();
+                    if (!img_url_obj) { cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
                     char* data_uri;
                     size_t data_uri_len = strlen("data:") + strlen(part->image_base64.mime_type) + strlen(";base64,") + strlen(part->image_base64.data) + 1;
                     data_uri = malloc(data_uri_len);
@@ -162,11 +164,11 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                         cJSON_AddStringToObject(img_url_obj, "url", data_uri);
                         free(data_uri);
                     } else {
-                        // Handle malloc failure for data_uri if necessary
-                        cJSON_Delete(part_obj); // Clean up partially created part_obj
-                        cJSON_Delete(img_url_obj);
-                        cJSON_Delete(root);
-                        return NULL;
+                        fprintf(stderr, "Error: malloc failed for data_uri in OpenAI payload.\n");
+                        cJSON_Delete(img_url_obj); 
+                        cJSON_Delete(part_obj);    
+                        cJSON_Delete(root);        
+                        return NULL;               
                     }
                     cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
@@ -208,6 +210,7 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
                 cJSON_AddStringToObject(part_obj, "text", part->text);
             } else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
                 cJSON *inline_data_obj = cJSON_CreateObject();
+                if (!inline_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
                 cJSON_AddStringToObject(inline_data_obj, "mime_type", part->image_base64.mime_type);
                 cJSON_AddStringToObject(inline_data_obj, "data", part->image_base64.data); 
                 cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
@@ -356,7 +359,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         current_event_start = event_end + 2;
 
         char* line = event_data_segment;
-        char* extracted_token_str = NULL;
+        char* extracted_token_str = NULL; // Reset for each SSE event's data lines
         bool is_final_for_this_event = false;
 
         while (line && *line) {
@@ -366,12 +369,10 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
 
-                // ---- START GEMINI DEBUGGING ----
                 if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
                     fprintf(stderr, "\n[DEBUG-GEMINI-RAW-JSON]: <%s>\n", json_str);
                     fflush(stderr);
                 }
-                // ---- END GEMINI DEBUGGING ----
 
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
@@ -396,6 +397,8 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 if (delta) {
                                     cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
                                     if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
+                                        // For OpenAI, each delta is usually a distinct token.
+                                        // No accumulation needed within a single 'data:' line's JSON.
                                         extracted_token_str = dp_internal_strdup(content->valuestring);
                                     }
                                 }
@@ -421,41 +424,47 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 if (!content) fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'content' in candidate not found.\n");
                                 else {
                                     cJSON *parts = cJSON_GetObjectItemCaseSensitive(content, "parts");
-                                    if (!cJSON_IsArray(parts)) { // Check if it's an array
+                                    if (!cJSON_IsArray(parts)) { 
                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'parts' in content not found or not an array.\n");
                                     } else {
                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Found 'parts' array, size: %d\n", cJSON_GetArraySize(parts));
                                         cJSON* part_item_iter = NULL;
+                                        char* current_chunk_text = NULL; // Accumulate text from all parts in this chunk
+
                                         cJSON_ArrayForEach(part_item_iter, parts) { 
                                             if(part_item_iter){
                                                 cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item_iter, "text");
                                                 if (cJSON_IsString(text) && text->valuestring) {
                                                     fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text from a part: '%s' (len: %zu)\n", text->valuestring, strlen(text->valuestring));
                                                     if (strlen(text->valuestring) > 0) {
-                                                        if (!extracted_token_str) { 
-                                                            extracted_token_str = dp_internal_strdup(text->valuestring);
+                                                        if (!current_chunk_text) { 
+                                                            current_chunk_text = dp_internal_strdup(text->valuestring);
                                                         } else { 
-                                                            char* old_token = extracted_token_str;
-                                                            size_t new_len = strlen(old_token) + strlen(text->valuestring);
-                                                            extracted_token_str = malloc(new_len + 1);
-                                                            if (extracted_token_str) {
-                                                                strcpy(extracted_token_str, old_token);
-                                                                strcat(extracted_token_str, text->valuestring);
-                                                                free(old_token);
-                                                            } else {
-                                                                extracted_token_str = old_token; 
-                                                                // Log malloc failure
+                                                            char* old_text = current_chunk_text;
+                                                            size_t new_len = strlen(old_text) + strlen(text->valuestring);
+                                                            current_chunk_text = malloc(new_len + 1);
+                                                            if (current_chunk_text) {
+                                                                strcpy(current_chunk_text, old_text);
+                                                                strcat(current_chunk_text, text->valuestring);
+                                                                free(old_text);
+                                                            } else { // Malloc failed, restore old
+                                                                current_chunk_text = old_text; 
                                                                 fprintf(stderr, "[DEBUG-GEMINI-PARSE-ERROR] Malloc failed for concatenating token.\n");
                                                             }
                                                         }
-                                                        fprintf(stderr, "[DEBUG-GEMINI-PARSE] Current accumulated token: '%s'\n", extracted_token_str ? extracted_token_str : "(null)");
                                                     } else {
-                                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text is empty string.\n");
+                                                         fprintf(stderr, "[DEBUG-GEMINI-PARSE] Extracted text part is empty string.\n");
                                                     }
                                                 } else {
                                                     fprintf(stderr, "[DEBUG-GEMINI-PARSE] 'text' field not found or not a string in a part.\n");
                                                 }
                                             }
+                                        }
+                                        if (current_chunk_text) {
+                                            extracted_token_str = current_chunk_text; // Assign accumulated text for this event
+                                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] Final accumulated token for this event: '%s'\n", extracted_token_str);
+                                        } else {
+                                            fprintf(stderr, "[DEBUG-GEMINI-PARSE] No text accumulated from parts for this event.\n");
                                         }
                                     }
                                 }
@@ -486,11 +495,20 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         free(event_data_segment);
 
         if (extracted_token_str) {
+            if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                 fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with token: '%s', is_final: %d\n", extracted_token_str, is_final_for_this_event);
+                 fflush(stderr);
+            }
             if (processor->user_callback(extracted_token_str, processor->user_data, is_final_for_this_event, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
             free(extracted_token_str);
+            // extracted_token_str is now invalid, it will be NULL at the start of the next SSE event processing
         } else if (is_final_for_this_event) { 
+            if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                fprintf(stderr, "[DEBUG-GEMINI-CALLBACK] Calling user_callback with NULL token (final event).\n");
+                fflush(stderr);
+            }
             if (processor->user_callback(NULL, processor->user_data, true, NULL) != 0) {
                 processor->stop_streaming_signal = true;
             }
@@ -502,7 +520,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         memmove(processor->buffer, processor->buffer + processed_total, processor->buffer_size - processed_total);
     }
     processor->buffer_size -= processed_total;
-    if (processor->buffer_size < processor->buffer_capacity) {
+    if (processor->buffer_size < processor->buffer_capacity) { // Should always be true after memmove
         processor->buffer[processor->buffer_size] = '\0'; 
     }
     return realsize;
