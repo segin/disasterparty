@@ -1,6 +1,7 @@
 AC_PREREQ([2.69])
-AC_INIT([Disaster Party], [0.1.0], [your-email@example.com], [disasterparty], [https://example.com/disasterparty])
-AC_CONFIG_SRCDIR([src/disasterparty.c]) # Corrected filename
+AC_INIT([Disaster Party], [0.1.0], [segin2005@gmail.com], [disasterparty], [https://example.com/disasterparty])
+# AC_DEFINE_UNQUOTED(DP_VERSION, "${PACKAGE_VERSION}", [Define to library version]) 
+AC_CONFIG_SRCDIR([src/disasterparty.c]) 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIRS([m4])
@@ -13,6 +14,8 @@ AC_PROG_CC
 AC_PROG_LN_S
 AM_PROG_AR 
 LT_INIT 
+AC_PROG_SED 
+AC_PROG_INSTALL
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CURL], [libcurl >= 7.20.0], [],
@@ -31,19 +34,15 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-# For version 0.1.0 -> current=0, revision=1, age=0
-# This results in:
-#   Real library name: libdisasterparty.so.0.1.0
-#   Soname:            libdisasterparty.so.0 
-#   Linker name:       libdisasterparty.so (symlink to soname)
 DP_LT_VERSION="0:1:0" 
 AC_SUBST(DP_LT_VERSION)
-
+AC_SUBST(PACKAGE_VERSION) 
 
 AC_CONFIG_FILES([
     Makefile
     src/Makefile
     tests/Makefile
+    man/Makefile  
     disasterparty.pc
 ])
 AC_OUTPUT
@@ -51,6 +50,10 @@ AC_OUTPUT
 AC_MSG_NOTICE([
 ========================================================================
 Disaster Party $VERSION configured successfully.
+
+  Man pages will be installed in: ${mandir}/man3
+  Library version (libtool):    ${DP_LT_VERSION}
+  Package version:              ${PACKAGE_VERSION}
 
   Prefix:           ${prefix}
   Compiler:         ${CC}
@@ -62,7 +65,6 @@ Disaster Party $VERSION configured successfully.
   cJSON LIBS:       ${CJSON_LIBS}
 
 Now type 'make' to build, and then (optionally) 'make install'.
-Make sure 'src/disasterparty.c' exists and is correctly named.
 ========================================================================
 ])
 
