@@ -11,10 +11,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.1.1" // Updated version
+#define DP_VERSION "0.1.1" 
 #define DP_VERSION_MAJOR 0
 #define DP_VERSION_MINOR 1
-#define DP_VERSION_PATCH 1 // Updated patch version
+#define DP_VERSION_PATCH 1 
 
 
 /**
@@ -50,22 +50,16 @@ typedef struct {
     char* image_url;
     struct {
         char* mime_type;
-        char* data; // Base64 encoded string
+        char* data; 
     } image_base64;
 } dp_content_part_t; 
 
-/**
- * @brief Represents a single message in a conversation.
- */
 typedef struct {
     dp_message_role_t role;
     dp_content_part_t* parts;
     size_t num_parts;
 } dp_message_t; 
 
-/**
- * @brief Configuration for an LLM API request.
- */
 typedef struct {
     const char* model;
     dp_message_t* messages;
@@ -75,17 +69,11 @@ typedef struct {
     bool stream;              
 } dp_request_config_t; 
 
-/**
- * @brief Represents a part of an LLM's response (for non-streaming).
- */
 typedef struct {
     dp_content_part_type_t type; 
     char* text;
 } dp_response_part_t; 
 
-/**
- * @brief Represents the overall response from an LLM.
- */
 typedef struct {
     dp_response_part_t* parts; 
     size_t num_parts;          
@@ -94,42 +82,47 @@ typedef struct {
     char* finish_reason;      
 } dp_response_t; 
 
+/**
+ * @brief Holds information about a single available LLM model.
+ */
+typedef struct {
+    char* id_or_name;       // "id" for OpenAI (e.g., "gpt-4.1-nano"), "name" for Gemini (e.g., "models/gemini-2.0-flash")
+    char* display_name;     // User-friendly display name (more common in Gemini)
+    char* version;          // Specific version string (more common in Gemini)
+    char* description;      // Model description (more common in Gemini)
+    long input_token_limit; // May not always be available directly
+    long output_token_limit;// May not always be available directly
+    // Add more fields as needed, e.g., supported generation methods if available and desired
+} dp_model_info_t;
 
 /**
- * @brief Callback function type for handling streamed data from Disaster Party.
+ * @brief Holds a list of available models and any error information from the listing operation.
  */
+typedef struct {
+    dp_model_info_t* models;    // Dynamically allocated array of model info
+    size_t count;               // Number of models in the array
+    char* error_message;        // Error message if the operation failed
+    long http_status_code;      // HTTP status of the list models API call
+} dp_model_list_t;
+
+
 typedef int (*dp_stream_callback_t)(const char* token, 
                                     void* user_data,
                                     bool is_final_chunk,
                                     const char* error_during_stream);
 
-/**
- * @brief Opaque context structure for managing Disaster Party LLM client state.
- */
 typedef struct dp_context_s dp_context_t; 
 
-/**
- * @brief Initializes a Disaster Party LLM client context.
- */
 dp_context_t* dp_init_context(dp_provider_type_t provider, 
                               const char* api_key,
                               const char* api_base_url);
 
-/**
- * @brief Destroys a Disaster Party LLM client context and frees associated resources.
- */
 void dp_destroy_context(dp_context_t* context);
 
-/**
- * @brief Performs a non-streaming completion request to the LLM.
- */
 int dp_perform_completion(dp_context_t* context,
                           const dp_request_config_t* request_config,
                           dp_response_t* response);
 
-/**
- * @brief Performs a streaming completion request to the LLM.
- */
 int dp_perform_streaming_completion(dp_context_t* context,
                                     const dp_request_config_t* request_config,
                                     dp_stream_callback_t callback,
@@ -137,33 +130,40 @@ int dp_perform_streaming_completion(dp_context_t* context,
                                     dp_response_t* response);
 
 /**
- * @brief Frees the content of a dp_response_t structure.
+ * @brief Lists available models from the configured LLM provider.
+ *
+ * The caller is responsible for freeing the returned dp_model_list_t structure
+ * and its contents using dp_free_model_list() when it's no longer needed.
+ *
+ * @param context An initialized Disaster Party context.
+ * @param model_list_out A pointer to a dp_model_list_t pointer. On success, this
+ * will be populated with a pointer to a newly allocated
+ * dp_model_list_t structure. On failure, it will be set to NULL,
+ * and an error code will be returned.
+ * @return 0 on success, -1 on failure (e.g., network error, memory allocation error).
+ * If -1 is returned, `*model_list_out` might still be allocated and contain
+ * an error message and HTTP status code; it should still be freed by the caller
+ * using dp_free_model_list(). If `*model_list_out` is NULL after a -1 return,
+ * a more fundamental error occurred (e.g. bad arguments).
  */
-void dp_free_response_content(dp_response_t* response);
+int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
 /**
- * @brief Frees the content of an array of dp_message_t, including their parts.
+ * @brief Frees the memory allocated for a dp_model_list_t structure and its contents.
+ *
+ * @param model_list A pointer to the dp_model_list_t structure to be freed.
+ * If NULL, the function does nothing.
  */
+void dp_free_model_list(dp_model_list_t* model_list);
+
+
+void dp_free_response_content(dp_response_t* response);
 void dp_free_messages(dp_message_t* messages, size_t num_messages);
 
-/**
- * @brief Adds a text part to a message.
- */
 bool dp_message_add_text_part(dp_message_t* message, const char* text);
-
-/**
- * @brief Adds an image URL part to a message.
- */
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url);
-
-/**
- * @brief Adds a base64 encoded image part to a message.
- */
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
 
-/**
- * @brief Returns the version string of the Disaster Party library.
- */
 const char* dp_get_version(void);
 
 #endif // DISASTERPARTY_H
