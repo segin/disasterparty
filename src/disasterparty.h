@@ -86,23 +86,22 @@ typedef struct {
  * @brief Holds information about a single available LLM model.
  */
 typedef struct {
-    char* id_or_name;       // "id" for OpenAI (e.g., "gpt-4.1-nano"), "name" for Gemini (e.g., "models/gemini-2.0-flash")
-    char* display_name;     // User-friendly display name (more common in Gemini)
-    char* version;          // Specific version string (more common in Gemini)
-    char* description;      // Model description (more common in Gemini)
-    long input_token_limit; // May not always be available directly
-    long output_token_limit;// May not always be available directly
-    // Add more fields as needed, e.g., supported generation methods if available and desired
+    char* model_id;         // "id" for OpenAI (e.g., "gpt-4.1-nano"), "name" for Gemini (e.g., "models/gemini-2.0-flash") - Standardized to model_id
+    char* display_name;     
+    char* version;          
+    char* description;      
+    long input_token_limit; 
+    long output_token_limit;
 } dp_model_info_t;
 
 /**
  * @brief Holds a list of available models and any error information from the listing operation.
  */
 typedef struct {
-    dp_model_info_t* models;    // Dynamically allocated array of model info
-    size_t count;               // Number of models in the array
-    char* error_message;        // Error message if the operation failed
-    long http_status_code;      // HTTP status of the list models API call
+    dp_model_info_t* models;    
+    size_t count;               
+    char* error_message;        
+    long http_status_code;      
 } dp_model_list_t;
 
 
@@ -129,31 +128,8 @@ int dp_perform_streaming_completion(dp_context_t* context,
                                     void* user_data,
                                     dp_response_t* response);
 
-/**
- * @brief Lists available models from the configured LLM provider.
- *
- * The caller is responsible for freeing the returned dp_model_list_t structure
- * and its contents using dp_free_model_list() when it's no longer needed.
- *
- * @param context An initialized Disaster Party context.
- * @param model_list_out A pointer to a dp_model_list_t pointer. On success, this
- * will be populated with a pointer to a newly allocated
- * dp_model_list_t structure. On failure, it will be set to NULL,
- * and an error code will be returned.
- * @return 0 on success, -1 on failure (e.g., network error, memory allocation error).
- * If -1 is returned, `*model_list_out` might still be allocated and contain
- * an error message and HTTP status code; it should still be freed by the caller
- * using dp_free_model_list(). If `*model_list_out` is NULL after a -1 return,
- * a more fundamental error occurred (e.g. bad arguments).
- */
 int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
-/**
- * @brief Frees the memory allocated for a dp_model_list_t structure and its contents.
- *
- * @param model_list A pointer to the dp_model_list_t structure to be freed.
- * If NULL, the function does nothing.
- */
 void dp_free_model_list(dp_model_list_t* model_list);
 
 
