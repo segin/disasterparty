@@ -1,8 +1,9 @@
 #include "disasterparty.h" 
-#include <curl/curl.h> // Added for libcurl functions
+#include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
+#include <stdint.h> // Added for uint32_t
 
 char* base64_encode(const unsigned char *data, size_t input_length) {
     const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
