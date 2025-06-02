@@ -2,7 +2,7 @@
 * Updated library version to 0.1.1.
 * Corrected SSE event separator detection for Gemini streams (handles `\r\n\r\n`).
 * Updated OpenAI test model from `gpt-3.5-turbo` to `gpt-4.1-nano`.
-* Updated Gemini test model to `gemini-2.0-flash` and token limits.
+* Updated Gemini test model to `gemini-2.0-flash`.
 * Added `dp_list_models()` and `dp_free_model_list()` functions for enumerating models available at the API endpoint.
 * Added man pages for all public functions and a library overview (section 7).
 * Updated User-Agent string to `disasterparty/0.1.1`.
