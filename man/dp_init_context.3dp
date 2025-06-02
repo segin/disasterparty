@@ -1,5 +1,5 @@
 .\" Man page for dp_init_context from libdisasterparty
-.TH DP_INIT_CONTEXT 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_INIT_CONTEXT 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_init_context \- initialize a Disaster Party LLM client context
@@ -58,7 +58,10 @@ If an error occurs, NULL is returned. Error details might be printed to stderr
 by the function in some cases (e.g., missing API key).
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>

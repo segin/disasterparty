@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_completion from libdisasterparty
-.TH DP_PERFORM_COMPLETION 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_COMPLETION 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_completion \- perform a non-streaming LLM completion request
@@ -75,7 +75,10 @@ might indicate an API-level error (e.g., 4xx or 5xx), and
 might contain the API's error message.
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>

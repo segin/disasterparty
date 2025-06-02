@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_streaming_completion from libdisasterparty
-.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_streaming_completion \- perform a streaming LLM completion request
@@ -103,7 +103,10 @@ Return 0 to continue, non-zero to attempt to stop.
 .RE
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>

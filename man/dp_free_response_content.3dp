@@ -1,5 +1,5 @@
 .\" Man page for dp_free_response_content from libdisasterparty
-.TH DP_FREE_RESPONSE_CONTENT 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_FREE_RESPONSE_CONTENT 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_response_content \- free content of a Disaster Party response structure
@@ -47,7 +47,10 @@ Can be NULL.
 This function does not return a value.
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>

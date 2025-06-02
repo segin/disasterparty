@@ -1,9 +1,5 @@
 .\" Man page for dp_get_version from libdisasterparty
-.\" Process this file with:
-.\" groff -man -Tascii dp_get_version.3dp | less
-.\" or to generate for installation (often done by make):
-.\" groff -man dp_get_version.3dp > dp_get_version.3
-.TH DP_GET_VERSION 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_GET_VERSION 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_get_version \- get the version string of the Disaster Party library
@@ -18,7 +14,7 @@ The
 .B dp_get_version()
 function returns a constant string that represents the current version of the
 Disaster Party library. The version string follows a semantic versioning format
-(e.g., "0.1.0").
+(e.g., "0.1.1").
 
 .SH RETURN VALUE
 This function returns a pointer to a null-terminated string containing the
@@ -36,13 +32,16 @@ int main(void) {
 }
 .fi
 
-.SH SEE ALSO
-.BR disasterparty (7) (if a general library man page exists)
-
 .SH BUGS
-No known bugs. Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR disasterparty (7)
 

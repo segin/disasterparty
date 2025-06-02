@@ -1,5 +1,5 @@
 .\" Man page for dp_list_models from libdisasterparty
-.TH DP_LIST_MODELS 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_LIST_MODELS 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_list_models \- list available models from the LLM provider
@@ -101,7 +101,10 @@ The HTTP status code of the API call.
 .RE
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>

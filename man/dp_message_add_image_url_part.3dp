@@ -1,5 +1,5 @@
 .\" Man page for dp_message_add_image_url_part from libdisasterparty
-.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "June 1, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_image_url_part \- add an image URL content part to a Disaster Party message
@@ -49,7 +49,10 @@ Returns
 on error (e.g., memory allocation failure).
 
 .SH BUGS
-Report bugs to segin2005@gmail.com.
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
