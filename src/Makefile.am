@@ -1,12 +1,16 @@
-lib_LTLIBRARIES = libdisasterparty.la # Corrected library name
+# src/Makefile.am
 
-libdisasterparty_la_SOURCES = disasterparty.c disasterparty.h # Corrected filenames
+lib_LTLIBRARIES = libdisasterparty.la 
+
+libdisasterparty_la_SOURCES = disasterparty.c disasterparty.h 
 
 libdisasterparty_la_LDFLAGS = -version-info $(DP_LT_VERSION)
-libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS) # Added CJSON_LIBS
+libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS) 
 
-pkgincludedir = $(includedir)/disasterparty # Corrected directory name
-pkginclude_HEADERS = disasterparty.h # Corrected header name
+# Use PACKAGE_TARNAME for the directory, which is 'disasterparty' (no space)
+# This comes from the 4th argument to AC_INIT in configure.ac
+pkgincludedir = $(includedir)/$(PACKAGE_TARNAME)
+pkginclude_HEADERS = disasterparty.h 
 
 AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src 
 
