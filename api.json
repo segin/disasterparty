@@ -1,0 +1,276 @@
+{
+  "libraryName": "Disaster Party",
+  "libraryIdentifier": "disasterparty",
+  "version": "0.1.1",
+  "headerFile": "disasterparty.h",
+  "description": "A C library for interacting with OpenAI-compatible and Google Gemini LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
+  "dependencies": [
+    {"name": "libcurl", "version_requirement": ">= 7.20.0"},
+    {"name": "libcjson", "version_requirement": ">= 1.7.10"}
+  ],
+  "symbolPrefix": "dp_",
+  "dataTypes": [
+    {
+      "name": "dp_provider_type_t",
+      "type": "enum",
+      "description": "Enumeration for supported LLM API providers.",
+      "values": [
+        {"name": "DP_PROVIDER_OPENAI_COMPATIBLE", "description": "OpenAI-compatible API provider."},
+        {"name": "DP_PROVIDER_GOOGLE_GEMINI", "description": "Google Gemini API provider."}
+      ]
+    },
+    {
+      "name": "dp_message_role_t",
+      "type": "enum",
+      "description": "Enumeration for the role in a message.",
+      "values": [
+        {"name": "DP_ROLE_SYSTEM", "description": "System role."},
+        {"name": "DP_ROLE_USER", "description": "User role."},
+        {"name": "DP_ROLE_ASSISTANT", "description": "Assistant (model) role."},
+        {"name": "DP_ROLE_TOOL", "description": "Tool role (for function calling)."}
+      ]
+    },
+    {
+      "name": "dp_content_part_type_t",
+      "type": "enum",
+      "description": "Enumeration for the type of content part in a multimodal message.",
+      "values": [
+        {"name": "DP_CONTENT_PART_TEXT", "description": "Text content."},
+        {"name": "DP_CONTENT_PART_IMAGE_URL", "description": "Image URL content."},
+        {"name": "DP_CONTENT_PART_IMAGE_BASE64", "description": "Base64 encoded image data."}
+      ]
+    },
+    {
+      "name": "dp_content_part_t",
+      "type": "struct",
+      "description": "Represents a single part of a multimodal message content.",
+      "fields": [
+        {"name": "type", "type": "dp_content_part_type_t", "description": "Type of this content part."},
+        {"name": "text", "type": "char*", "description": "Text content (if type is DP_CONTENT_PART_TEXT)."},
+        {"name": "image_url", "type": "char*", "description": "URL of the image (if type is DP_CONTENT_PART_IMAGE_URL)."},
+        {
+          "name": "image_base64", 
+          "type": "struct { char* mime_type; char* data; }", 
+          "description": "Base64 encoded image data (if type is DP_CONTENT_PART_IMAGE_BASE64).",
+          "subfields": [
+            {"name": "mime_type", "type": "char*", "description": "MIME type of the image (e.g., \"image/png\")."},
+            {"name": "data", "type": "char*", "description": "Base64 encoded image data string."}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dp_message_t",
+      "type": "struct",
+      "description": "Represents a single message in a conversation.",
+      "fields": [
+        {"name": "role", "type": "dp_message_role_t", "description": "Role of the message sender."},
+        {"name": "parts", "type": "dp_content_part_t*", "description": "Array of content parts for multimodality."},
+        {"name": "num_parts", "type": "size_t", "description": "Number of parts in the 'parts' array."}
+      ]
+    },
+    {
+      "name": "dp_request_config_t",
+      "type": "struct",
+      "description": "Configuration for an LLM API request.",
+      "fields": [
+        {"name": "model", "type": "const char*", "description": "Identifier of the model to use."},
+        {"name": "messages", "type": "dp_message_t*", "description": "Array of messages forming the conversation history."},
+        {"name": "num_messages", "type": "size_t", "description": "Number of messages in the 'messages' array."},
+        {"name": "temperature", "type": "double", "description": "Sampling temperature for generation (0.0-2.0)."},
+        {"name": "max_tokens", "type": "int", "description": "Maximum number of tokens to generate."},
+        {"name": "stream", "type": "bool", "description": "True for streaming response, false for single blocking response."}
+      ]
+    },
+    {
+      "name": "dp_response_part_t",
+      "type": "struct",
+      "description": "Represents a part of an LLM's response (primarily for non-streaming full content).",
+      "fields": [
+        {"name": "type", "type": "dp_content_part_type_t", "description": "Type of this response part (usually DP_CONTENT_PART_TEXT)."},
+        {"name": "text", "type": "char*", "description": "Text content of the response part."}
+      ]
+    },
+    {
+      "name": "dp_response_t",
+      "type": "struct",
+      "description": "Represents the overall response from an LLM API call.",
+      "fields": [
+        {"name": "parts", "type": "dp_response_part_t*", "description": "Array of response parts (for non-streaming full response)."},
+        {"name": "num_parts", "type": "size_t", "description": "Number of parts in the 'parts' array."},
+        {"name": "error_message", "type": "char*", "description": "Error message if the operation failed."},
+        {"name": "http_status_code", "type": "long", "description": "HTTP status code of the API call."},
+        {"name": "finish_reason", "type": "char*", "description": "Reason the generation finished (e.g., \"stop\", \"length\")."}
+      ]
+    },
+    {
+      "name": "dp_model_info_t",
+      "type": "struct",
+      "description": "Holds information about a single available LLM model.",
+      "fields": [
+        {"name": "model_id", "type": "char*", "description": "Unique identifier for the model."},
+        {"name": "display_name", "type": "char*", "description": "User-friendly display name."},
+        {"name": "version", "type": "char*", "description": "Specific version string of the model."},
+        {"name": "description", "type": "char*", "description": "Brief description of the model."},
+        {"name": "input_token_limit", "type": "long", "description": "Maximum input tokens."},
+        {"name": "output_token_limit", "type": "long", "description": "Maximum output tokens."}
+      ]
+    },
+    {
+      "name": "dp_model_list_t",
+      "type": "struct",
+      "description": "Holds a list of available models and status from the listing operation.",
+      "fields": [
+        {"name": "models", "type": "dp_model_info_t*", "description": "Array of model information structures."},
+        {"name": "count", "type": "size_t", "description": "Number of models in the 'models' array."},
+        {"name": "error_message", "type": "char*", "description": "Error message if the listing operation failed."},
+        {"name": "http_status_code", "type": "long", "description": "HTTP status code of the list models API call."}
+      ]
+    },
+    {
+      "name": "dp_context_s",
+      "type": "struct",
+      "description": "Opaque context structure for managing LLM client state. Internals are not public.",
+      "isOpaque": true
+    },
+    {
+      "name": "dp_context_t",
+      "type": "typedef",
+      "definition": "struct dp_context_s",
+      "description": "Typedef for the opaque client context structure."
+    },
+    {
+      "name": "dp_stream_callback_t",
+      "type": "function_pointer",
+      "signature": "int (*dp_stream_callback_t)(const char* token, void* user_data, bool is_final_chunk, const char* error_during_stream)",
+      "description": "Callback function type for handling streamed data.",
+      "parameters": [
+        {"name": "token", "type": "const char*", "description": "Received text chunk. NULL on final call or error."},
+        {"name": "user_data", "type": "void*", "description": "User-defined data passed from the streaming call."},
+        {"name": "is_final_chunk", "type": "bool", "description": "True if this is the last content-bearing chunk or stream end signal."},
+        {"name": "error_during_stream", "type": "const char*", "description": "Error message if an error occurred during stream processing."}
+      ],
+      "returnType": "int",
+      "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
+    }
+  ],
+  "functions": [
+    {
+      "name": "dp_get_version",
+      "description": "Returns the version string of the Disaster Party library.",
+      "returnType": "const char*",
+      "parameters": [
+        {"name": "void", "type": ""}
+      ]
+    },
+    {
+      "name": "dp_init_context",
+      "description": "Initializes a Disaster Party LLM client context.",
+      "returnType": "dp_context_t*",
+      "parameters": [
+        {"name": "provider", "type": "dp_provider_type_t", "description": "The LLM provider type."},
+        {"name": "api_key", "type": "const char*", "description": "The API key for authentication."},
+        {"name": "api_base_url", "type": "const char*", "description": "Optional base URL for the API. If NULL, defaults are used."}
+      ]
+    },
+    {
+      "name": "dp_destroy_context",
+      "description": "Destroys a Disaster Party LLM client context and frees associated resources.",
+      "returnType": "void",
+      "parameters": [
+        {"name": "context", "type": "dp_context_t*", "description": "The context to destroy."}
+      ]
+    },
+    {
+      "name": "dp_perform_completion",
+      "description": "Performs a non-streaming completion request to the LLM. `request_config->stream` should be false.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on error.",
+      "parameters": [
+        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
+        {"name": "request_config", "type": "const dp_request_config_t*", "description": "Configuration for the request."},
+        {"name": "response", "type": "dp_response_t*", "description": "Pointer to a response structure to be filled."}
+      ]
+    },
+    {
+      "name": "dp_perform_streaming_completion",
+      "description": "Performs a streaming completion request to the LLM. For OpenAI, `request_config->stream` must be true.",
+      "returnType": "int",
+      "returnDescription": "0 if streaming was successful (or errors handled by callback), -1 on setup error.",
+      "parameters": [
+        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
+        {"name": "request_config", "type": "const dp_request_config_t*", "description": "Configuration for the request."},
+        {"name": "callback", "type": "dp_stream_callback_t", "description": "Callback function to handle received tokens/chunks."},
+        {"name": "user_data", "type": "void*", "description": "User-defined data to be passed to the callback."},
+        {"name": "response", "type": "dp_response_t*", "description": "Pointer to a response structure for final status/initial errors."}
+      ]
+    },
+    {
+      "name": "dp_list_models",
+      "description": "Lists available models from the configured LLM provider.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
+        {"name": "model_list_out", "type": "dp_model_list_t**", "description": "Pointer to a dp_model_list_t pointer to be populated."}
+      ]
+    },
+    {
+      "name": "dp_free_model_list",
+      "description": "Frees the memory allocated for a dp_model_list_t structure and its contents.",
+      "returnType": "void",
+      "parameters": [
+        {"name": "model_list", "type": "dp_model_list_t*", "description": "The model list structure to be freed."}
+      ]
+    },
+    {
+      "name": "dp_free_response_content",
+      "description": "Frees the content of a dp_response_t structure.",
+      "returnType": "void",
+      "parameters": [
+        {"name": "response", "type": "dp_response_t*", "description": "The response structure whose content is to be freed."}
+      ]
+    },
+    {
+      "name": "dp_free_messages",
+      "description": "Frees the content of an array of dp_message_t, including their parts.",
+      "returnType": "void",
+      "parameters": [
+        {"name": "messages", "type": "dp_message_t*", "description": "Array of messages."},
+        {"name": "num_messages", "type": "size_t", "description": "Number of messages in the array."}
+      ]
+    },
+    {
+      "name": "dp_message_add_text_part",
+      "description": "Adds a text part to a message.",
+      "returnType": "bool",
+      "returnDescription": "true on success, false on failure.",
+      "parameters": [
+        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
+        {"name": "text", "type": "const char*", "description": "The text content."}
+      ]
+    },
+    {
+      "name": "dp_message_add_image_url_part",
+      "description": "Adds an image URL part to a message.",
+      "returnType": "bool",
+      "returnDescription": "true on success, false on failure.",
+      "parameters": [
+        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
+        {"name": "image_url", "type": "const char*", "description": "The URL of the image."}
+      ]
+    },
+    {
+      "name": "dp_message_add_base64_image_part",
+      "description": "Adds a base64 encoded image part to a message.",
+      "returnType": "bool",
+      "returnDescription": "true on success, false on failure.",
+      "parameters": [
+        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
+        {"name": "mime_type", "type": "const char*", "description": "The MIME type of the image."},
+        {"name": "base64_data", "type": "const char*", "description": "The base64 encoded image data."}
+      ]
+    }
+  ]
+}
+
