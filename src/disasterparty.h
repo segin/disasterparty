@@ -11,10 +11,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.2.0" // Updated version
+#define DP_VERSION "0.2.0"
 #define DP_VERSION_MAJOR 0
-#define DP_VERSION_MINOR 2 // Updated version
-#define DP_VERSION_PATCH 0 // Updated version
+#define DP_VERSION_MINOR 2
+#define DP_VERSION_PATCH 0
 
 
 /**
@@ -23,7 +23,7 @@ typedef struct cJSON cJSON;
 typedef enum {
     DP_PROVIDER_OPENAI_COMPATIBLE,
     DP_PROVIDER_GOOGLE_GEMINI,
-    DP_PROVIDER_ANTHROPIC // New provider
+    DP_PROVIDER_ANTHROPIC
 } dp_provider_type_t;
 
 /**
@@ -65,7 +65,7 @@ typedef struct {
     const char* model;
     dp_message_t* messages;
     size_t num_messages;
-    const char* system_prompt; // Optional system prompt, especially for Anthropic
+    const char* system_prompt;
     double temperature;
     int max_tokens;
     bool stream;
@@ -100,9 +100,6 @@ typedef struct {
     long http_status_code;
 } dp_model_list_t;
 
-/**
- * @brief Enumeration for Anthropic stream event types.
- */
 typedef enum {
     DP_ANTHROPIC_EVENT_UNKNOWN,
     DP_ANTHROPIC_EVENT_MESSAGE_START,
@@ -115,14 +112,9 @@ typedef enum {
     DP_ANTHROPIC_EVENT_ERROR
 } dp_anthropic_event_type_t;
 
-/**
- * @brief Structure to hold a detailed Anthropic stream event.
- */
 typedef struct {
-    dp_anthropic_event_type_t event_type; // The type of the SSE event
-    const char* raw_json_data;            // The raw JSON string from the 'data:' line of the SSE event
-    // Future: Could include a pre-parsed cJSON* object, but that complicates memory management for the callback.
-    // Raw JSON is safer for the callback to parse as needed.
+    dp_anthropic_event_type_t event_type;
+    const char* raw_json_data;
 } dp_anthropic_stream_event_t;
 
 typedef int (*dp_stream_callback_t)(const char* token,
@@ -130,17 +122,6 @@ typedef int (*dp_stream_callback_t)(const char* token,
                                     bool is_final_chunk,
                                     const char* error_during_stream);
 
-/**
- * @brief Callback function type for handling detailed Anthropic streamed events.
- *
- * @param event A pointer to the dp_anthropic_stream_event_t structure containing
- * the event type and its raw JSON data. The `raw_json_data` string
- * is valid only for the duration of this callback; copy if needed.
- * @param user_data A pointer to user-defined data.
- * @param error_during_stream If an error occurred *during* the stream processing
- * (e.g., parsing SSE line), this will contain an error message.
- * @return Return 0 to continue streaming, non-zero to attempt to stop streaming.
- */
 typedef int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event,
                                               void* user_data,
                                               const char* error_during_stream);
@@ -159,21 +140,10 @@ int dp_perform_completion(dp_context_t* context,
 
 int dp_perform_streaming_completion(dp_context_t* context,
                                     const dp_request_config_t* request_config,
-                                    dp_stream_callback_t callback, // Generic text-token callback
+                                    dp_stream_callback_t callback,
                                     void* user_data,
                                     dp_response_t* response);
 
-/**
- * @brief Performs a streaming completion request specifically for Anthropic,
- * providing detailed SSE events to the callback.
- *
- * @param context An initialized Disaster Party context (must be DP_PROVIDER_ANTHROPIC).
- * @param request_config Configuration for the request. `request_config->stream` must be true.
- * @param anthropic_callback The Anthropic-specific callback function.
- * @param user_data User-defined data to be passed to the callback.
- * @param response Pointer to a response structure for final status/initial errors.
- * @return 0 if streaming was successful, -1 on setup error or if provider is not Anthropic.
- */
 int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               const dp_request_config_t* request_config,
                                               dp_anthropic_stream_callback_t anthropic_callback,
@@ -192,5 +162,51 @@ bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url)
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
 
 const char* dp_get_version(void);
+
+/**
+ * @brief Serializes an array of messages to a JSON string.
+ *
+ * The caller is responsible for freeing the output string `*json_str_out` using `free()`.
+ *
+ * @param messages An array of `dp_message_t` structures.
+ * @param num_messages The number of messages in the array.
+ * @param json_str_out A pointer to a `char*` that will be updated to point to the new JSON string.
+ * @return 0 on success, -1 on failure.
+ */
+int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_messages, char** json_str_out);
+
+/**
+ * @brief Deserializes a JSON string into an array of messages.
+ *
+ * The caller is responsible for freeing the output array `*messages_out` and its contents
+ * using `dp_free_messages()`.
+ *
+ * @param json_str The null-terminated JSON string to parse.
+ * @param messages_out A pointer to a `dp_message_t*` that will be updated to point to the new array of messages.
+ * @param num_messages_out A pointer to a `size_t` that will be updated with the number of messages in the array.
+ * @return 0 on success, -1 on failure (e.g., parse error).
+ */
+int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out);
+
+/**
+ * @brief Serializes an array of messages to a file.
+ *
+ * @param messages An array of `dp_message_t` structures.
+ * @param num_messages The number of messages in the array.
+ * @param path The file path to save the JSON to.
+ * @return 0 on success, -1 on failure.
+ */
+int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
+
+/**
+ * @brief Deserializes an array of messages from a file.
+ *
+ * @param path The file path to read the JSON from.
+ * @param messages_out A pointer to a `dp_message_t*` that will be updated to point to the new array of messages.
+ * @param num_messages_out A pointer to a `size_t` that will be updated with the number of messages in the array.
+ * @return 0 on success, -1 on failure.
+ */
+int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
+
 
 #endif // DISASTERPARTY_H

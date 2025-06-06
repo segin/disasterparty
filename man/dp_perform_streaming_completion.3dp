@@ -1,8 +1,8 @@
 .\" Man page for dp_perform_streaming_completion from libdisasterparty
-.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
-dp_perform_streaming_completion \- perform a streaming LLM completion request
+dp_perform_streaming_completion \- perform a streaming LLM completion request with a generic text callback
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
@@ -13,94 +13,24 @@ dp_perform_streaming_completion \- perform a streaming LLM completion request
 The
 .B dp_perform_streaming_completion()
 function sends a request to the configured LLM provider to generate a completion
-and streams the response back token by token (or chunk by chunk).
+and streams the response back token by token. This function is for use cases
+where only the text content of the stream is needed.
 
-The
-.I context
-argument is a pointer to an initialized
-.BR dp_context_t .
+The provided
+.I callback
+function will be invoked multiple times with text tokens as they are received.
+When used with the Anthropic provider, this function internally parses the
+detailed event stream and extracts only the text for the generic callback.
+To receive detailed events from Anthropic, use
+.BR dp_perform_anthropic_streaming_completion (3).
 
-The
-.I request_config
-argument specifies the parameters for the request. For OpenAI-compatible providers,
+For OpenAI and Anthropic,
 .I request_config->stream
 must be set to
 .BR true .
-For Google Gemini, this function automatically uses the appropriate streaming endpoint.
-
-The
-.I callback
-argument is a function pointer of type
-.BR dp_stream_callback_t .
-This callback will be invoked multiple times as data is received from the stream.
-It receives the token/chunk, user-defined data, a flag indicating if it's the
-final chunk, and any error message that occurred during stream processing.
-The callback can return a non-zero value to attempt to stop the stream.
-
-The
-.I user_data
-argument is an opaque pointer passed to the callback function, allowing
-application-specific state to be accessed.
-
-The
-.I response
-argument is a pointer to a
-.BR dp_response_t
-structure. For streaming, this structure is primarily used to return the final
-HTTP status code, any errors that occurred before the stream started or during
-its setup, and the
-.I finish_reason
-if available. The actual content is delivered via the callback.
-The caller should initialize this structure and free its contents using
-.BR dp_free_response_content (3)
-after use.
-
-.SH PARAMETERS
-.TP
-.B dp_context_t *\fIcontext\fP
-An initialized Disaster Party context.
-.TP
-.B const dp_request_config_t *\fIrequest_config\fP
-Configuration for the completion request.
-.TP
-.B dp_stream_callback_t \fIcallback\fP
-The callback function to handle streamed data.
-.TP
-.B void *\fIuser_data\fP
-User-defined data to be passed to the callback.
-.TP
-.B dp_response_t *\fIresponse\fP
-A pointer to a structure for final status and initial errors.
 
 .SH RETURN VALUE
-Returns 0 if the streaming request was successfully initiated and the stream
-completed (which might include errors reported via the callback or in
-.I response->error_message
-if they occurred during the stream itself but after successful initiation).
-Returns -1 if there was a critical error setting up or initiating the request
-(e.g., network issue, bad configuration before the stream could start).
-.I response->error_message
-will contain details.
-
-.SH CALLBACK FUNCTION SIGNATURE
-.BR "int (*dp_stream_callback_t)(const char *" token ", void *" user_data ", bool " is_final_chunk ", const char *" error_during_stream ");"
-.RS
-.TP
-.I token
-The received text chunk. NULL on final call or if an error occurred.
-.TP
-.I user_data
-The opaque pointer passed to
-.BR dp_perform_streaming_completion .
-.TP
-.I is_final_chunk
-True if this is the last content-bearing chunk or a signal of stream end.
-.TP
-.I error_during_stream
-An error message if an error occurred during stream processing. NULL otherwise.
-.TP
-Return 0 to continue, non-zero to attempt to stop.
-.RE
+Returns 0 if the stream was successfully initiated and completed. Returns -1 on setup error.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -110,11 +40,10 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
-.BR dp_init_context (3),
 .BR dp_perform_completion (3),
-.BR dp_free_response_content (3),
+.BR dp_perform_anthropic_streaming_completion (3),
 .BR disasterparty (7)
-

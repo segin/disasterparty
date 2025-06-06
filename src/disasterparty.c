@@ -10,7 +10,7 @@
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const char* DEFAULT_ANTHROPIC_API_BASE_URL = "https://api.anthropic.com/v1"; // Anthropic base URL
+const char* DEFAULT_ANTHROPIC_API_BASE_URL = "https://api.anthropic.com/v1";
 const char* DISASTERPARTY_USER_AGENT = "disasterparty/" DP_VERSION;
 
 
@@ -19,8 +19,6 @@ struct dp_context_s {
     dp_provider_type_t provider;
     char* api_key;
     char* api_base_url;
-    // For Anthropic, we might need to store the API version header value if it's configurable
-    // For now, we'll hardcode "2023-06-01" as it's common.
 };
 
 typedef struct {
@@ -28,9 +26,8 @@ typedef struct {
     size_t size;
 } memory_struct_t;
 
-// Stream processor for generic text-token callback
 typedef struct {
-    dp_stream_callback_t user_callback; // Generic callback
+    dp_stream_callback_t user_callback;
     void* user_data;
     char* buffer;
     size_t buffer_size;
@@ -41,15 +38,13 @@ typedef struct {
     char* accumulated_error_during_stream;
 } stream_processor_t;
 
-// Stream processor for detailed Anthropic event callback
 typedef struct {
-    dp_anthropic_stream_callback_t anthropic_user_callback; // Anthropic-specific callback
+    dp_anthropic_stream_callback_t anthropic_user_callback;
     void* user_data;
     char* buffer;
     size_t buffer_size;
     size_t buffer_capacity;
-    // No provider needed here as this processor is Anthropic-specific
-    char* finish_reason_capture; // For overall status, though detailed events might have their own
+    char* finish_reason_capture;
     bool stop_streaming_signal;
     char* accumulated_error_during_stream;
 } anthropic_stream_processor_t;
@@ -110,7 +105,6 @@ dp_context_t* dp_init_context(dp_provider_type_t provider, const char* api_key, 
                 context->api_base_url = dp_internal_strdup(DEFAULT_ANTHROPIC_API_BASE_URL);
                 break;
             default:
-                // Should not happen if enum is handled correctly
                 context->api_base_url = NULL;
                 break;
         }
@@ -274,13 +268,12 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
     if (!root) return NULL;
 
     cJSON_AddStringToObject(root, "model", request_config->model);
-    cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens > 0 ? request_config->max_tokens : 1024); // Anthropic requires max_tokens
-    if (request_config->temperature >= 0.0 && request_config->temperature <= 1.0) { // Anthropic specific range for messages API often 0-1
+    cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens > 0 ? request_config->max_tokens : 1024);
+    if (request_config->temperature >= 0.0 && request_config->temperature <= 1.0) {
         cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
-    } else if (request_config->temperature > 1.0) { // Default if out of typical range
+    } else if (request_config->temperature > 1.0) {
          cJSON_AddNumberToObject(root, "temperature", 1.0);
     }
-
 
     if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
         cJSON_AddStringToObject(root, "system", request_config->system_prompt);
@@ -291,7 +284,7 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
 
     for (size_t i = 0; i < request_config->num_messages; ++i) {
         const dp_message_t* msg = &request_config->messages[i];
-        if (msg->role == DP_ROLE_SYSTEM) continue; // System prompts handled separately for Anthropic
+        if (msg->role == DP_ROLE_SYSTEM) continue;
 
         cJSON *msg_obj = cJSON_CreateObject();
         if (!msg_obj) { cJSON_Delete(root); return NULL; }
@@ -319,8 +312,6 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
                 cJSON_AddStringToObject(source_obj, "data", part->image_base64.data);
                 cJSON_AddItemToObject(part_obj, "source", source_obj);
             } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
-                // Anthropic generally prefers base64 for images in messages.
-                // If an image URL is given, we might convert it to a text description as a fallback.
                 char temp_text[512];
                 snprintf(temp_text, sizeof(temp_text), "Image referenced by URL: %s (Anthropic prefers direct image data)", part->image_url);
                 cJSON_AddStringToObject(part_obj, "type", "text");
@@ -341,7 +332,6 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
     return json_string;
 }
 
-
 static char* extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
     if (!json_response_str) return NULL;
@@ -352,7 +342,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
     }
 
     char* extracted_text = NULL;
-    cJSON *item_array = NULL; // For OpenAI 'choices', Gemini 'candidates', Anthropic 'content'
+    cJSON *item_array = NULL;
 
     if (provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
         item_array = cJSON_GetObjectItemCaseSensitive(root, "choices");
@@ -401,7 +391,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                 }
             }
         }
-        if (finish_reason_out && !*finish_reason_out) { // Fallback for finishReason
+        if (finish_reason_out && !*finish_reason_out) {
             cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(root, "promptFeedback");
             if (prompt_feedback) {
                 cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
@@ -411,10 +401,9 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
             }
         }
     } else if (provider == DP_PROVIDER_ANTHROPIC) {
-        // Anthropic's non-streaming response structure: top-level 'content' is an array of blocks
         item_array = cJSON_GetObjectItemCaseSensitive(root, "content");
         if(cJSON_IsArray(item_array) && cJSON_GetArraySize(item_array) > 0) {
-            cJSON* content_block = cJSON_GetArrayItem(item_array, 0); // Assuming first block is text
+            cJSON* content_block = cJSON_GetArrayItem(item_array, 0);
             if(content_block && cJSON_IsObject(content_block)) {
                 cJSON* text_item = cJSON_GetObjectItemCaseSensitive(content_block, "text");
                 if(cJSON_IsString(text_item) && text_item->valuestring) {
@@ -434,23 +423,27 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
     return extracted_text;
 }
 
-// Generic text-token streaming callback
 static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
-    // ... (Existing implementation for OpenAI and Gemini (SSE), now needs Anthropic text extraction) ...
-    // For Anthropic, if this generic callback is used, we need to parse its specific SSE
-    // and extract only text from "content_block_delta" with "text_delta".
-
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
-    if (processor->stop_streaming_signal) return 0;
+    if (processor->stop_streaming_signal) {
+        // Stop was signaled on a previous chunk, this is a new chunk arriving before curl stops.
+        // We must still accept it to not cause a libcurl error, but we do nothing with it.
+        return realsize;
+    }
 
     size_t needed_capacity = processor->buffer_size + realsize + 1;
     if (processor->buffer_capacity < needed_capacity) {
         size_t new_capacity = needed_capacity > processor->buffer_capacity * 2 ? needed_capacity : processor->buffer_capacity * 2;
         if (new_capacity < 1024) new_capacity = 1024;
         char* new_buf = realloc(processor->buffer, new_capacity);
-        if (!new_buf) { /* error handling */ return 0;}
+        if (!new_buf) {
+            const char* err_msg = "Stream buffer memory re-allocation failed";
+            processor->user_callback(NULL, processor->user_data, true, err_msg);
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
+            return 0;
+        }
         processor->buffer = new_buf;
         processor->buffer_capacity = new_capacity;
     }
@@ -484,7 +477,13 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
 
         size_t event_len = event_end - current_event_start;
         char* event_data_segment = malloc(event_len + 1);
-        if (!event_data_segment) { /* error handling */ processor->stop_streaming_signal = true; break; }
+        if (!event_data_segment) {
+            const char* err_msg = "Event segment memory allocation failed";
+             processor->user_callback(NULL, processor->user_data, true, err_msg);
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
+            processor->stop_streaming_signal = true;
+            break;
+        }
         strncpy(event_data_segment, current_event_start, event_len);
         event_data_segment[event_len] = '\0';
 
@@ -494,7 +493,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         char* line = event_data_segment;
         char* extracted_token_str = NULL;
         bool is_final_for_this_event = false;
-        char* sse_event_type_str = NULL; // For Anthropic
+        char* sse_event_type_str = NULL;
 
         while (line && *line) {
             char* next_line = strchr(line, '\n');
@@ -506,7 +505,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             }
 
             if (processor->provider == DP_PROVIDER_ANTHROPIC && strncmp(line, "event: ", 7) == 0) {
-                free(sse_event_type_str); // Free previous if any
+                free(sse_event_type_str);
                 sse_event_type_str = dp_internal_strdup(line + 7);
             } else if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
@@ -520,8 +519,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                 cJSON *json_chunk = cJSON_Parse(json_str);
                 if (json_chunk) {
                     if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-                        // ... (OpenAI parsing - unchanged) ...
-                        cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
+                         cJSON *choices = cJSON_GetObjectItemCaseSensitive(json_chunk, "choices");
                         if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
                             cJSON *choice = cJSON_GetArrayItem(choices, 0);
                             if(choice) {
@@ -542,7 +540,6 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                             }
                         }
                     } else if (processor->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-                        // ... (Gemini parsing - unchanged) ...
                         cJSON *candidates = cJSON_GetObjectItemCaseSensitive(json_chunk, "candidates");
                         if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
                             cJSON *candidate = cJSON_GetArrayItem(candidates, 0);
@@ -611,14 +608,16 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                             }
                         } else if (sse_event_type_str && strcmp(sse_event_type_str, "message_delta") == 0) {
                              if (!processor->finish_reason_capture) {
-                                cJSON *stop_reason = cJSON_GetObjectItemCaseSensitive(json_chunk, "stop_reason");
-                                if(cJSON_IsString(stop_reason) && stop_reason->valuestring){
-                                    processor->finish_reason_capture = dp_internal_strdup(stop_reason->valuestring);
+                                cJSON* usage = cJSON_GetObjectItemCaseSensitive(json_chunk, "usage");
+                                if(usage){
+                                    cJSON* stop_reason_item = cJSON_GetObjectItemCaseSensitive(usage, "stop_reason");
+                                    if(cJSON_IsString(stop_reason_item) && stop_reason_item->valuestring){
+                                         processor->finish_reason_capture = dp_internal_strdup(stop_reason_item->valuestring);
+                                    }
                                 }
                              }
                         } else if (sse_event_type_str && strcmp(sse_event_type_str, "message_stop") == 0) {
                             is_final_for_this_event = true;
-                            // finish_reason should have been captured from message_delta or earlier content_block_delta
                         } else if (sse_event_type_str && strcmp(sse_event_type_str, "error") == 0) {
                             cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(json_chunk, "error");
                             if(error_obj) {
@@ -630,14 +629,14 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                      if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = temp_err; else free(temp_err);
                                 }
                             }
-                            is_final_for_this_event = true; // Error usually means end of stream
+                            is_final_for_this_event = true;
                         }
-                    } // End provider check
+                    }
                     cJSON_Delete(json_chunk);
-                } // End if json_chunk
-            } // End if "data: "
-            if (next_line) line = next_line + 1 ; else break;
-        } // End while lines in event_data_segment
+                }
+            }
+            if (next_line) line = next_line + 1 + ((next_line > line && *(next_line-1) == '\r') ? -1 : 0) ; else break;
+        }
         free(sse_event_type_str); sse_event_type_str = NULL;
         free(event_data_segment);
 
@@ -655,29 +654,21 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         if (is_final_for_this_event) processor->stop_streaming_signal = true;
     }
 
-    if (remaining_in_buffer > 0 && current_event_start < processor->buffer + processor->buffer_size) {
+    if (remaining_in_buffer > 0 && current_event_start > processor->buffer) {
         memmove(processor->buffer, current_event_start, remaining_in_buffer);
-    } else if (remaining_in_buffer == 0) { // Cleared buffer
-        processor->buffer_size = 0;
     }
-    // If remaining_in_buffer > 0 and current_event_start == processor->buffer, it means nothing was processed.
-    // This can happen if the buffer doesn't contain a full SSE separator yet.
-    // In this case, buffer_size remains as is, waiting for more data.
-
-    processor->buffer_size = remaining_in_buffer; // Update buffer size
+    processor->buffer_size = remaining_in_buffer;
     if (processor->buffer_size < processor->buffer_capacity) {
         processor->buffer[processor->buffer_size] = '\0';
     }
     return realsize;
 }
 
-
-// New write callback for Anthropic detailed streaming
 static size_t anthropic_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     anthropic_stream_processor_t* processor = (anthropic_stream_processor_t*)userp;
 
-    if (processor->stop_streaming_signal) return 0;
+    if (processor->stop_streaming_signal) return realsize;
 
     size_t needed_capacity = processor->buffer_size + realsize + 1;
     if (processor->buffer_capacity < needed_capacity) {
@@ -685,7 +676,7 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
         if (new_capacity < 1024) new_capacity = 1024;
         char* new_buf = realloc(processor->buffer, new_capacity);
         if (!new_buf) {
-            dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":\"Stream buffer memory re-allocation failed\"}" };
+            dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":{\"type\":\"internal_error\",\"message\":\"Stream buffer memory re-allocation failed\"}}" };
             processor->anthropic_user_callback(&event, processor->user_data, "Stream buffer memory re-allocation failed");
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup("Stream buffer memory re-allocation failed");
             return 0;
@@ -724,7 +715,7 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
         size_t event_len = event_end - current_event_start;
         char* event_data_segment = malloc(event_len + 1);
         if (!event_data_segment) {
-            dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":\"Event segment memory allocation failed\"}" };
+            dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":{\"type\":\"internal_error\",\"message\":\"Event segment memory allocation failed\"}}" };
             processor->anthropic_user_callback(&event, processor->user_data, "Event segment memory allocation failed");
             if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup("Event segment memory allocation failed");
             processor->stop_streaming_signal = true; break;
@@ -750,10 +741,10 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
             }
 
             if (strncmp(line, "event: ", 7) == 0) {
-                free(temp_event_type_str); // free previous type if accumulating multi-line event (should not happen with Anthropic SSE usually)
+                free(temp_event_type_str);
                 temp_event_type_str = dp_internal_strdup(line + 7);
             } else if (strncmp(line, "data: ", 6) == 0) {
-                free(temp_json_data_str); // free previous data if accumulating
+                free(temp_json_data_str);
                 temp_json_data_str = dp_internal_strdup(line + 6);
             }
             if (next_line) line = next_line + 1 ; else break;
@@ -771,17 +762,13 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
             else current_api_event.event_type = DP_ANTHROPIC_EVENT_UNKNOWN;
             free(temp_event_type_str);
         }
-        current_api_event.raw_json_data = temp_json_data_str; // temp_json_data_str is already a strdup or NULL
+        current_api_event.raw_json_data = temp_json_data_str;
 
-        // Capture overall finish reason from message_stop or error event
         if (current_api_event.event_type == DP_ANTHROPIC_EVENT_MESSAGE_STOP || current_api_event.event_type == DP_ANTHROPIC_EVENT_ERROR) {
              if (!processor->finish_reason_capture && current_api_event.raw_json_data) {
                 cJSON* data_json = cJSON_Parse(current_api_event.raw_json_data);
                 if(data_json) {
                     if (current_api_event.event_type == DP_ANTHROPIC_EVENT_MESSAGE_STOP) {
-                        // Anthropic's message_stop event itself might not contain a stop_reason field in its 'data'.
-                        // The stop_reason is usually in the 'message_delta' that precedes message_stop, or on content blocks.
-                        // For simplicity, we'll mark it. A more detailed parser could extract from message_delta.
                         processor->finish_reason_capture = dp_internal_strdup("message_stop_event");
                     } else { // DP_ANTHROPIC_EVENT_ERROR
                         cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(data_json, "error");
@@ -797,13 +784,13 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
                     cJSON_Delete(data_json);
                 }
              }
-             processor->stop_streaming_signal = true; // Stop after final event
+             processor->stop_streaming_signal = true;
         }
 
         if (processor->anthropic_user_callback(&current_api_event, processor->user_data, NULL) != 0) {
             processor->stop_streaming_signal = true;
         }
-        free(temp_json_data_str); // Free the strdup'd JSON data after callback
+        free(temp_json_data_str);
         free(event_data_segment);
     }
 
@@ -825,8 +812,8 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
         if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_completion.");
         return -1;
     }
-    if (request_config->stream && context->provider != DP_PROVIDER_ANTHROPIC) { // Anthropic handles stream via this func too, but has specific one.
-        if (response) response->error_message = dp_internal_strdup("dp_perform_completion called with stream=true. Use dp_perform_streaming_completion or dp_perform_anthropic_streaming_completion.");
+    if (request_config->stream) {
+        if (response) response->error_message = dp_internal_strdup("dp_perform_completion called with stream=true. Use streaming functions instead.");
         return -1;
     }
     memset(response, 0, sizeof(dp_response_t));
@@ -869,9 +856,8 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
         char api_key_header[512];
         snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
         headers = curl_slist_append(headers, api_key_header);
-        headers = curl_slist_append(headers, "anthropic-version: 2023-06-01"); // Common Anthropic version
+        headers = curl_slist_append(headers, "anthropic-version: 2023-06-01");
     }
-
 
     memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
     if (!chunk_mem.memory) {
@@ -910,14 +896,14 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 cJSON* error_root = cJSON_Parse(chunk_mem.memory);
                 if (error_root) {
                     cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(error_root, "error");
-                    if (error_obj) { // General error structure
+                    if (error_obj) {
                         cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                         if (cJSON_IsString(msg_item) && msg_item->valuestring) {
                              asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
                         }
-                    } else { // Anthropic specific error structure might be at top level
+                    } else {
                          cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
-                         cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message"); // Anthropic error often has message at root of error obj
+                         cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message");
                          if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                             cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
                             asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
@@ -936,12 +922,12 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
              char* api_err_detail = NULL;
              if(error_root){
                 cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(error_root, "error");
-                if(error_obj){ // General
+                if(error_obj){
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if(cJSON_IsString(msg_item) && msg_item->valuestring){
                         api_err_detail = msg_item->valuestring;
                     }
-                } else { // Anthropic specific
+                } else {
                      cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
                      cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message");
                      if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
@@ -975,14 +961,9 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_streaming_completion.");
         return -1;
     }
-    // This function is for generic text streaming. If Anthropic is chosen, it will adapt.
-    // For detailed Anthropic events, dp_perform_anthropic_streaming_completion should be used.
-    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE && !request_config->stream) {
-         if (response) response->error_message = dp_internal_strdup("dp_perform_streaming_completion for OpenAI requires stream=true in config.");
-        return -1;
-    }
-     if (context->provider == DP_PROVIDER_ANTHROPIC && !request_config->stream) {
-         if (response) response->error_message = dp_internal_strdup("dp_perform_streaming_completion for Anthropic requires stream=true in config.");
+
+    if (context->provider != DP_PROVIDER_GOOGLE_GEMINI && !request_config->stream) {
+         if (response) response->error_message = dp_internal_strdup("dp_perform_streaming_completion requires stream=true in config for OpenAI and Anthropic.");
         return -1;
     }
 
@@ -994,7 +975,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         return -1;
     }
 
-    stream_processor_t processor = {0}; // Generic stream processor
+    stream_processor_t processor = {0};
     processor.user_callback = callback;
     processor.user_data = user_data;
     processor.provider = context->provider;
@@ -1015,7 +996,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         json_payload_str = build_anthropic_json_payload_with_cjson(request_config);
     }
 
-    if (!json_payload_str) {
+     if (!json_payload_str) {
         response->error_message = dp_internal_strdup("Payload build failed for streaming.");
         free(processor.buffer); curl_easy_cleanup(curl); return -1;
     }
@@ -1044,7 +1025,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback); // Generic callback handler
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
 
@@ -1052,7 +1033,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
     if (!processor.stop_streaming_signal) {
-        // ... (rest of error handling as in previous version) ...
         const char* final_stream_error = processor.accumulated_error_during_stream;
         if (res != CURLE_OK && !final_stream_error) {
             final_stream_error = curl_easy_strerror(res);
@@ -1060,7 +1040,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
             cJSON* error_json = cJSON_Parse(processor.buffer);
             if (error_json) {
                 cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(error_json, "error");
-                 if (error_obj) { // General error structure
+                 if (error_obj) {
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
                         final_stream_error = msg_item->valuestring;
@@ -1068,7 +1048,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                            response->error_message = dp_internal_strdup(final_stream_error);
                         }
                     }
-                } else { // Anthropic specific error structure might be at top level
+                } else {
                      cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "type");
                      cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "message");
                      if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
@@ -1099,7 +1079,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     if (res != CURLE_OK && !response->error_message) {
         asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
-         // ... (rest of error message population as in previous version) ...
          char* temp_err_msg = NULL;
          if (processor.buffer_size > 0) {
             cJSON* error_json = cJSON_Parse(processor.buffer);
@@ -1151,7 +1130,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     return response->error_message ? -1 : 0;
 }
 
-// New function for Anthropic detailed streaming
 int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               const dp_request_config_t* request_config,
                                               dp_anthropic_stream_callback_t anthropic_callback,
@@ -1178,7 +1156,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
         return -1;
     }
 
-    anthropic_stream_processor_t processor = {0}; // Anthropic-specific processor
+    anthropic_stream_processor_t processor = {0};
     processor.anthropic_user_callback = anthropic_callback;
     processor.user_data = user_data;
     processor.buffer_capacity = 8192;
@@ -1202,12 +1180,12 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     char api_key_header[512];
     snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
     headers = curl_slist_append(headers, api_key_header);
-    headers = curl_slist_append(headers, "anthropic-version: 2023-06-01"); // Or a more recent version if available/required
+    headers = curl_slist_append(headers, "anthropic-version: 2023-06-01");
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, anthropic_detailed_stream_write_callback); // Use new callback
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, anthropic_detailed_stream_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
 
@@ -1220,18 +1198,16 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
 
         if (res != CURLE_OK && !final_stream_error) {
             final_stream_error = curl_easy_strerror(res);
-            final_event.event_type = DP_ANTHROPIC_EVENT_ERROR; // Treat curl error as a stream error event
-            final_event.raw_json_data = final_stream_error; // Not JSON, but best effort
+            final_event.event_type = DP_ANTHROPIC_EVENT_ERROR;
+            final_event.raw_json_data = final_stream_error;
         } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !final_stream_error) {
             final_event.event_type = DP_ANTHROPIC_EVENT_ERROR;
-            final_event.raw_json_data = processor.buffer_size > 0 ? processor.buffer : "{\"error\":\"HTTP error occurred during stream\"}";
+            final_event.raw_json_data = processor.buffer_size > 0 ? processor.buffer : "{\"error\":{\"type\":\"http_error\",\"message\":\"HTTP error occurred during stream\"}}";
             final_stream_error = processor.buffer_size > 0 ? processor.buffer : "HTTP error occurred during stream";
-        } else if (!final_stream_error) { // Clean end, but ensure a final signal if not already done by message_stop
-            final_event.event_type = DP_ANTHROPIC_EVENT_MESSAGE_STOP; // Simulate if not caught explicitly
+        } else if (!final_stream_error) {
+            final_event.event_type = DP_ANTHROPIC_EVENT_MESSAGE_STOP;
         }
-        // Call user callback one last time to signal end or error.
-        // Only if not already stopped by user or message_stop.
-        // The stop_streaming_signal helps prevent double-calling for message_stop.
+
         if (final_event.event_type != DP_ANTHROPIC_EVENT_UNKNOWN || final_stream_error) {
             processor.anthropic_user_callback(&final_event, processor.user_data, final_stream_error);
         }
@@ -1240,11 +1216,9 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     if (processor.finish_reason_capture) {
         response->finish_reason = processor.finish_reason_capture;
     } else if (res == CURLE_OK && response->http_status_code >= 200 && response->http_status_code < 300 && !processor.accumulated_error_during_stream && !response->finish_reason) {
-        response->finish_reason = dp_internal_strdup("completed"); // Or derive from last Anthropic event if possible
+        response->finish_reason = dp_internal_strdup("completed");
     }
 
-    // Populate response->error_message for overall function status
-    // (Logic similar to dp_perform_streaming_completion's end)
     if (res != CURLE_OK && !response->error_message) {
         asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
@@ -1304,7 +1278,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
         snprintf(url, sizeof(url), "%s/models?key=%s", context->api_base_url, context->api_key);
     } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
-        snprintf(url, sizeof(url), "%s/models", context->api_base_url); // Anthropic also uses /models
+        snprintf(url, sizeof(url), "%s/models", context->api_base_url);
         char api_key_header[512];
         snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
         headers = curl_slist_append(headers, api_key_header);
@@ -1340,7 +1314,6 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                 return_code = -1;
             } else {
                 cJSON *data_array = NULL;
-                // OpenAI and Anthropic use "data", Gemini uses "models"
                 if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE || context->provider == DP_PROVIDER_ANTHROPIC) {
                     data_array = cJSON_GetObjectItemCaseSensitive(root, "data");
                 } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
@@ -1364,37 +1337,41 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                             cJSON *id_item = NULL;
                             if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE || context->provider == DP_PROVIDER_ANTHROPIC) {
                                 id_item = cJSON_GetObjectItemCaseSensitive(model_json, "id");
-                            } else { // Gemini
+                            } else {
                                 id_item = cJSON_GetObjectItemCaseSensitive(model_json, "name");
                             }
                             if (cJSON_IsString(id_item) && id_item->valuestring) {
-                                info->model_id = dp_internal_strdup(id_item->valuestring);
+                                const char* model_name_str = id_item->valuestring;
+                                if (context->provider == DP_PROVIDER_GOOGLE_GEMINI && strncmp(model_name_str, "models/", 7) == 0) {
+                                    model_name_str += 7; // Strip the "models/" prefix
+                                }
+                                info->model_id = dp_internal_strdup(model_name_str);
                             }
 
-                            cJSON *display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "displayName"); // Gemini specific
-                             if (!display_name_item && context->provider == DP_PROVIDER_ANTHROPIC) { // Anthropic specific
+                            cJSON *display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "displayName");
+                             if (!display_name_item && context->provider == DP_PROVIDER_ANTHROPIC) {
                                 display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "display_name");
                             }
                             if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
                                 info->display_name = dp_internal_strdup(display_name_item->valuestring);
                             }
 
-                            cJSON *version_item = cJSON_GetObjectItemCaseSensitive(model_json, "version"); // Gemini specific
+                            cJSON *version_item = cJSON_GetObjectItemCaseSensitive(model_json, "version");
                             if (cJSON_IsString(version_item) && version_item->valuestring) {
                                 info->version = dp_internal_strdup(version_item->valuestring);
                             }
 
-                            cJSON *description_item = cJSON_GetObjectItemCaseSensitive(model_json, "description"); // Gemini specific
+                            cJSON *description_item = cJSON_GetObjectItemCaseSensitive(model_json, "description");
                             if (cJSON_IsString(description_item) && description_item->valuestring) {
                                 info->description = dp_internal_strdup(description_item->valuestring);
                             }
 
-                            cJSON *input_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "inputTokenLimit"); // Gemini specific
+                            cJSON *input_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "inputTokenLimit");
                             if(cJSON_IsNumber(input_limit_item)) {
                                 info->input_token_limit = (long)input_limit_item->valuedouble;
                             }
 
-                            cJSON *output_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "outputTokenLimit"); // Gemini specific
+                            cJSON *output_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "outputTokenLimit");
                              if(cJSON_IsNumber(output_limit_item)) {
                                 info->output_token_limit = (long)output_limit_item->valuedouble;
                             }
@@ -1516,3 +1493,173 @@ bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url)
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
     return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
 }
+
+// ---- START SERIALIZATION FUNCTIONS ----
+
+int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_messages, char** json_str_out) {
+    if (!messages || !json_str_out) return -1;
+
+    cJSON* root = cJSON_CreateArray();
+    if (!root) return -1;
+
+    for (size_t i = 0; i < num_messages; ++i) {
+        const dp_message_t* msg = &messages[i];
+        cJSON* msg_obj = cJSON_CreateObject();
+        if (!msg_obj) { cJSON_Delete(root); return -1; }
+
+        const char* role_str = "user"; // default
+        switch(msg->role) {
+            case DP_ROLE_SYSTEM: role_str = "system"; break;
+            case DP_ROLE_USER: role_str = "user"; break;
+            case DP_ROLE_ASSISTANT: role_str = "assistant"; break;
+            case DP_ROLE_TOOL: role_str = "tool"; break;
+        }
+        cJSON_AddStringToObject(msg_obj, "role", role_str);
+
+        cJSON* parts_array = cJSON_AddArrayToObject(msg_obj, "parts");
+        if(!parts_array) { cJSON_Delete(msg_obj); cJSON_Delete(root); return -1; }
+
+        for (size_t j = 0; j < msg->num_parts; ++j) {
+            const dp_content_part_t* part = &msg->parts[j];
+            cJSON* part_obj = cJSON_CreateObject();
+            if(!part_obj) { cJSON_Delete(root); return -1; }
+
+            switch(part->type) {
+                case DP_CONTENT_PART_TEXT:
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", part->text);
+                    break;
+                case DP_CONTENT_PART_IMAGE_URL:
+                    cJSON_AddStringToObject(part_obj, "type", "image_url");
+                    cJSON_AddStringToObject(part_obj, "url", part->image_url);
+                    break;
+                case DP_CONTENT_PART_IMAGE_BASE64:
+                    cJSON_AddStringToObject(part_obj, "type", "image_base64");
+                    cJSON_AddStringToObject(part_obj, "mime_type", part->image_base64.mime_type);
+                    cJSON_AddStringToObject(part_obj, "data", part->image_base64.data);
+                    break;
+            }
+            cJSON_AddItemToArray(parts_array, part_obj);
+        }
+        cJSON_AddItemToArray(root, msg_obj);
+    }
+
+    *json_str_out = cJSON_Print(root); // Pretty-printed for readability
+    cJSON_Delete(root);
+
+    return (*json_str_out) ? 0 : -1;
+}
+
+int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out) {
+    if (!json_str || !messages_out || !num_messages_out) return -1;
+
+    cJSON* root = cJSON_Parse(json_str);
+    if (!root) return -1;
+
+    if (!cJSON_IsArray(root)) {
+        cJSON_Delete(root);
+        return -1;
+    }
+
+    size_t count = cJSON_GetArraySize(root);
+    dp_message_t* msg_array = calloc(count, sizeof(dp_message_t));
+    if (!msg_array) { cJSON_Delete(root); return -1; }
+
+    int current_msg_idx = 0;
+    cJSON* msg_obj = NULL;
+    cJSON_ArrayForEach(msg_obj, root) {
+        dp_message_t* current_msg = &msg_array[current_msg_idx];
+
+        cJSON* role_item = cJSON_GetObjectItemCaseSensitive(msg_obj, "role");
+        if (cJSON_IsString(role_item)) {
+            if (strcmp(role_item->valuestring, "system") == 0) current_msg->role = DP_ROLE_SYSTEM;
+            else if (strcmp(role_item->valuestring, "assistant") == 0) current_msg->role = DP_ROLE_ASSISTANT;
+            else if (strcmp(role_item->valuestring, "tool") == 0) current_msg->role = DP_ROLE_TOOL;
+            else current_msg->role = DP_ROLE_USER; // Default
+        }
+
+        cJSON* parts_array = cJSON_GetObjectItemCaseSensitive(msg_obj, "parts");
+        if (cJSON_IsArray(parts_array)) {
+            cJSON* part_obj = NULL;
+            cJSON_ArrayForEach(part_obj, parts_array) {
+                cJSON* type_item = cJSON_GetObjectItemCaseSensitive(part_obj, "type");
+                if (cJSON_IsString(type_item)) {
+                    if (strcmp(type_item->valuestring, "text") == 0) {
+                        cJSON* text_item = cJSON_GetObjectItemCaseSensitive(part_obj, "text");
+                        if (cJSON_IsString(text_item)) dp_message_add_text_part(current_msg, text_item->valuestring);
+                    } else if (strcmp(type_item->valuestring, "image_url") == 0) {
+                        cJSON* url_item = cJSON_GetObjectItemCaseSensitive(part_obj, "url");
+                        if (cJSON_IsString(url_item)) dp_message_add_image_url_part(current_msg, url_item->valuestring);
+                    } else if (strcmp(type_item->valuestring, "image_base64") == 0) {
+                        cJSON* mime_item = cJSON_GetObjectItemCaseSensitive(part_obj, "mime_type");
+                        cJSON* data_item = cJSON_GetObjectItemCaseSensitive(part_obj, "data");
+                        if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
+                            dp_message_add_base64_image_part(current_msg, mime_item->valuestring, data_item->valuestring);
+                        }
+                    }
+                }
+            }
+        }
+        current_msg_idx++;
+    }
+
+    cJSON_Delete(root);
+    *messages_out = msg_array;
+    *num_messages_out = count;
+    return 0;
+}
+
+
+int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path) {
+    char* json_str = NULL;
+    if (dp_serialize_messages_to_json_str(messages, num_messages, &json_str) != 0) {
+        return -1;
+    }
+    if (!json_str) return -1; // Should not happen if previous call returns 0
+
+    FILE* fp = fopen(path, "w");
+    if (!fp) {
+        free(json_str);
+        return -1;
+    }
+
+    int result = (fputs(json_str, fp) < 0) ? -1 : 0;
+
+    fclose(fp);
+    free(json_str);
+    return result;
+}
+
+int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out) {
+    FILE* fp = fopen(path, "r");
+    if (!fp) return -1;
+
+    fseek(fp, 0, SEEK_END);
+    long length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    if (length < 0) {
+        fclose(fp);
+        return -1;
+    }
+
+    char* buffer = malloc(length + 1);
+    if (!buffer) {
+        fclose(fp);
+        return -1;
+    }
+
+    if (fread(buffer, 1, length, fp) != (size_t)length) {
+        free(buffer);
+        fclose(fp);
+        return -1;
+    }
+    buffer[length] = '\0';
+    fclose(fp);
+
+    int result = dp_deserialize_messages_from_json_str(buffer, messages_out, num_messages_out);
+    free(buffer);
+    return result;
+}
+
+// ---- END SERIALIZATION FUNCTIONS ----

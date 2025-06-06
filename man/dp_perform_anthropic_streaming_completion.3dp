@@ -1,0 +1,57 @@
+.\" Man page for dp_perform_anthropic_streaming_completion from libdisasterparty
+.TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_perform_anthropic_streaming_completion \- perform a streaming request to Anthropic with detailed event handling
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_perform_anthropic_streaming_completion(dp_context_t *" context ", const dp_request_config_t *" request_config ", dp_anthropic_stream_callback_t " anthropic_callback ", void *" user_data ", dp_response_t *" response ");"
+
+.SH DESCRIPTION
+The
+.B dp_perform_anthropic_streaming_completion()
+function sends a streaming request specifically to the Anthropic API. It is designed
+for applications that need to process the fine-grained, event-based Server-Sent
+Events (SSE) that the Anthropic API provides.
+
+The provider in the
+.I context
+must be
+.BR DP_PROVIDER_ANTHROPIC ,
+and
+.I request_config->stream
+must be set to
+.BR true .
+
+Instead of a generic text callback, this function takes a
+.I anthropic_callback
+of type
+.BR dp_anthropic_stream_callback_t .
+This callback is invoked for each SSE event (e.g.,
+.BR message_start ,
+.BR content_block_delta ,
+.BR message_stop )
+and receives a
+.BR dp_anthropic_stream_event_t
+structure containing the event type and the raw JSON data associated with it.
+
+.SH RETURN VALUE
+Returns 0 if the stream was successfully initiated and completed. Returns -1 on setup error
+or if the provider in the context is not Anthropic.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_perform_streaming_completion (3),
+.BR disasterparty (7)

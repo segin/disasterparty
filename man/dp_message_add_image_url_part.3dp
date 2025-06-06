@@ -1,8 +1,8 @@
 .\" Man page for dp_message_add_image_url_part from libdisasterparty
-.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
-dp_message_add_image_url_part \- add an image URL content part to a Disaster Party message
+dp_message_add_image_url_part \- add an image URL content part to a message
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
@@ -14,39 +14,18 @@ The
 .B dp_message_add_image_url_part()
 function adds a new image URL content part to an existing
 .BR dp_message_t
-structure. This is typically used for multimodal requests where an image is referenced by its URL.
-The
-.I message
-must have its
-.I parts
-array and
-.I num_parts
-field initialized.
-This function reallocates the internal
-.I parts
-array.
-
-The provided
+structure for multimodal requests. The provided
 .I image_url
-is copied into a newly allocated string within the content part.
-The caller is responsible for freeing the message contents using
+is copied into a newly allocated string. The caller is responsible for
+eventually freeing the message contents using
 .BR dp_free_messages (3).
-
-.SH PARAMETERS
-.TP
-.B dp_message_t *\fImessage\fP
-A pointer to the Disaster Party message structure.
-.TP
-.B const char *\fIimage_url\fP
-The null-terminated URL string for the image.
 
 .SH RETURN VALUE
 Returns
 .BR true
-on success.
-Returns
+on success, and
 .BR false
-on error (e.g., memory allocation failure).
+on error.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -56,11 +35,10 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_message_add_text_part (3),
 .BR dp_message_add_base64_image_part (3),
-.BR dp_free_messages (3),
-.BR disasterparty (7)
-
+.BR dp_free_messages (3)

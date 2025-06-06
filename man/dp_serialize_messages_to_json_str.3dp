@@ -1,0 +1,42 @@
+.\" Man page for dp_serialize_messages_to_json_str from libdisasterparty
+.TH DP_SERIALIZE_MESSAGES_TO_JSON_STR 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_serialize_messages_to_json_str \- serialize an array of messages to a JSON string
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_serialize_messages_to_json_str(const dp_message_t *" messages ", size_t " num_messages ", char **" json_str_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_serialize_messages_to_json_str()
+function converts an array of
+.BR dp_message_t
+structures into a pretty-printed JSON string. This is useful for saving a conversation
+history in a portable format.
+
+The caller is responsible for freeing the allocated string returned in
+.I *json_str_out
+using
+.BR free (3).
+
+.SH RETURN VALUE
+Returns 0 on success. Returns -1 on failure (e.g., invalid arguments, memory allocation error).
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_deserialize_messages_from_json_str (3),
+.BR dp_free_messages (3),
+.BR disasterparty (7)

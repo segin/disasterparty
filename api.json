@@ -1,12 +1,12 @@
 {
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "headerFile": "disasterparty.h",
-  "description": "A C library for interacting with OpenAI-compatible and Google Gemini LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
+  "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
   "dependencies": [
-    {"name": "libcurl", "version_requirement": ">= 7.20.0"},
-    {"name": "libcjson", "version_requirement": ">= 1.7.10"}
+    { "name": "libcurl", "version_requirement": ">= 7.20.0" },
+    { "name": "libcjson", "version_requirement": ">= 1.7.10" }
   ],
   "symbolPrefix": "dp_",
   "dataTypes": [
@@ -15,8 +15,18 @@
       "type": "enum",
       "description": "Enumeration for supported LLM API providers.",
       "values": [
-        {"name": "DP_PROVIDER_OPENAI_COMPATIBLE", "description": "OpenAI-compatible API provider."},
-        {"name": "DP_PROVIDER_GOOGLE_GEMINI", "description": "Google Gemini API provider."}
+        {
+          "name": "DP_PROVIDER_OPENAI_COMPATIBLE",
+          "description": "OpenAI-compatible API provider."
+        },
+        {
+          "name": "DP_PROVIDER_GOOGLE_GEMINI",
+          "description": "Google Gemini API provider."
+        },
+        {
+          "name": "DP_PROVIDER_ANTHROPIC",
+          "description": "Anthropic Claude API provider."
+        }
       ]
     },
     {
@@ -24,10 +34,16 @@
       "type": "enum",
       "description": "Enumeration for the role in a message.",
       "values": [
-        {"name": "DP_ROLE_SYSTEM", "description": "System role."},
-        {"name": "DP_ROLE_USER", "description": "User role."},
-        {"name": "DP_ROLE_ASSISTANT", "description": "Assistant (model) role."},
-        {"name": "DP_ROLE_TOOL", "description": "Tool role (for function calling)."}
+        { "name": "DP_ROLE_SYSTEM", "description": "System role." },
+        { "name": "DP_ROLE_USER", "description": "User role." },
+        {
+          "name": "DP_ROLE_ASSISTANT",
+          "description": "Assistant (model) role."
+        },
+        {
+          "name": "DP_ROLE_TOOL",
+          "description": "Tool role (for function calling)."
+        }
       ]
     },
     {
@@ -35,9 +51,15 @@
       "type": "enum",
       "description": "Enumeration for the type of content part in a multimodal message.",
       "values": [
-        {"name": "DP_CONTENT_PART_TEXT", "description": "Text content."},
-        {"name": "DP_CONTENT_PART_IMAGE_URL", "description": "Image URL content."},
-        {"name": "DP_CONTENT_PART_IMAGE_BASE64", "description": "Base64 encoded image data."}
+        { "name": "DP_CONTENT_PART_TEXT", "description": "Text content." },
+        {
+          "name": "DP_CONTENT_PART_IMAGE_URL",
+          "description": "Image URL content."
+        },
+        {
+          "name": "DP_CONTENT_PART_IMAGE_BASE64",
+          "description": "Base64 encoded image data."
+        }
       ]
     },
     {
@@ -45,16 +67,36 @@
       "type": "struct",
       "description": "Represents a single part of a multimodal message content.",
       "fields": [
-        {"name": "type", "type": "dp_content_part_type_t", "description": "Type of this content part."},
-        {"name": "text", "type": "char*", "description": "Text content (if type is DP_CONTENT_PART_TEXT)."},
-        {"name": "image_url", "type": "char*", "description": "URL of the image (if type is DP_CONTENT_PART_IMAGE_URL)."},
         {
-          "name": "image_base64", 
-          "type": "struct { char* mime_type; char* data; }", 
+          "name": "type",
+          "type": "dp_content_part_type_t",
+          "description": "Type of this content part."
+        },
+        {
+          "name": "text",
+          "type": "char*",
+          "description": "Text content (if type is DP_CONTENT_PART_TEXT)."
+        },
+        {
+          "name": "image_url",
+          "type": "char*",
+          "description": "URL of the image (if type is DP_CONTENT_PART_IMAGE_URL)."
+        },
+        {
+          "name": "image_base64",
+          "type": "struct { char* mime_type; char* data; }",
           "description": "Base64 encoded image data (if type is DP_CONTENT_PART_IMAGE_BASE64).",
           "subfields": [
-            {"name": "mime_type", "type": "char*", "description": "MIME type of the image (e.g., \"image/png\")."},
-            {"name": "data", "type": "char*", "description": "Base64 encoded image data string."}
+            {
+              "name": "mime_type",
+              "type": "char*",
+              "description": "MIME type of the image (e.g., \"image/png\")."
+            },
+            {
+              "name": "data",
+              "type": "char*",
+              "description": "Base64 encoded image data string."
+            }
           ]
         }
       ]
@@ -64,9 +106,21 @@
       "type": "struct",
       "description": "Represents a single message in a conversation.",
       "fields": [
-        {"name": "role", "type": "dp_message_role_t", "description": "Role of the message sender."},
-        {"name": "parts", "type": "dp_content_part_t*", "description": "Array of content parts for multimodality."},
-        {"name": "num_parts", "type": "size_t", "description": "Number of parts in the 'parts' array."}
+        {
+          "name": "role",
+          "type": "dp_message_role_t",
+          "description": "Role of the message sender."
+        },
+        {
+          "name": "parts",
+          "type": "dp_content_part_t*",
+          "description": "Array of content parts for multimodality."
+        },
+        {
+          "name": "num_parts",
+          "type": "size_t",
+          "description": "Number of parts in the 'parts' array."
+        }
       ]
     },
     {
@@ -74,12 +128,41 @@
       "type": "struct",
       "description": "Configuration for an LLM API request.",
       "fields": [
-        {"name": "model", "type": "const char*", "description": "Identifier of the model to use."},
-        {"name": "messages", "type": "dp_message_t*", "description": "Array of messages forming the conversation history."},
-        {"name": "num_messages", "type": "size_t", "description": "Number of messages in the 'messages' array."},
-        {"name": "temperature", "type": "double", "description": "Sampling temperature for generation (0.0-2.0)."},
-        {"name": "max_tokens", "type": "int", "description": "Maximum number of tokens to generate."},
-        {"name": "stream", "type": "bool", "description": "True for streaming response, false for single blocking response."}
+        {
+          "name": "model",
+          "type": "const char*",
+          "description": "Identifier of the model to use."
+        },
+        {
+          "name": "messages",
+          "type": "dp_message_t*",
+          "description": "Array of messages forming the conversation history."
+        },
+        {
+          "name": "num_messages",
+          "type": "size_t",
+          "description": "Number of messages in the 'messages' array."
+        },
+        {
+          "name": "system_prompt",
+          "type": "const char*",
+          "description": "Optional system prompt, primarily for Anthropic."
+        },
+        {
+          "name": "temperature",
+          "type": "double",
+          "description": "Sampling temperature for generation (0.0-2.0 for OpenAI/Gemini, 0.0-1.0 for Anthropic)."
+        },
+        {
+          "name": "max_tokens",
+          "type": "int",
+          "description": "Maximum number of tokens to generate."
+        },
+        {
+          "name": "stream",
+          "type": "bool",
+          "description": "True for streaming response, false for single blocking response."
+        }
       ]
     },
     {
@@ -87,8 +170,16 @@
       "type": "struct",
       "description": "Represents a part of an LLM's response (primarily for non-streaming full content).",
       "fields": [
-        {"name": "type", "type": "dp_content_part_type_t", "description": "Type of this response part (usually DP_CONTENT_PART_TEXT)."},
-        {"name": "text", "type": "char*", "description": "Text content of the response part."}
+        {
+          "name": "type",
+          "type": "dp_content_part_type_t",
+          "description": "Type of this response part (usually DP_CONTENT_PART_TEXT)."
+        },
+        {
+          "name": "text",
+          "type": "char*",
+          "description": "Text content of the response part."
+        }
       ]
     },
     {
@@ -96,11 +187,31 @@
       "type": "struct",
       "description": "Represents the overall response from an LLM API call.",
       "fields": [
-        {"name": "parts", "type": "dp_response_part_t*", "description": "Array of response parts (for non-streaming full response)."},
-        {"name": "num_parts", "type": "size_t", "description": "Number of parts in the 'parts' array."},
-        {"name": "error_message", "type": "char*", "description": "Error message if the operation failed."},
-        {"name": "http_status_code", "type": "long", "description": "HTTP status code of the API call."},
-        {"name": "finish_reason", "type": "char*", "description": "Reason the generation finished (e.g., \"stop\", \"length\")."}
+        {
+          "name": "parts",
+          "type": "dp_response_part_t*",
+          "description": "Array of response parts (for non-streaming full response)."
+        },
+        {
+          "name": "num_parts",
+          "type": "size_t",
+          "description": "Number of parts in the 'parts' array."
+        },
+        {
+          "name": "error_message",
+          "type": "char*",
+          "description": "Error message if the operation failed."
+        },
+        {
+          "name": "http_status_code",
+          "type": "long",
+          "description": "HTTP status code of the API call."
+        },
+        {
+          "name": "finish_reason",
+          "type": "char*",
+          "description": "Reason the generation finished (e.g., \"stop\", \"length\", \"end_turn\")."
+        }
       ]
     },
     {
@@ -108,12 +219,36 @@
       "type": "struct",
       "description": "Holds information about a single available LLM model.",
       "fields": [
-        {"name": "model_id", "type": "char*", "description": "Unique identifier for the model."},
-        {"name": "display_name", "type": "char*", "description": "User-friendly display name."},
-        {"name": "version", "type": "char*", "description": "Specific version string of the model."},
-        {"name": "description", "type": "char*", "description": "Brief description of the model."},
-        {"name": "input_token_limit", "type": "long", "description": "Maximum input tokens."},
-        {"name": "output_token_limit", "type": "long", "description": "Maximum output tokens."}
+        {
+          "name": "model_id",
+          "type": "char*",
+          "description": "Unique identifier for the model."
+        },
+        {
+          "name": "display_name",
+          "type": "char*",
+          "description": "User-friendly display name."
+        },
+        {
+          "name": "version",
+          "type": "char*",
+          "description": "Specific version string of the model."
+        },
+        {
+          "name": "description",
+          "type": "char*",
+          "description": "Brief description of the model."
+        },
+        {
+          "name": "input_token_limit",
+          "type": "long",
+          "description": "Maximum input tokens."
+        },
+        {
+          "name": "output_token_limit",
+          "type": "long",
+          "description": "Maximum output tokens."
+        }
       ]
     },
     {
@@ -121,10 +256,59 @@
       "type": "struct",
       "description": "Holds a list of available models and status from the listing operation.",
       "fields": [
-        {"name": "models", "type": "dp_model_info_t*", "description": "Array of model information structures."},
-        {"name": "count", "type": "size_t", "description": "Number of models in the 'models' array."},
-        {"name": "error_message", "type": "char*", "description": "Error message if the listing operation failed."},
-        {"name": "http_status_code", "type": "long", "description": "HTTP status code of the list models API call."}
+        {
+          "name": "models",
+          "type": "dp_model_info_t*",
+          "description": "Array of model information structures."
+        },
+        {
+          "name": "count",
+          "type": "size_t",
+          "description": "Number of models in the 'models' array."
+        },
+        {
+          "name": "error_message",
+          "type": "char*",
+          "description": "Error message if the listing operation failed."
+        },
+        {
+          "name": "http_status_code",
+          "type": "long",
+          "description": "HTTP status code of the list models API call."
+        }
+      ]
+    },
+    {
+      "name": "dp_anthropic_event_type_t",
+      "type": "enum",
+      "description": "Enumeration for Anthropic stream event types.",
+      "values": [
+        { "name": "DP_ANTHROPIC_EVENT_UNKNOWN" },
+        { "name": "DP_ANTHROPIC_EVENT_MESSAGE_START" },
+        { "name": "DP_ANTHROPIC_EVENT_CONTENT_BLOCK_START" },
+        { "name": "DP_ANTHROPIC_EVENT_PING" },
+        { "name": "DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA" },
+        { "name": "DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP" },
+        { "name": "DP_ANTHROPIC_EVENT_MESSAGE_DELTA" },
+        { "name": "DP_ANTHROPIC_EVENT_MESSAGE_STOP" },
+        { "name": "DP_ANTHROPIC_EVENT_ERROR" }
+      ]
+    },
+    {
+      "name": "dp_anthropic_stream_event_t",
+      "type": "struct",
+      "description": "Structure to hold a detailed Anthropic stream event.",
+      "fields": [
+        {
+          "name": "event_type",
+          "type": "dp_anthropic_event_type_t",
+          "description": "The type of the SSE event."
+        },
+        {
+          "name": "raw_json_data",
+          "type": "const char*",
+          "description": "The raw JSON string from the 'data:' line of the SSE event."
+        }
       ]
     },
     {
@@ -143,12 +327,53 @@
       "name": "dp_stream_callback_t",
       "type": "function_pointer",
       "signature": "int (*dp_stream_callback_t)(const char* token, void* user_data, bool is_final_chunk, const char* error_during_stream)",
-      "description": "Callback function type for handling streamed data.",
+      "description": "Generic callback function type for handling streamed text tokens.",
       "parameters": [
-        {"name": "token", "type": "const char*", "description": "Received text chunk. NULL on final call or error."},
-        {"name": "user_data", "type": "void*", "description": "User-defined data passed from the streaming call."},
-        {"name": "is_final_chunk", "type": "bool", "description": "True if this is the last content-bearing chunk or stream end signal."},
-        {"name": "error_during_stream", "type": "const char*", "description": "Error message if an error occurred during stream processing."}
+        {
+          "name": "token",
+          "type": "const char*",
+          "description": "Received text chunk. NULL on final call or error."
+        },
+        {
+          "name": "user_data",
+          "type": "void*",
+          "description": "User-defined data passed from the streaming call."
+        },
+        {
+          "name": "is_final_chunk",
+          "type": "bool",
+          "description": "True if this is the last content-bearing chunk or stream end signal."
+        },
+        {
+          "name": "error_during_stream",
+          "type": "const char*",
+          "description": "Error message if an error occurred during stream processing."
+        }
+      ],
+      "returnType": "int",
+      "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
+    },
+    {
+      "name": "dp_anthropic_stream_callback_t",
+      "type": "function_pointer",
+      "signature": "int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_during_stream)",
+      "description": "Callback function type for handling detailed Anthropic streamed events.",
+      "parameters": [
+        {
+          "name": "event",
+          "type": "const dp_anthropic_stream_event_t*",
+          "description": "Pointer to the detailed Anthropic event structure."
+        },
+        {
+          "name": "user_data",
+          "type": "void*",
+          "description": "User-defined data passed from the streaming call."
+        },
+        {
+          "name": "error_during_stream",
+          "type": "const char*",
+          "description": "Error message if an error occurred during stream processing."
+        }
       ],
       "returnType": "int",
       "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
@@ -159,18 +384,28 @@
       "name": "dp_get_version",
       "description": "Returns the version string of the Disaster Party library.",
       "returnType": "const char*",
-      "parameters": [
-        {"name": "void", "type": ""}
-      ]
+      "parameters": [{ "name": "void", "type": "" }]
     },
     {
       "name": "dp_init_context",
       "description": "Initializes a Disaster Party LLM client context.",
       "returnType": "dp_context_t*",
       "parameters": [
-        {"name": "provider", "type": "dp_provider_type_t", "description": "The LLM provider type."},
-        {"name": "api_key", "type": "const char*", "description": "The API key for authentication."},
-        {"name": "api_base_url", "type": "const char*", "description": "Optional base URL for the API. If NULL, defaults are used."}
+        {
+          "name": "provider",
+          "type": "dp_provider_type_t",
+          "description": "The LLM provider type."
+        },
+        {
+          "name": "api_key",
+          "type": "const char*",
+          "description": "The API key for authentication."
+        },
+        {
+          "name": "api_base_url",
+          "type": "const char*",
+          "description": "Optional base URL for the API. If NULL, defaults are used."
+        }
       ]
     },
     {
@@ -178,7 +413,11 @@
       "description": "Destroys a Disaster Party LLM client context and frees associated resources.",
       "returnType": "void",
       "parameters": [
-        {"name": "context", "type": "dp_context_t*", "description": "The context to destroy."}
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "The context to destroy."
+        }
       ]
     },
     {
@@ -187,22 +426,87 @@
       "returnType": "int",
       "returnDescription": "0 on success, -1 on error.",
       "parameters": [
-        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
-        {"name": "request_config", "type": "const dp_request_config_t*", "description": "Configuration for the request."},
-        {"name": "response", "type": "dp_response_t*", "description": "Pointer to a response structure to be filled."}
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "request_config",
+          "type": "const dp_request_config_t*",
+          "description": "Configuration for the request."
+        },
+        {
+          "name": "response",
+          "type": "dp_response_t*",
+          "description": "Pointer to a response structure to be filled."
+        }
       ]
     },
     {
       "name": "dp_perform_streaming_completion",
-      "description": "Performs a streaming completion request to the LLM. For OpenAI, `request_config->stream` must be true.",
+      "description": "Performs a streaming completion request, providing text tokens to the callback. For Anthropic, it extracts text from detailed events. For OpenAI, `request_config->stream` must be true.",
       "returnType": "int",
-      "returnDescription": "0 if streaming was successful (or errors handled by callback), -1 on setup error.",
+      "returnDescription": "0 if streaming was successful, -1 on setup error.",
       "parameters": [
-        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
-        {"name": "request_config", "type": "const dp_request_config_t*", "description": "Configuration for the request."},
-        {"name": "callback", "type": "dp_stream_callback_t", "description": "Callback function to handle received tokens/chunks."},
-        {"name": "user_data", "type": "void*", "description": "User-defined data to be passed to the callback."},
-        {"name": "response", "type": "dp_response_t*", "description": "Pointer to a response structure for final status/initial errors."}
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "request_config",
+          "type": "const dp_request_config_t*",
+          "description": "Configuration for the request."
+        },
+        {
+          "name": "callback",
+          "type": "dp_stream_callback_t",
+          "description": "Generic callback function to handle received text tokens/chunks."
+        },
+        {
+          "name": "user_data",
+          "type": "void*",
+          "description": "User-defined data to be passed to the callback."
+        },
+        {
+          "name": "response",
+          "type": "dp_response_t*",
+          "description": "Pointer to a response structure for final status/initial errors."
+        }
+      ]
+    },
+    {
+      "name": "dp_perform_anthropic_streaming_completion",
+      "description": "Performs a streaming completion request specifically for Anthropic, providing detailed SSE events to the callback. `request_config->stream` must be true.",
+      "returnType": "int",
+      "returnDescription": "0 if streaming was successful, -1 on setup error or if provider is not Anthropic.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context (must be for DP_PROVIDER_ANTHROPIC)."
+        },
+        {
+          "name": "request_config",
+          "type": "const dp_request_config_t*",
+          "description": "Configuration for the request."
+        },
+        {
+          "name": "anthropic_callback",
+          "type": "dp_anthropic_stream_callback_t",
+          "description": "Anthropic-specific callback function to handle detailed SSE events."
+        },
+        {
+          "name": "user_data",
+          "type": "void*",
+          "description": "User-defined data to be passed to the callback."
+        },
+        {
+          "name": "response",
+          "type": "dp_response_t*",
+          "description": "Pointer to a response structure for final status/initial errors."
+        }
       ]
     },
     {
@@ -211,8 +515,16 @@
       "returnType": "int",
       "returnDescription": "0 on success, -1 on failure.",
       "parameters": [
-        {"name": "context", "type": "dp_context_t*", "description": "Initialized client context."},
-        {"name": "model_list_out", "type": "dp_model_list_t**", "description": "Pointer to a dp_model_list_t pointer to be populated."}
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "model_list_out",
+          "type": "dp_model_list_t**",
+          "description": "Pointer to a dp_model_list_t pointer to be populated."
+        }
       ]
     },
     {
@@ -220,7 +532,11 @@
       "description": "Frees the memory allocated for a dp_model_list_t structure and its contents.",
       "returnType": "void",
       "parameters": [
-        {"name": "model_list", "type": "dp_model_list_t*", "description": "The model list structure to be freed."}
+        {
+          "name": "model_list",
+          "type": "dp_model_list_t*",
+          "description": "The model list structure to be freed."
+        }
       ]
     },
     {
@@ -228,7 +544,11 @@
       "description": "Frees the content of a dp_response_t structure.",
       "returnType": "void",
       "parameters": [
-        {"name": "response", "type": "dp_response_t*", "description": "The response structure whose content is to be freed."}
+        {
+          "name": "response",
+          "type": "dp_response_t*",
+          "description": "The response structure whose content is to be freed."
+        }
       ]
     },
     {
@@ -236,8 +556,16 @@
       "description": "Frees the content of an array of dp_message_t, including their parts.",
       "returnType": "void",
       "parameters": [
-        {"name": "messages", "type": "dp_message_t*", "description": "Array of messages."},
-        {"name": "num_messages", "type": "size_t", "description": "Number of messages in the array."}
+        {
+          "name": "messages",
+          "type": "dp_message_t*",
+          "description": "Array of messages."
+        },
+        {
+          "name": "num_messages",
+          "type": "size_t",
+          "description": "Number of messages in the array."
+        }
       ]
     },
     {
@@ -246,8 +574,16 @@
       "returnType": "bool",
       "returnDescription": "true on success, false on failure.",
       "parameters": [
-        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
-        {"name": "text", "type": "const char*", "description": "The text content."}
+        {
+          "name": "message",
+          "type": "dp_message_t*",
+          "description": "The message to modify."
+        },
+        {
+          "name": "text",
+          "type": "const char*",
+          "description": "The text content."
+        }
       ]
     },
     {
@@ -256,8 +592,16 @@
       "returnType": "bool",
       "returnDescription": "true on success, false on failure.",
       "parameters": [
-        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
-        {"name": "image_url", "type": "const char*", "description": "The URL of the image."}
+        {
+          "name": "message",
+          "type": "dp_message_t*",
+          "description": "The message to modify."
+        },
+        {
+          "name": "image_url",
+          "type": "const char*",
+          "description": "The URL of the image."
+        }
       ]
     },
     {
@@ -266,11 +610,114 @@
       "returnType": "bool",
       "returnDescription": "true on success, false on failure.",
       "parameters": [
-        {"name": "message", "type": "dp_message_t*", "description": "The message to modify."},
-        {"name": "mime_type", "type": "const char*", "description": "The MIME type of the image."},
-        {"name": "base64_data", "type": "const char*", "description": "The base64 encoded image data."}
+        {
+          "name": "message",
+          "type": "dp_message_t*",
+          "description": "The message to modify."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "The MIME type of the image."
+        },
+        {
+          "name": "base64_data",
+          "type": "const char*",
+          "description": "The base64 encoded image data."
+        }
+      ]
+    },
+    {
+      "name": "dp_serialize_messages_to_json_str",
+      "description": "Serializes an array of messages to a JSON string.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "messages",
+          "type": "const dp_message_t*",
+          "description": "Array of messages."
+        },
+        {
+          "name": "num_messages",
+          "type": "size_t",
+          "description": "Number of messages."
+        },
+        {
+          "name": "json_str_out",
+          "type": "char**",
+          "description": "Output for the allocated JSON string."
+        }
+      ]
+    },
+    {
+      "name": "dp_deserialize_messages_from_json_str",
+      "description": "Deserializes a JSON string into an array of messages.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "json_str",
+          "type": "const char*",
+          "description": "The JSON string to parse."
+        },
+        {
+          "name": "messages_out",
+          "type": "dp_message_t**",
+          "description": "Output for the allocated array of messages."
+        },
+        {
+          "name": "num_messages_out",
+          "type": "size_t*",
+          "description": "Output for the number of messages."
+        }
+      ]
+    },
+    {
+      "name": "dp_serialize_messages_to_file",
+      "description": "Serializes an array of messages to a file.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "messages",
+          "type": "const dp_message_t*",
+          "description": "Array of messages."
+        },
+        {
+          "name": "num_messages",
+          "type": "size_t",
+          "description": "Number of messages."
+        },
+        {
+          "name": "path",
+          "type": "const char*",
+          "description": "File path to save the JSON to."
+        }
+      ]
+    },
+    {
+      "name": "dp_deserialize_messages_from_file",
+      "description": "Deserializes an array of messages from a file.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "path",
+          "type": "const char*",
+          "description": "File path to read the JSON from."
+        },
+        {
+          "name": "messages_out",
+          "type": "dp_message_t**",
+          "description": "Output for the allocated array of messages."
+        },
+        {
+          "name": "num_messages_out",
+          "type": "size_t*",
+          "description": "Output for the number of messages."
+        }
       ]
     }
   ]
 }
-

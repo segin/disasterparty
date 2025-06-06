@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_completion from libdisasterparty
-.TH DP_PERFORM_COMPLETION 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_COMPLETION 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_completion \- perform a non-streaming LLM completion request
@@ -12,67 +12,29 @@ dp_perform_completion \- perform a non-streaming LLM completion request
 .SH DESCRIPTION
 The
 .B dp_perform_completion()
-function sends a request to the configured LLM provider to generate a completion
-based on the provided messages and configuration. This function operates in a
-non-streaming (blocking) mode, waiting for the full response from the API.
-
-The
-.I context
-argument is a pointer to an initialized
-.BR dp_context_t .
-
-The
-.I request_config
-argument specifies the parameters for the request, such as the model, messages,
-temperature, and maximum tokens. The
+function sends a request to the configured LLM provider to generate a completion.
+This function operates in a non-streaming (blocking) mode, waiting for the full
+response from the API. The
 .BR stream
 field within
 .I request_config
 must be set to
-.BR false
-for this function.
+.BR false .
 
 The
 .I response
 argument is a pointer to a
 .BR dp_response_t
 structure that will be populated with the LLM's response or error information.
-The caller is responsible for initializing this structure (e.g., to zeros) before
-calling and for freeing its contents using
+The caller is responsible for freeing its contents using
 .BR dp_free_response_content (3)
 after use, even if an error occurs.
 
-.SH PARAMETERS
-.TP
-.B dp_context_t *\fIcontext\fP
-An initialized Disaster Party context.
-.TP
-.B const dp_request_config_t *\fIrequest_config\fP
-Configuration for the completion request. `request_config->stream` must be `false`.
-.TP
-.B dp_response_t *\fIresponse\fP
-A pointer to a structure to store the response.
-
 .SH RETURN VALUE
-Returns 0 on success (i.e., the API call was made and a response, possibly an
-API error response, was received and parsed).
-Returns -1 on critical errors (e.g., invalid arguments, failure to build payload,
-libcurl error before or during the request).
-In case of error,
-.I response->error_message
-will contain a description of the error, and
-.I response->http_status_code
-will contain the HTTP status.
-
-.SH ERRORS
-If -1 is returned,
-.I response->error_message
-should be checked for details.
-Even if 0 is returned,
-.I response->http_status_code
-might indicate an API-level error (e.g., 4xx or 5xx), and
-.I response->error_message
-might contain the API's error message.
+Returns 0 on success. Returns -1 on critical errors (e.g., invalid arguments,
+network errors). In all cases, the
+.I response
+struct should be checked for the HTTP status and any API-level error messages.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -82,11 +44,10 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
-.BR dp_init_context (3),
 .BR dp_perform_streaming_completion (3),
 .BR dp_free_response_content (3),
 .BR disasterparty (7)
-

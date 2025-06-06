@@ -1,5 +1,5 @@
 .\" Man page for dp_free_model_list from libdisasterparty
-.TH DP_FREE_MODEL_LIST 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_FREE_MODEL_LIST 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_model_list \- free a Disaster Party model list structure
@@ -16,31 +16,8 @@ function deallocates all memory associated with a
 .BR dp_model_list_t
 structure that was previously allocated by
 .BR dp_list_models (3).
-This includes freeing each
-.BR dp_model_info_t
-structure within the list, all character strings (like
-.I model_id ,
-.I display_name ,
-etc.) within those structures, the array of
-.BR dp_model_info_t
-structures itself, and any error message string within the
-.BR dp_model_list_t .
-Finally, it frees the
-.BR dp_model_list_t
-structure itself.
-
-If
-.I model_list
-is NULL, the function does nothing. It is safe to call this function
-with a NULL pointer.
-
-.SH PARAMETERS
-.TP
-.B dp_model_list_t *\fImodel_list\fP
-A pointer to the `dp_model_list_t` structure to be freed. Can be NULL.
-
-.SH RETURN VALUE
-This function does not return a value.
+This includes freeing all strings and the array of models within the structure.
+Passing a NULL pointer is a safe no-op.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -50,9 +27,9 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_list_models (3),
 .BR disasterparty (7)
-

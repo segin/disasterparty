@@ -1,0 +1,126 @@
+.\" Man page for disasterparty library overview
+.TH disasterparty 7 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+disasterparty \- overview of the Disaster Party LLM client library
+
+.SH DESCRIPTION
+The
+.B Disaster Party
+library provides a C interface for interacting with Large Language Model (LLM)
+APIs, currently supporting OpenAI-compatible endpoints, the Google Gemini API,
+and the Anthropic Claude API. It aims to simplify common tasks such as sending text
+or multimodal prompts and handling both regular (blocking) and streaming responses.
+
+The library is designed to be relatively simple to integrate and use, leveraging
+.BR libcurl (3)
+for HTTP(S) communication and
+.BR cJSON (3)
+for robust JSON parsing and generation.
+
+Key features include:
+.IP \(bu 2
+Support for OpenAI, Google Gemini, and Anthropic Claude APIs.
+.IP \(bu 2
+Support for text-only and multimodal (text + image URL/base64) inputs.
+.IP \(bu 2
+Handling of both non-streaming (full response at once) and streaming (token-by-token) completions.
+.IP \(bu 2
+A dedicated, detailed streaming callback for Anthropic's event-based stream.
+.IP \(bu 2
+Interface for listing available models from the supported providers.
+.IP \(bu 2
+Helper functions for constructing request messages and serializing/deserializing conversations to/from JSON or files.
+.IP \(bu 2
+Management of API contexts and response data.
+
+.SH SYNOPSIS
+To use the Disaster Party library in your C program, include the main header file:
+.PP
+.B #include <disasterparty.h>
+.PP
+When compiling and linking, you will typically need to link against
+.BR libdisasterparty ,
+.BR libcurl ,
+and
+.BR libcjson .
+Using pkg-config is recommended if available:
+.PP
+.BR gcc my_app.c $(pkg-config --cflags --libs disasterparty)
+
+.SH GETTING STARTED
+1. Initialize a context using
+.BR dp_init_context (3),
+   specifying the provider and your API key.
+.br
+2. Construct your request messages using
+.BR dp_message_t
+   and helper functions like
+   .BR dp_message_add_text_part (3).
+.br
+3. Configure your request using
+.BR dp_request_config_t ,
+   setting the model, messages, temperature, etc.
+.br
+4. Perform the API call using either
+.BR dp_perform_completion (3)
+   for a blocking response or
+.BR dp_perform_streaming_completion (3)
+   with a callback for streaming.
+.br
+5. To list available models, use
+.BR dp_list_models (3).
+.br
+6. Always free allocated resources using functions like
+.BR dp_free_response_content (3),
+.BR dp_free_model_list (3),
+.BR dp_free_messages (3),
+   and finally
+.BR dp_destroy_context (3).
+
+.SH API FUNCTIONS
+The library provides several functions for different operations. Refer to the
+individual manual pages in section 3 of the manual for detailed information on
+each function.
+
+.SH ENVIRONMENT
+The library itself does not directly read environment variables for API keys, but
+the provided test programs and typical applications using this library often
+expect API keys to be set in environment variables such as:
+.TP
+.B OPENAI_API_KEY
+For OpenAI-compatible services.
+.TP
+.B GEMINI_API_KEY
+For Google Gemini services.
+.TP
+.B ANTHROPIC_API_KEY
+For Anthropic Claude services.
+
+.SH FILES
+.TP
+.I <disasterparty.h>
+The main header file to include in your C programs.
+.TP
+.I libdisasterparty.so
+The shared library file.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_perform_completion (3),
+.BR dp_perform_streaming_completion (3),
+.BR dp_list_models (3),
+.BR dp_serialize (3),
+.BR curl (1),
+.BR cJSON (3) (if man page exists for cJSON)

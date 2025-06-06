@@ -1,0 +1,39 @@
+.\" Man page for dp_serialize_messages_to_file from libdisasterparty
+.TH DP_SERIALIZE_MESSAGES_TO_FILE 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_serialize_messages_to_file \- serialize an array of messages to a file
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_serialize_messages_to_file(const dp_message_t *" messages ", size_t " num_messages ", const char *" path ");"
+
+.SH DESCRIPTION
+The
+.B dp_serialize_messages_to_file()
+function serializes an array of
+.BR dp_message_t
+structures to a JSON file at the specified
+.IR path .
+It is a convenience wrapper around
+.BR dp_serialize_messages_to_json_str (3).
+
+.SH RETURN VALUE
+Returns 0 on success. Returns -1 on failure (e.g., failed to serialize to string, cannot open file for writing).
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_deserialize_messages_from_file (3),
+.BR dp_free_messages (3),
+.BR disasterparty (7)

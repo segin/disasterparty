@@ -1,0 +1,71 @@
+.\" Man page for dp_serialize functions from libdisasterparty
+.TH DP_SERIALIZE 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_serialize_messages_to_json_str, dp_deserialize_messages_from_json_str, dp_serialize_messages_to_file, dp_deserialize_messages_from_file \- helper functions for conversation serialization
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_serialize_messages_to_json_str(const dp_message_t *" messages ", size_t " num_messages ", char **" json_str_out ");"
+.br
+.BI "int dp_deserialize_messages_from_json_str(const char *" json_str ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+.br
+.BI "int dp_serialize_messages_to_file(const dp_message_t *" messages ", size_t " num_messages ", const char *" path ");"
+.br
+.BI "int dp_deserialize_messages_from_file(const char *" path ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+
+.SH DESCRIPTION
+These functions provide utilities to save and load conversation histories to and from
+a structured JSON format. This is useful for persisting conversations for later use.
+
+.TP
+.B dp_serialize_messages_to_json_str()
+Converts an array of
+.BR dp_message_t
+structures into a pretty-printed JSON string. The caller is responsible for freeing
+the returned string in
+.I *json_str_out
+using
+.BR free (3).
+
+.TP
+.B dp_deserialize_messages_from_json_str()
+Parses a JSON string and creates a newly allocated array of
+.BR dp_message_t
+structures. The caller is responsible for freeing the returned array and all its contents
+using
+.BR dp_free_messages (3)
+and then freeing the array pointer itself with
+.BR free (3).
+
+.TP
+.B dp_serialize_messages_to_file()
+Serializes an array of messages to a JSON file at the specified
+.IR path .
+
+.TP
+.B dp_deserialize_messages_from_file()
+Reads a JSON file from the specified
+.I path
+and deserializes it into an array of messages. As with the string version, the caller
+is responsible for freeing the allocated memory.
+
+.SH RETURN VALUE
+All functions return 0 on success and -1 on failure (e.g., memory allocation error,
+file I/O error, JSON parse error).
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_free_messages (3),
+.BR disasterparty (7)

@@ -1,5 +1,5 @@
 .\" Man page for dp_init_context from libdisasterparty
-.TH DP_INIT_CONTEXT 3 "June 2, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_INIT_CONTEXT 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_init_context \- initialize a Disaster Party LLM client context
@@ -20,31 +20,13 @@ The
 .I provider
 argument specifies the LLM service to use (e.g.,
 .BR DP_PROVIDER_OPENAI_COMPATIBLE ,
-.BR DP_PROVIDER_GOOGLE_GEMINI ).
-
-The
-.I api_key
-argument is the authentication key for the selected provider. It is mandatory.
-
-The
-.I api_base_url
-argument is optional. If NULL, the library will use default base URLs for the
-known providers. If provided, it overrides the default.
+.BR DP_PROVIDER_GOOGLE_GEMINI ,
+or
+.BR DP_PROVIDER_ANTHROPIC ).
 
 The returned context must be freed using
 .BR dp_destroy_context (3)
 when it is no longer needed.
-
-.SH PARAMETERS
-.TP
-.B dp_provider_type_t \fIprovider\fP
-The type of LLM provider to use.
-.TP
-.B const char *\fIapi_key\fP
-The API key for the specified provider. Cannot be NULL.
-.TP
-.B const char *\fIapi_base_url\fP
-Optional. The base URL for the API endpoint. If NULL, a default is used.
 
 .SH RETURN VALUE
 On success,
@@ -52,10 +34,6 @@ On success,
 returns a pointer to the newly allocated
 .BR dp_context_t .
 On error (e.g., memory allocation failure, missing API key), it returns NULL.
-
-.SH ERRORS
-If an error occurs, NULL is returned. Error details might be printed to stderr
-by the function in some cases (e.g., missing API key).
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -65,9 +43,9 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_destroy_context (3),
 .BR disasterparty (7)
-

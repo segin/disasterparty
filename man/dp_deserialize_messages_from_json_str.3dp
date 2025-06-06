@@ -1,0 +1,43 @@
+.\" Man page for dp_deserialize_messages_from_json_str from libdisasterparty
+.TH DP_DESERIALIZE_MESSAGES_FROM_JSON_STR 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_deserialize_messages_from_json_str \- deserialize a JSON string into an array of messages
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_deserialize_messages_from_json_str(const char *" json_str ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_deserialize_messages_from_json_str()
+function parses a JSON string and creates a newly allocated array of
+.BR dp_message_t
+structures. This is used to load a previously saved conversation history.
+
+The caller is responsible for freeing the returned array and all its contents. This
+can be done by first calling
+.BR dp_free_messages (3)
+on the array, and then calling
+.BR free (3)
+on the array pointer itself (`*messages_out`).
+
+.SH RETURN VALUE
+Returns 0 on success. Returns -1 on failure (e.g., invalid arguments, JSON parse error, memory allocation error).
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_serialize_messages_to_json_str (3),
+.BR dp_free_messages (3),
+.BR disasterparty (7)

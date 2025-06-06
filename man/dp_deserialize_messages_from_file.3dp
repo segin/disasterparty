@@ -1,0 +1,46 @@
+.\" Man page for dp_deserialize_messages_from_file from libdisasterparty
+.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_deserialize_messages_from_file \- deserialize an array of messages from a file
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_deserialize_messages_from_file(const char *" path ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_deserialize_messages_from_file()
+function reads a JSON file from the specified
+.I path
+and deserializes it into a newly allocated array of
+.BR dp_message_t
+structures. It is a convenience wrapper around
+.BR dp_deserialize_messages_from_json_str (3).
+
+The caller is responsible for freeing the returned array and all its contents
+using
+.BR dp_free_messages (3)
+followed by
+.BR free (3)
+on the array pointer (`*messages_out`).
+
+.SH RETURN VALUE
+Returns 0 on success. Returns -1 on failure (e.g., file not found, read error, JSON parse error).
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_serialize_messages_to_file (3),
+.BR dp_free_messages (3),
+.BR disasterparty (7)
