@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -26,7 +27,7 @@ int main() {
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "claude-3-haiku-20240307"; // A fast and capable model for testing
+    request_config.model = "claude-3-haiku-20240307";
     request_config.temperature = 0.7;
     request_config.max_tokens = 256;
     request_config.stream = false;
@@ -68,11 +69,26 @@ int main() {
         fprintf(stderr, "-------------------------------------------\n");
     }
 
+    fflush(stdout);
+    fflush(stderr);
+
+    // Debugging the exit condition
+    bool cond1_result_is_0 = (result == 0);
+    bool cond2_error_msg_is_null = (response.error_message == NULL);
+    bool cond3_http_is_200 = (response.http_status_code == 200);
+
+    fprintf(stderr, "[TEST_EXIT_COND_DEBUG_ANTHROPIC] result==0: %d, error_msg==NULL: %d, http_status==200: %d\n",
+            cond1_result_is_0, cond2_error_msg_is_null, cond3_http_is_200);
+
+    int final_exit_code = (cond1_result_is_0 && cond2_error_msg_is_null && cond3_http_is_200) ? 0 : 1;
+    fprintf(stderr, "[TEST_EXIT_CODE_ANTHROPIC] Final exit code: %d\n", final_exit_code);
+    fflush(stderr);
+
     dp_free_response_content(&response);
     dp_free_messages(messages, request_config.num_messages);
     dp_destroy_context(context);
 
     curl_global_cleanup();
     printf("Anthropic text test (Disaster Party) finished.\n");
-    return (result == 0 && response.error_message == NULL && response.http_status_code == 200) ? 0 : 1;
+    return final_exit_code;
 }

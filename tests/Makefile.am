@@ -11,6 +11,11 @@ check_PROGRAMS = \
     test_anthropic_text_dp \
     test_anthropic_streaming_dp \
     test_anthropic_streaming_detailed_dp \
+    test_anthropic_multimodal_dp \
+    test_anthropic_list_models_dp \
+    test_openai_streaming_multimodal_dp \
+    test_gemini_streaming_multimodal_dp \
+    test_anthropic_streaming_multimodal_dp \
     test_serialization_dp
 
 # Sources for each test program
@@ -26,6 +31,11 @@ test_anthropic_text_dp_SOURCES = test_anthropic_text_dp.c
 test_anthropic_streaming_dp_SOURCES = test_anthropic_streaming_dp.c
 test_anthropic_streaming_detailed_dp_SOURCES = test_anthropic_streaming_detailed_dp.c
 test_serialization_dp_SOURCES = test_serialization_dp.c
+test_anthropic_multimodal_dp_SOURCES = test_anthropic_multimodal_dp.c
+test_anthropic_list_models_dp_SOURCES = test_anthropic_list_models_dp.c
+test_openai_streaming_multimodal_dp_SOURCES = test_openai_streaming_multimodal_dp.c
+test_gemini_streaming_multimodal_dp_SOURCES = test_gemini_streaming_multimodal_dp.c
+test_anthropic_streaming_multimodal_dp_SOURCES = test_anthropic_streaming_multimodal_dp.c
 
 
 LDADD = ../src/libdisasterparty.la

@@ -1,5 +1,6 @@
 #include "disasterparty.h"
 #include <curl/curl.h>
+#include <cjson/cJSON.h> // Added for cJSON functions
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +37,7 @@ int anthropic_detailed_stream_handler(const dp_anthropic_stream_event_t* event, 
     fprintf(stderr, "[EVENT: %s]\n", event_name);
 
     // If it's a content delta, print the text to stdout
-    if (event->event_type == DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA) {
+    if (event->event_type == DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA && event->raw_json_data) {
         cJSON* root = cJSON_Parse(event->raw_json_data);
         if (root) {
             cJSON* delta = cJSON_GetObjectItemCaseSensitive(root, "delta");
