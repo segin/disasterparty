@@ -22,7 +22,6 @@ man3_MANS = \
 	dp_deserialize_messages_from_file.3 \
 	dp_serialize.3
 
-
 # List of man pages to install in section 7.
 man7_MANS = \
 	disasterparty.7
@@ -31,6 +30,7 @@ man7_MANS = \
 EXTRA_DIST = $(man3_MANS:.3=.3dp) $(man7_MANS:.7=.7dp)
 
 # Declare the suffixes used for the transformation rule.
+# This needs to be done before the rule itself if it's not a default rule.
 SUFFIXES = .3 .3dp .7 .7dp
 
 # Rule to transform a .3dp file into a .3 file.
