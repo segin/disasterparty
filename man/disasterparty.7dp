@@ -37,7 +37,9 @@ Management of API contexts and response data.
 .SH SYNOPSIS
 To use the Disaster Party library in your C program, include the main header file:
 .PP
-.B #include <disasterparty.h>
+.nf
+#include <disasterparty.h>
+.fi
 .PP
 When compiling and linking, you will typically need to link against
 .BR libdisasterparty ,
@@ -46,7 +48,9 @@ and
 .BR libcjson .
 Using pkg-config is recommended if available:
 .PP
-.BR gcc my_app.c $(pkg-config --cflags --libs disasterparty)
+.nf
+gcc my_app.c $(pkg-config --cflags --libs disasterparty)
+.fi
 
 .SH GETTING STARTED
 1. Initialize a context using
@@ -121,6 +125,6 @@ Gemini (Conceptualization and initial C code generation)
 .BR dp_perform_completion (3),
 .BR dp_perform_streaming_completion (3),
 .BR dp_list_models (3),
-.BR dp_serialize_messages_to_file (3),
+.BR dp_serialize (3),
 .BR curl (1),
 .BR cJSON (3) (if man page exists for cJSON)
