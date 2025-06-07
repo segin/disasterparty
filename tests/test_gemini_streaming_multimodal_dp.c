@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Re-using helper functions from other tests
-char* base64_encode(const unsigned char *data, size_t input_length); // Prototype
-unsigned char* read_file_to_buffer(const char* filename, size_t* file_size); // Prototype
+char* base64_encode(const unsigned char *data, size_t input_length);
+unsigned char* read_file_to_buffer(const char* filename, size_t* file_size);
 
 int stream_handler(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
@@ -40,7 +41,6 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "FAIL: Image path required. Usage: %s [path] or set GEMINI_TEST_IMAGE_PATH\n", argv[0]);
         return 1;
     }
-
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing Gemini Streaming Multimodal:\n");
@@ -89,18 +89,22 @@ int main(int argc, char* argv[]) {
     int result = dp_perform_streaming_completion(context, &request_config, stream_handler, NULL, &response_status);
 
     printf("\n---\n");
-    if (result != 0 || response_status.error_message) {
-        fprintf(stderr, "Gemini streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
+    if (result == 0) {
+        printf("Gemini streaming multimodal test seems successful. HTTP: %ld\n", response_status.http_status_code);
     } else {
-        printf("Gemini streaming multimodal test seems successful.\n");
+        fprintf(stderr, "Gemini streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
     }
+
+    // Determine exit code based on success conditions
+    bool success = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200);
+    int final_exit_code = success ? 0 : 1;
 
     dp_free_response_content(&response_status);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
 
-    return (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200) ? 0 : 1;
+    return final_exit_code;
 }
 
 // Full definitions for helper functions

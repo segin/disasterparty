@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 int stream_handler(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
@@ -54,11 +55,11 @@ int main() {
     messages[0].parts = NULL;
 
     if (!dp_message_add_text_part(&messages[0], "What is in this image? Stream your response.")) {
-        return 1; // Simplified error handling for brevity
+        fprintf(stderr, "Failed to add text part.\n"); return 1;
     }
     const char* image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/640px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
     if (!dp_message_add_image_url_part(&messages[0], image_url)) {
-        return 1;
+        fprintf(stderr, "Failed to add image part.\n"); return 1;
     }
 
     printf("Sending streaming multimodal request to model: %s\n---\n", request_config.model);
@@ -67,16 +68,20 @@ int main() {
     int result = dp_perform_streaming_completion(context, &request_config, stream_handler, NULL, &response_status);
 
     printf("\n---\n");
-    if (result != 0 || response_status.error_message) {
-        fprintf(stderr, "OpenAI streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
+    if (result == 0) {
+        printf("OpenAI streaming multimodal test seems successful. HTTP: %ld\n", response_status.http_status_code);
     } else {
-        printf("OpenAI streaming multimodal test seems successful.\n");
+        fprintf(stderr, "OpenAI streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
     }
+
+    // Determine exit code based on success conditions
+    bool success = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200);
+    int final_exit_code = success ? 0 : 1;
 
     dp_free_response_content(&response_status);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
 
-    return (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200) ? 0 : 1;
+    return final_exit_code;
 }

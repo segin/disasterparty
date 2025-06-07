@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Re-using helper functions from other tests
 char* base64_encode(const unsigned char *data, size_t input_length);
@@ -90,18 +91,22 @@ int main(int argc, char* argv[]) {
     int result = dp_perform_streaming_completion(context, &request_config, stream_handler, NULL, &response_status);
 
     printf("\n---\n");
-    if (result != 0 || response_status.error_message) {
-        fprintf(stderr, "Anthropic streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
+    if (result == 0) {
+        printf("Anthropic streaming multimodal test seems successful. HTTP: %ld\n", response_status.http_status_code);
     } else {
-        printf("Anthropic streaming multimodal test seems successful.\n");
+        fprintf(stderr, "Anthropic streaming multimodal test failed. HTTP: %ld, Error: %s\n", response_status.http_status_code, response_status.error_message ? response_status.error_message : "N/A");
     }
+
+    // Determine exit code based on success conditions
+    bool success = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200);
+    int final_exit_code = success ? 0 : 1;
 
     dp_free_response_content(&response_status);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
 
-    return (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200) ? 0 : 1;
+    return final_exit_code;
 }
 
 char* base64_encode(const unsigned char *data, size_t input_length) { const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; size_t output_length = 4 * ((input_length + 2) / 3); char *encoded_data = malloc(output_length + 1); if (encoded_data == NULL) return NULL; for (size_t i = 0, j = 0; i < input_length;) { uint32_t octet_a = i < input_length ? data[i++] : 0; uint32_t octet_b = i < input_length ? data[i++] : 0; uint32_t octet_c = i < input_length ? data[i++] : 0; uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c; encoded_data[j++] = base64_chars[(triple >> 3 * 6) & 0x3F]; encoded_data[j++] = base64_chars[(triple >> 2 * 6) & 0x3F]; encoded_data[j++] = base64_chars[(triple >> 1 * 6) & 0x3F]; encoded_data[j++] = base64_chars[(triple >> 0 * 6) & 0x3F]; } for (size_t i = 0; i < (3 - input_length % 3) % 3; i++) { encoded_data[output_length - 1 - i] = '='; } encoded_data[output_length] = '\0'; return encoded_data; }

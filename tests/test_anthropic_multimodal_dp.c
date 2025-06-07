@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h> // Added for bool type
 
 // Re-using helper functions from other tests
 char* base64_encode(const unsigned char *data, size_t input_length) {
@@ -126,10 +127,14 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "---------------------------------------------------\n");
     }
 
+    // Determine exit code based on success conditions
+    bool success = (result == 0 && response.error_message == NULL && response.http_status_code == 200);
+    int final_exit_code = success ? 0 : 1;
+
     dp_free_response_content(&response);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
     printf("Anthropic multimodal test (Disaster Party) finished.\n");
-    return (result == 0 && response.error_message == NULL && response.http_status_code == 200) ? 0 : 1;
+    return final_exit_code;
 }
