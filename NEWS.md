@@ -1,8 +1,19 @@
+# Version 0.2.0 (2025-06-07)
+* Added support for Anthropic Claude API.
+  * New provider type `DP_PROVIDER_ANTHROPIC`.
+  * Implemented `dp_perform_completion` for Anthropic.
+  * Implemented `dp_perform_streaming_completion` (generic text callback) for Anthropic.
+  * Added `dp_perform_anthropic_streaming_completion` with a new `dp_anthropic_stream_callback_t` for detailed Anthropic SSE event handling (`dp_anthropic_stream_event_t`).
+  * Added `system_prompt` to `dp_request_config_t`.
+  * Updated `dp_list_models` to support Anthropic.
+* Updated library version to 0.2.0 across all relevant files.
+* User-Agent string updated to `disasterparty/0.2.0`.
+
 # Version 0.1.1 (2025-06-02)
 * Updated library version to 0.1.1.
 * Corrected SSE event separator detection for Gemini streams (handles `\r\n\r\n`).
 * Updated OpenAI test model from `gpt-3.5-turbo` to `gpt-4.1-nano`.
-* Updated Gemini test model to `gemini-2.0-flash`.
+* Updated Gemini test model to `gemini-2.0-flash` and token limits.
 * Added `dp_list_models()` and `dp_free_model_list()` functions for enumerating models available at the API endpoint.
 * Added man pages for all public functions and a library overview (section 7).
 * Updated User-Agent string to `disasterparty/0.1.1`.

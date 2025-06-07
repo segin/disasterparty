@@ -1,8 +1,8 @@
 # Disaster Party LLM Client Library
 
-Version: 0.1.1
+Version: 0.2.0
 
-A C library for interacting with OpenAI-compatible and Google Gemini LLM APIs,
+A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs,
 with a focus on creating delightful chaos. Supports text and multimodal inputs,
 and both regular and streaming responses.
 
@@ -18,13 +18,13 @@ This project uses GNU Autotools.
     * You might need to specify a prefix: `./configure --prefix=/usr/local`
 3.  Run `make` to compile the library and tests.
 4.  (Optional) Run `make check` to run the test suite.
-    * This requires `OPENAI_API_KEY` and `GEMINI_API_KEY` environment variables to be set.
-    * For multimodal Gemini tests, `GEMINI_TEST_IMAGE_PATH` or a command-line argument to the test executable is needed.
+    * This requires `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `ANTHROPIC_API_KEY` environment variables to be set.
+    * For multimodal tests, an image path environment variable (e.g., `GEMINI_TEST_IMAGE_PATH`) is also needed.
 5.  (Optional) Run `sudo make install` to install the library and header files.
 
 ## Dependencies
 
-* libcurl (>= 7.20.0)
+* libcurl (>= 7.2.0)
 * libcjson (>= 1.7.10)
 
 ## Usage
@@ -40,5 +40,5 @@ See the files in the `tests/` directory for usage examples.
 ## API Keys
 
 The test programs (and any application using this library) will require API keys
-for the respective services (OpenAI, Google Gemini). These are typically provided
-via environment variables (`OPENAI_API_KEY`, `GEMINI_API_KEY`).
+for the respective services. These are typically provided
+via environment variables (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`).

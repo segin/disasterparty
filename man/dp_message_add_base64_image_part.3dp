@@ -1,5 +1,5 @@
 .\" Man page for dp_message_add_base64_image_part from libdisasterparty
-.TH DP_MESSAGE_ADD_BASE64_IMAGE_PART 3 "June 6, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_BASE64_IMAGE_PART 3 "June 7, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_base64_image_part \- add a base64 encoded image content part to a message
