@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Forward declaration for libcurl and cJSON
 typedef void CURL;
 typedef struct cJSON cJSON;
@@ -11,10 +15,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.2.0"
+#define DP_VERSION "0.2.1" // Updated version
 #define DP_VERSION_MAJOR 0
 #define DP_VERSION_MINOR 2
-#define DP_VERSION_PATCH 0
+#define DP_VERSION_PATCH 1 // Updated version
 
 
 /**
@@ -163,50 +167,17 @@ bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_ty
 
 const char* dp_get_version(void);
 
-/**
- * @brief Serializes an array of messages to a JSON string.
- *
- * The caller is responsible for freeing the output string `*json_str_out` using `free()`.
- *
- * @param messages An array of `dp_message_t` structures.
- * @param num_messages The number of messages in the array.
- * @param json_str_out A pointer to a `char*` that will be updated to point to the new JSON string.
- * @return 0 on success, -1 on failure.
- */
 int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_messages, char** json_str_out);
 
-/**
- * @brief Deserializes a JSON string into an array of messages.
- *
- * The caller is responsible for freeing the output array `*messages_out` and its contents
- * using `dp_free_messages()`.
- *
- * @param json_str The null-terminated JSON string to parse.
- * @param messages_out A pointer to a `dp_message_t*` that will be updated to point to the new array of messages.
- * @param num_messages_out A pointer to a `size_t` that will be updated with the number of messages in the array.
- * @return 0 on success, -1 on failure (e.g., parse error).
- */
 int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out);
 
-/**
- * @brief Serializes an array of messages to a file.
- *
- * @param messages An array of `dp_message_t` structures.
- * @param num_messages The number of messages in the array.
- * @param path The file path to save the JSON to.
- * @return 0 on success, -1 on failure.
- */
 int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
 
-/**
- * @brief Deserializes an array of messages from a file.
- *
- * @param path The file path to read the JSON from.
- * @param messages_out A pointer to a `dp_message_t*` that will be updated to point to the new array of messages.
- * @param num_messages_out A pointer to a `size_t` that will be updated with the number of messages in the array.
- * @return 0 on success, -1 on failure.
- */
 int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DISASTERPARTY_H

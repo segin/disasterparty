@@ -1,5 +1,5 @@
 .\" Man page for dp_serialize functions from libdisasterparty
-.TH DP_SERIALIZE 3 "June 7, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_SERIALIZE 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_serialize_messages_to_json_str, dp_deserialize_messages_from_json_str, dp_serialize_messages_to_file, dp_deserialize_messages_from_file \- helper functions for conversation serialization

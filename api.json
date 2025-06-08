@@ -1,7 +1,7 @@
 {
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "headerFile": "disasterparty.h",
   "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
   "dependencies": [

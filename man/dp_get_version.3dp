@@ -1,5 +1,5 @@
 .\" Man page for dp_get_version from libdisasterparty
-.TH DP_GET_VERSION 3 "June 7, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_GET_VERSION 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_get_version \- get the version string of the Disaster Party library
@@ -14,7 +14,7 @@ The
 .B dp_get_version()
 function returns a constant string that represents the current version of the
 Disaster Party library. The version string follows a semantic versioning format
-(e.g., "0.2.0").
+(e.g., "0.2.1").
 
 .SH RETURN VALUE
 This function returns a pointer to a null-terminated string containing the

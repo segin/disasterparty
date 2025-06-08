@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_completion from libdisasterparty
-.TH DP_PERFORM_COMPLETION 3 "June 7, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_COMPLETION 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_completion \- perform a non-streaming LLM completion request

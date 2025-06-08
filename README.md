@@ -1,6 +1,6 @@
 # Disaster Party LLM Client Library
 
-Version: 0.2.0
+Version: 0.2.1
 
 A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs,
 with a focus on creating delightful chaos. Supports text and multimodal inputs,
@@ -19,12 +19,12 @@ This project uses GNU Autotools.
 3.  Run `make` to compile the library and tests.
 4.  (Optional) Run `make check` to run the test suite.
     * This requires `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `ANTHROPIC_API_KEY` environment variables to be set.
-    * For multimodal tests, an image path environment variable (e.g., `GEMINI_TEST_IMAGE_PATH`) is also needed.
+    * For multimodal tests, `GEMINI_TEST_IMAGE_PATH` or `ANTHROPIC_TEST_IMAGE_PATH` (or a command-line argument to the test executable) is needed.
 5.  (Optional) Run `sudo make install` to install the library and header files.
 
 ## Dependencies
 
-* libcurl (>= 7.2.0)
+* libcurl (>= 7.20.0)
 * libcjson (>= 1.7.10)
 
 ## Usage
@@ -33,12 +33,14 @@ Include `disasterparty.h` in your C code and link against `-ldisasterparty`.
 Ensure your build system also links against libcurl and libcjson (pkg-config can help with this).
 
 Example compilation:
-`gcc my_app.c $(pkg-config --cflags --libs disasterparty)`
+```sh
+gcc my_app.c $(pkg-config --cflags --libs disasterparty)
+```
 
 See the files in the `tests/` directory for usage examples.
 
 ## API Keys
 
 The test programs (and any application using this library) will require API keys
-for the respective services. These are typically provided
+for the respective services (OpenAI, Google Gemini, Anthropic). These are typically provided
 via environment variables (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`).
