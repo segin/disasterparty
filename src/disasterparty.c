@@ -133,9 +133,27 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
 
     cJSON_AddStringToObject(root, "model", request_config->model);
     cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
+
     if (request_config->max_tokens > 0) {
-        cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens);
+        const char* max_tokens_key = (request_config->max_tokens_key_override)
+                                     ? request_config->max_tokens_key_override
+                                     : "max_tokens";
+        cJSON_AddNumberToObject(root, max_tokens_key, request_config->max_tokens);
     }
+
+    // Add top_p if specified
+    if (request_config->top_p >= 0.0) {
+        cJSON_AddNumberToObject(root, "top_p", request_config->top_p);
+    }
+
+    // Add stop sequences if specified
+    if (request_config->stop_sequences && request_config->num_stop_sequences > 0) {
+        cJSON* stop_array = cJSON_CreateStringArray(request_config->stop_sequences, request_config->num_stop_sequences);
+        if (stop_array) {
+            cJSON_AddItemToObject(root, "stop", stop_array);
+        }
+    }
+
     if (request_config->stream) {
         cJSON_AddTrueToObject(root, "stream");
     }
@@ -146,14 +164,22 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
         return NULL;
     }
 
+    if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
+        cJSON* sys_msg_obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(sys_msg_obj, "role", "system");
+        cJSON_AddStringToObject(sys_msg_obj, "content", request_config->system_prompt);
+        cJSON_AddItemToArray(messages_array, sys_msg_obj);
+    }
+
     for (size_t i = 0; i < request_config->num_messages; ++i) {
         const dp_message_t* msg = &request_config->messages[i];
+        if (msg->role == DP_ROLE_SYSTEM) continue;
+
         cJSON *msg_obj = cJSON_CreateObject();
         if (!msg_obj) { cJSON_Delete(root); return NULL; }
 
         const char* role_str = NULL;
         switch (msg->role) {
-            case DP_ROLE_SYSTEM: role_str = "system"; break;
             case DP_ROLE_USER: role_str = "user"; break;
             case DP_ROLE_ASSISTANT: role_str = "assistant"; break;
             case DP_ROLE_TOOL: role_str = "tool"; break;
@@ -214,11 +240,24 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
+    if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
+        cJSON* sys_instruction = cJSON_AddObjectToObject(root, "system_instruction");
+        if (!sys_instruction) { cJSON_Delete(root); return NULL; }
+        cJSON* sys_parts_array = cJSON_AddArrayToObject(sys_instruction, "parts");
+        if (!sys_parts_array) { cJSON_Delete(root); return NULL; }
+        cJSON* sys_part_obj = cJSON_CreateObject();
+        if (!sys_part_obj) { cJSON_Delete(root); return NULL; }
+        cJSON_AddStringToObject(sys_part_obj, "text", request_config->system_prompt);
+        cJSON_AddItemToArray(sys_parts_array, sys_part_obj);
+    }
+
     cJSON *contents_array = cJSON_AddArrayToObject(root, "contents");
     if (!contents_array) { cJSON_Delete(root); return NULL; }
 
     for (size_t i = 0; i < request_config->num_messages; ++i) {
         const dp_message_t* msg = &request_config->messages[i];
+        if (msg->role == DP_ROLE_SYSTEM) continue;
+
         cJSON *content_obj = cJSON_CreateObject();
         if (!content_obj) { cJSON_Delete(root); return NULL; }
 
@@ -254,9 +293,28 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
     cJSON *gen_config = cJSON_AddObjectToObject(root, "generationConfig");
     if (!gen_config) { cJSON_Delete(root); return NULL; }
     cJSON_AddNumberToObject(gen_config, "temperature", request_config->temperature);
+
     if (request_config->max_tokens > 0) {
-        cJSON_AddNumberToObject(gen_config, "maxOutputTokens", request_config->max_tokens);
+        const char* max_tokens_key = (request_config->max_tokens_key_override)
+                                     ? request_config->max_tokens_key_override
+                                     : "maxOutputTokens";
+        cJSON_AddNumberToObject(gen_config, max_tokens_key, request_config->max_tokens);
     }
+
+    // Add top_p, top_k, and stop sequences
+    if (request_config->top_p >= 0.0) {
+        cJSON_AddNumberToObject(gen_config, "topP", request_config->top_p);
+    }
+    if (request_config->top_k >= 0) {
+        cJSON_AddNumberToObject(gen_config, "topK", request_config->top_k);
+    }
+    if (request_config->stop_sequences && request_config->num_stop_sequences > 0) {
+        cJSON* stop_array = cJSON_CreateStringArray(request_config->stop_sequences, request_config->num_stop_sequences);
+        if (stop_array) {
+            cJSON_AddItemToObject(gen_config, "stopSequences", stop_array);
+        }
+    }
+
 
     char* json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -268,12 +326,36 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
     if (!root) return NULL;
 
     cJSON_AddStringToObject(root, "model", request_config->model);
-    cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens > 0 ? request_config->max_tokens : 1024);
+
+    if (request_config->max_tokens > 0) {
+        const char* max_tokens_key = (request_config->max_tokens_key_override)
+                                     ? request_config->max_tokens_key_override
+                                     : "max_tokens";
+        cJSON_AddNumberToObject(root, max_tokens_key, request_config->max_tokens);
+    } else {
+        cJSON_AddNumberToObject(root, "max_tokens", 1024); // Anthropic requires max_tokens
+    }
+
     if (request_config->temperature >= 0.0 && request_config->temperature <= 1.0) {
         cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
     } else if (request_config->temperature > 1.0) {
          cJSON_AddNumberToObject(root, "temperature", 1.0);
     }
+
+    // Add top_p, top_k, and stop sequences
+    if (request_config->top_p >= 0.0) {
+        cJSON_AddNumberToObject(root, "top_p", request_config->top_p);
+    }
+    if (request_config->top_k >= 0) {
+        cJSON_AddNumberToObject(root, "top_k", request_config->top_k);
+    }
+    if (request_config->stop_sequences && request_config->num_stop_sequences > 0) {
+        cJSON* stop_array = cJSON_CreateStringArray(request_config->stop_sequences, request_config->num_stop_sequences);
+        if (stop_array) {
+            cJSON_AddItemToObject(root, "stop_sequences", stop_array);
+        }
+    }
+
 
     if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
         cJSON_AddStringToObject(root, "system", request_config->system_prompt);
@@ -331,6 +413,7 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
     cJSON_Delete(root);
     return json_string;
 }
+
 
 static char* extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
@@ -428,8 +511,6 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     stream_processor_t* processor = (stream_processor_t*)userp;
 
     if (processor->stop_streaming_signal) {
-        // Stop was signaled on a previous chunk, this is a new chunk arriving before curl stops.
-        // We must still accept it to not cause a libcurl error, but we do nothing with it.
         return realsize;
     }
 
@@ -654,8 +735,10 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         if (is_final_for_this_event) processor->stop_streaming_signal = true;
     }
 
-    if (remaining_in_buffer > 0 && current_event_start > processor->buffer) {
+    if (remaining_in_buffer > 0 && current_event_start < processor->buffer + processor->buffer_size) {
         memmove(processor->buffer, current_event_start, remaining_in_buffer);
+    } else if (remaining_in_buffer == 0) {
+        processor->buffer_size = 0;
     }
     processor->buffer_size = remaining_in_buffer;
     if (processor->buffer_size < processor->buffer_capacity) {
@@ -663,6 +746,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
     }
     return realsize;
 }
+
 
 static size_t anthropic_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
@@ -1343,7 +1427,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                             if (cJSON_IsString(id_item) && id_item->valuestring) {
                                 const char* model_name_str = id_item->valuestring;
                                 if (context->provider == DP_PROVIDER_GOOGLE_GEMINI && strncmp(model_name_str, "models/", 7) == 0) {
-                                    model_name_str += 7; // Strip the "models/" prefix
+                                    model_name_str += 7;
                                 }
                                 info->model_id = dp_internal_strdup(model_name_str);
                             }
@@ -1544,7 +1628,7 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
         cJSON_AddItemToArray(root, msg_obj);
     }
 
-    *json_str_out = cJSON_Print(root); // Pretty-printed for readability
+    *json_str_out = cJSON_Print(root);
     cJSON_Delete(root);
 
     return (*json_str_out) ? 0 : -1;
@@ -1615,7 +1699,7 @@ int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messa
     if (dp_serialize_messages_to_json_str(messages, num_messages, &json_str) != 0) {
         return -1;
     }
-    if (!json_str) return -1; // Should not happen if previous call returns 0
+    if (!json_str) return -1;
 
     FILE* fp = fopen(path, "w");
     if (!fp) {

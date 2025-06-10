@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([Disaster Party], [0.2.1], [segin2005@gmail.com], [disasterparty], [https://github.com/segin/disasterparty])
+AC_INIT([Disaster Party], [0.2.2], [segin2005@gmail.com], [disasterparty], [https://github.com/segin/disasterparty]) # Updated version
 AC_CONFIG_SRCDIR([src/disasterparty.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -33,8 +33,12 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-# Version 0.2.1 (from 0.2.0): c:r:a -> current is unchanged, revision increments
-DP_LT_VERSION="0:3:0"
+# Version 0.2.2 (from 0.2.0):
+# - No interface changes, only bug fixes/internal improvements. -> revision increments.
+# current=1, revision=2, age=1 (age from 0.2.0 change) -> libdisasterparty.so.0.0.2
+# Let's keep it simpler for now for 0.x releases:
+# For 0.2.2: current=0, revision=4, age=0 -> libdisasterparty.so.0.4.0
+DP_LT_VERSION="0:4:0" # Updated libtool version (c:r:a)
 AC_SUBST(DP_LT_VERSION)
 AC_SUBST(PACKAGE_VERSION)
 

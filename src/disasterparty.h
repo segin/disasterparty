@@ -4,10 +4,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // Forward declaration for libcurl and cJSON
 typedef void CURL;
 typedef struct cJSON cJSON;
@@ -15,10 +11,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.2.1" // Updated version
+#define DP_VERSION "0.2.2"
 #define DP_VERSION_MAJOR 0
 #define DP_VERSION_MINOR 2
-#define DP_VERSION_PATCH 1 // Updated version
+#define DP_VERSION_PATCH 2
 
 
 /**
@@ -65,6 +61,9 @@ typedef struct {
     size_t num_parts;
 } dp_message_t;
 
+/**
+ * @brief Configuration for an LLM API request.
+ */
 typedef struct {
     const char* model;
     dp_message_t* messages;
@@ -72,6 +71,11 @@ typedef struct {
     const char* system_prompt;
     double temperature;
     int max_tokens;
+    const char* max_tokens_key_override;
+    double top_p;                       // New parameter: Nucleus sampling. Use -1.0 to omit.
+    int top_k;                          // New parameter: Top-k sampling. Use -1 to omit.
+    const char** stop_sequences;        // New parameter: Array of stop sequences.
+    size_t num_stop_sequences;          // New parameter: Number of stop sequences.
     bool stream;
 } dp_request_config_t;
 
@@ -168,16 +172,9 @@ bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_ty
 const char* dp_get_version(void);
 
 int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_messages, char** json_str_out);
-
 int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out);
-
 int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
-
 int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
 
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // DISASTERPARTY_H
