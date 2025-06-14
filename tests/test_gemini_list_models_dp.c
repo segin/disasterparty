@@ -6,17 +6,17 @@
 #include <stdbool.h>
 
 int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        printf("SKIP: GEMINI_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
-    const char* api_key = getenv("GEMINI_API_KEY");
-    if (!api_key) {
-        fprintf(stderr, "Error: GEMINI_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing Gemini List Models:\n");
     printf("Using Gemini API Key: ***\n");
@@ -63,4 +63,3 @@ int main() {
     printf("Gemini list models test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-

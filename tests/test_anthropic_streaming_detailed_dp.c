@@ -1,13 +1,13 @@
 #include "disasterparty.h"
 #include <curl/curl.h>
-#include <cjson/cJSON.h> 
+#include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 int anthropic_detailed_stream_handler(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_msg) {
-    (void)user_data; 
+    (void)user_data;
 
     if (error_msg) {
         fprintf(stderr, "\nStream Error reported by callback: %s\n", error_msg);
@@ -49,22 +49,24 @@ int anthropic_detailed_stream_handler(const dp_anthropic_stream_event_t* event, 
             cJSON_Delete(root);
         }
     }
-    
+
     if (event->event_type == DP_ANTHROPIC_EVENT_MESSAGE_STOP) {
         printf("\n[DETAILED STREAM END - Anthropic with Disaster Party]\n");
         fflush(stdout);
     }
 
-    return 0; 
+    return 0;
 }
 
 int main() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
-        fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
+        printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
@@ -134,4 +136,3 @@ int main() {
     printf("Anthropic detailed streaming test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-

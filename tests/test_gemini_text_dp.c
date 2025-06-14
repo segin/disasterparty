@@ -1,22 +1,22 @@
-#include "disasterparty.h" 
+#include "disasterparty.h"
 #include <curl/curl.h>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        printf("SKIP: GEMINI_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
-    const char* api_key = getenv("GEMINI_API_KEY");
-    if (!api_key) {
-        fprintf(stderr, "Error: GEMINI_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
 
@@ -31,7 +31,7 @@ int main() {
     dp_request_config_t request_config = {0};
     request_config.model = "gemini-2.0-flash";
     request_config.temperature = 0.8;
-    request_config.max_tokens = 2048; 
+    request_config.max_tokens = 2048;
     request_config.stream = false;
 
     dp_message_t messages[1];
@@ -46,7 +46,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-    
+
     printf("Sending request to Gemini model: %s\n", request_config.model);
     printf("Prompt: %s\n", messages[0].parts[0].text);
 
@@ -78,4 +78,3 @@ int main() {
     printf("Gemini text test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-

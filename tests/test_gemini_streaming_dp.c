@@ -1,7 +1,7 @@
-#include "disasterparty.h" 
-#include <curl/curl.h> 
+#include "disasterparty.h"
+#include <curl/curl.h>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -13,27 +13,27 @@ int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, 
     }
     if (token) {
         printf("%s", token);
-        fflush(stdout); 
+        fflush(stdout);
     }
     if (is_final && !error_msg) {
          printf("\n[STREAM END - Gemini (SSE) with Disaster Party]\n");
          fflush(stdout);
     }
-    return 0; 
+    return 0;
 }
 
 int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        printf("SKIP: GEMINI_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
-    const char* api_key = getenv("GEMINI_API_KEY");
-    if (!api_key) {
-        fprintf(stderr, "Error: GEMINI_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
 
@@ -49,28 +49,28 @@ int main() {
     request_config.model = "gemini-2.0-flash";
     request_config.temperature = 0.5;
     request_config.max_tokens = 2048;
-    
+
     dp_message_t messages[1];
     memset(messages, 0, sizeof(messages));
     request_config.messages = messages;
     request_config.num_messages = 1;
 
     messages[0].role = DP_ROLE_USER;
-    if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) { 
+    if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) {
         fprintf(stderr, "Failed to add text part to Gemini message.\n");
         dp_destroy_context(context);
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-    
+
     printf("Sending streaming request to Gemini model: %s\n", request_config.model);
     printf("Prompt: %s\n---\nStreaming Response (Gemini via SSE with Disaster Party):\n", messages[0].parts[0].text);
-    fflush(stdout); 
+    fflush(stdout);
 
     dp_response_t response_status = {0};
     int result = dp_perform_streaming_completion(context, &request_config, gemini_stream_handler_dp, NULL, &response_status);
 
-    printf("\n---\n"); 
+    printf("\n---\n");
     fflush(stdout);
 
     if (result == 0) {
@@ -98,7 +98,6 @@ int main() {
     dp_destroy_context(context);
     curl_global_cleanup();
     printf("Gemini streaming test (Disaster Party) finished.\n");
-    
+
     return final_exit_code;
 }
-

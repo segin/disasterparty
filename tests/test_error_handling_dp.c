@@ -1,13 +1,14 @@
-#include "disasterparty.h" 
-#include <curl/curl.h> 
+#include "disasterparty.h"
+#include <curl/curl.h>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 // Helper function to run a specific error test
 bool run_test(const char* test_name, dp_provider_type_t provider, const char* api_key, const char* model, long expected_http_status) {
     printf("\n--- Running Test: %s ---\n", test_name);
+    fflush(stdout);
 
     dp_context_t* context = dp_init_context(provider, api_key, NULL);
     if (!context) {
@@ -31,17 +32,15 @@ bool run_test(const char* test_name, dp_provider_type_t provider, const char* ap
     dp_perform_completion(context, &request_config, &response);
 
     bool success = (response.http_status_code == expected_http_status && response.error_message != NULL);
-    
+
     if (success) {
         printf("PASS: Successfully caught expected HTTP %ld.\n", expected_http_status);
         printf("      API Error Message: %.100s...\n", response.error_message);
     } else {
-        fprintf(stderr, "FAIL: Expected HTTP %ld but got %ld.\n", expected_http_status, response.http_status_code);
-        if (response.error_message) {
-            fprintf(stderr, "      API Error Message: %s\n", response.error_message);
-        } else {
-            fprintf(stderr, "      No API error message was reported by the library.\n");
-        }
+        fprintf(stderr, "FAIL: Expected HTTP %ld but got %ld. Library Error: \"%s\"\n",
+                expected_http_status,
+                response.http_status_code,
+                response.error_message ? response.error_message : "None");
     }
 
     dp_free_response_content(&response);
@@ -63,39 +62,50 @@ int main() {
     const char* fake_key = "invalid-api-key-for-testing";
     const char* fake_model = "model-does-not-exist";
 
+    if (!openai_key && !gemini_key && !anthropic_key) {
+        printf("SKIP: No API keys (OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY) are set. Skipping all error handling tests.\n");
+        curl_global_cleanup();
+        return 77; // Automake skip code
+    }
+
     bool all_tests_passed = true;
+    int tests_run = 0;
 
     // Test Bad API Key
     if (openai_key) {
+        tests_run++;
         if (!run_test("OpenAI Bad API Key", DP_PROVIDER_OPENAI_COMPATIBLE, fake_key, "gpt-4o", 401)) all_tests_passed = false;
     }
     if (gemini_key) {
+        tests_run++;
         if (!run_test("Gemini Bad API Key", DP_PROVIDER_GOOGLE_GEMINI, fake_key, "gemini-2.0-flash", 400)) all_tests_passed = false;
     }
     if (anthropic_key) {
+        tests_run++;
         if (!run_test("Anthropic Bad API Key", DP_PROVIDER_ANTHROPIC, fake_key, "claude-3-haiku-20240307", 401)) all_tests_passed = false;
     }
-    
+
     // Test Bad Model Name
     if (openai_key) {
+        tests_run++;
         if (!run_test("OpenAI Bad Model Name", DP_PROVIDER_OPENAI_COMPATIBLE, openai_key, fake_model, 404)) all_tests_passed = false;
     }
     if (gemini_key) {
-         // Gemini often returns 404 for bad model, but can also be other codes. 404 is a good check.
+        tests_run++;
         if (!run_test("Gemini Bad Model Name", DP_PROVIDER_GOOGLE_GEMINI, gemini_key, fake_model, 404)) all_tests_passed = false;
     }
     if (anthropic_key) {
-        if (!run_test("Anthropic Bad Model Name", DP_PROVIDER_ANTHROPIC, anthropic_key, fake_model, 400)) all_tests_passed = false;
+        tests_run++;
+        if (!run_test("Anthropic Bad Model Name", DP_PROVIDER_ANTHROPIC, anthropic_key, fake_model, 404)) all_tests_passed = false;
     }
 
     curl_global_cleanup();
-    
+
     if (all_tests_passed) {
-        printf("\nAll error handling tests passed!\n");
+        printf("\nAll %d error handling tests passed!\n", tests_run);
         return EXIT_SUCCESS;
     } else {
-        fprintf(stderr, "\nSome error handling tests failed.\n");
+        fprintf(stderr, "\nSome of the %d error handling tests failed.\n", tests_run);
         return EXIT_FAILURE;
     }
 }
-

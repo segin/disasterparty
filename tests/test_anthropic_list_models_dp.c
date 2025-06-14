@@ -6,15 +6,14 @@
 #include <stdbool.h>
 
 int main() {
-    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
-        fprintf(stderr, "curl_global_init() failed.\n");
-        return EXIT_FAILURE;
-    }
-
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
-        fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
+        printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
@@ -59,9 +58,8 @@ int main() {
 
     dp_free_model_list(model_list);
     dp_destroy_context(context);
-    
+
     curl_global_cleanup();
     printf("Anthropic list models test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-

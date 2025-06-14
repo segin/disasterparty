@@ -23,15 +23,14 @@ int anthropic_generic_stream_handler(const char* token, void* user_data, bool is
 }
 
 int main() {
-    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
-        fprintf(stderr, "curl_global_init() failed.\n");
-        return EXIT_FAILURE;
-    }
-
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
-        fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
+        printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
@@ -101,4 +100,3 @@ int main() {
     printf("Anthropic generic streaming test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-

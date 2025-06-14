@@ -28,7 +28,7 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
                     break;
                 case DP_CONTENT_PART_IMAGE_BASE64:
                     printf("type=image_base64, mime=\"%s\", data=\"%.10s...\"\n",
-                           part->image_base64.mime_type ? part->image_base64.mime_type : "(null)", 
+                           part->image_base64.mime_type ? part->image_base64.mime_type : "(null)",
                            part->image_base64.data ? part->image_base64.data : "(null)");
                     break;
             }
@@ -40,7 +40,7 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
 
 int main() {
     printf("Running Disaster Party Serialization Test...\n");
-    
+
     // 1. Create a sample conversation
     dp_message_t messages[2];
     memset(messages, 0, sizeof(messages));
@@ -114,17 +114,16 @@ int main() {
     assert(num_deserialized == num_messages);
     print_messages("Deserialized Messages from File", deserialized_messages, num_deserialized);
     printf("PASS: Deserialization from file successful.\n\n");
-    
+
     // Clean up original messages
     dp_free_messages(messages, num_messages);
     // Clean up deserialized messages
     dp_free_messages(deserialized_messages, num_deserialized);
     free(deserialized_messages);
-    
+
     remove(test_file); // Clean up the test file
 
     printf("All serialization tests passed!\n");
 
     return EXIT_SUCCESS;
 }
-

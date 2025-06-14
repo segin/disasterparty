@@ -1,28 +1,29 @@
-#include "disasterparty.h" 
+#include "disasterparty.h"
 #include <curl/curl.h>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 int main() {
+    const char* api_key = getenv("OPENAI_API_KEY");
+    if (!api_key) {
+        printf("SKIP: OPENAI_API_KEY environment variable not set.\n");
+        return 77;
+    }
+
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
-    const char* api_key = getenv("OPENAI_API_KEY");
-    if (!api_key) {
-        fprintf(stderr, "Error: OPENAI_API_KEY environment variable not set.\n");
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
-    
+    const char* base_url = getenv("OPENAI_API_BASE_URL");
+
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using OpenAI API Key: ***\n");
-    printf("Using OpenAI Base URL: %s\n", getenv("OPENAI_API_BASE_URL") ? getenv("OPENAI_API_BASE_URL") : "https://api.openai.com/v1");
+    printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, getenv("OPENAI_API_BASE_URL"));
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, base_url);
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for OpenAI (Multimodal).\n");
         curl_global_cleanup();
@@ -31,7 +32,7 @@ int main() {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gpt-4o"; 
+    request_config.model = "gpt-4o";
     request_config.temperature = 0.5;
     request_config.max_tokens = 300;
     request_config.stream = false;
@@ -58,7 +59,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-    
+
     printf("Sending multimodal request to model: %s\n", request_config.model);
     printf("Text prompt: %s\n", messages[0].parts[0].text);
     printf("Image URL: %s\n", messages[0].parts[1].image_url);
@@ -92,4 +93,3 @@ int main() {
     printf("OpenAI multimodal test (Disaster Party) finished.\n");
     return final_exit_code;
 }
-
