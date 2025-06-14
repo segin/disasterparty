@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 void print_messages(const char* header, const dp_message_t* messages, size_t num_messages) {
     printf("--- %s ---\n", header);
@@ -20,14 +21,15 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
             printf("  Part %zu: ", j);
             switch(part->type) {
                 case DP_CONTENT_PART_TEXT:
-                    printf("type=text, text=\"%s\"\n", part->text);
+                    printf("type=text, text=\"%s\"\n", part->text ? part->text : "(null)");
                     break;
                 case DP_CONTENT_PART_IMAGE_URL:
-                    printf("type=image_url, url=\"%s\"\n", part->image_url);
+                    printf("type=image_url, url=\"%s\"\n", part->image_url ? part->image_url : "(null)");
                     break;
                 case DP_CONTENT_PART_IMAGE_BASE64:
                     printf("type=image_base64, mime=\"%s\", data=\"%.10s...\"\n",
-                           part->image_base64.mime_type, part->image_base64.data);
+                           part->image_base64.mime_type ? part->image_base64.mime_type : "(null)", 
+                           part->image_base64.data ? part->image_base64.data : "(null)");
                     break;
             }
         }
@@ -38,7 +40,7 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
 
 int main() {
     printf("Running Disaster Party Serialization Test...\n");
-
+    
     // 1. Create a sample conversation
     dp_message_t messages[2];
     memset(messages, 0, sizeof(messages));
@@ -57,7 +59,8 @@ int main() {
     char* json_string = NULL;
     if (dp_serialize_messages_to_json_str(messages, num_messages, &json_string) != 0) {
         fprintf(stderr, "FAIL: dp_serialize_messages_to_json_str failed.\n");
-        return 1;
+        dp_free_messages(messages, num_messages);
+        return EXIT_FAILURE;
     }
     printf("Serialized to JSON String:\n%s\n", json_string);
     assert(json_string != NULL);
@@ -70,7 +73,7 @@ int main() {
         fprintf(stderr, "FAIL: dp_deserialize_messages_from_json_str failed.\n");
         free(json_string);
         dp_free_messages(messages, num_messages);
-        return 1;
+        return EXIT_FAILURE;
     }
     assert(deserialized_messages != NULL);
     assert(num_deserialized == num_messages);
@@ -94,7 +97,7 @@ int main() {
         fprintf(stderr, "FAIL: dp_serialize_messages_to_file failed.\n");
         free(json_string);
         dp_free_messages(messages, num_messages);
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("PASS: Serialization to file '%s' successful.\n\n", test_file);
     free(json_string);
@@ -105,22 +108,23 @@ int main() {
     if (dp_deserialize_messages_from_file(test_file, &deserialized_messages, &num_deserialized) != 0) {
         fprintf(stderr, "FAIL: dp_deserialize_messages_from_file failed.\n");
         dp_free_messages(messages, num_messages);
-        return 1;
+        return EXIT_FAILURE;
     }
     assert(deserialized_messages != NULL);
     assert(num_deserialized == num_messages);
     print_messages("Deserialized Messages from File", deserialized_messages, num_deserialized);
     printf("PASS: Deserialization from file successful.\n\n");
-
+    
     // Clean up original messages
     dp_free_messages(messages, num_messages);
     // Clean up deserialized messages
     dp_free_messages(deserialized_messages, num_deserialized);
     free(deserialized_messages);
-
+    
     remove(test_file); // Clean up the test file
 
     printf("All serialization tests passed!\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 }
+

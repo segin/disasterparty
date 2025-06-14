@@ -3,33 +3,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 int main() {
-    CURLcode global_init_res = curl_global_init(CURL_GLOBAL_DEFAULT);
-    if (global_init_res != CURLE_OK) {
-        fprintf(stderr, "curl_global_init() failed: %s\n", curl_easy_strerror(global_init_res));
-        return 1;
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
+        return EXIT_FAILURE;
     }
 
     const char* api_key = getenv("OPENAI_API_KEY");
-    const char* base_url = getenv("OPENAI_API_BASE_URL"); 
-
     if (!api_key) {
         fprintf(stderr, "Error: OPENAI_API_KEY environment variable not set.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing OpenAI List Models:\n");
     printf("Using OpenAI API Key: ***\n");
-    printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1");
+    printf("Using OpenAI Base URL: %s\n", getenv("OPENAI_API_BASE_URL") ? getenv("OPENAI_API_BASE_URL") : "https://api.openai.com/v1");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, base_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, getenv("OPENAI_API_BASE_URL"));
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for OpenAI.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("Disaster Party Context Initialized.\n");
 
@@ -40,11 +38,7 @@ int main() {
         printf("\n--- OpenAI Available Models (HTTP %ld) ---\n", model_list->http_status_code);
         printf("Found %zu models:\n", model_list->count);
         for (size_t i = 0; i < model_list->count; ++i) {
-            printf("  Model %zu:\n", i + 1);
-            printf("    ID:          %s\n", model_list->models[i].model_id ? model_list->models[i].model_id : "(N/A)");
-            // OpenAI /v1/models typically doesn't provide extensive details like display_name, version, description, limits in the main list object
-            // It primarily returns 'id', 'object', 'created', 'owned_by'.
-            // We are primarily interested in 'id'.
+            printf("  - ID: %s\n", model_list->models[i].model_id ? model_list->models[i].model_id : "(N/A)");
         }
         printf("-------------------------------------------\n");
     } else {
@@ -56,14 +50,17 @@ int main() {
         } else {
              fprintf(stderr, "Error: dp_list_models returned NULL for model_list structure.\n");
         }
-        fprintf(stderr, "-------------------------------------------\n");
+        printf("-------------------------------------------\n");
     }
+
+    bool success = (result == 0 && model_list && model_list->error_message == NULL && model_list->http_status_code == 200);
+    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_model_list(model_list);
     dp_destroy_context(context);
     
     curl_global_cleanup();
     printf("OpenAI list models test (Disaster Party) finished.\n");
-    return (result == 0 && model_list && model_list->error_message == NULL) ? 0 : 1; 
+    return final_exit_code;
 }
 

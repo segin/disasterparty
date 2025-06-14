@@ -6,13 +6,16 @@
 #include <stdbool.h>
 
 int main() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
+        return EXIT_FAILURE;
+    }
 
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
@@ -22,32 +25,30 @@ int main() {
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for Anthropic.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
     request_config.model = "claude-3-haiku-20240307";
     request_config.temperature = 0.7;
-    request_config.max_tokens = 256;
+    request_config.max_tokens = 512;
     request_config.stream = false;
     request_config.system_prompt = "You are a helpful and concise assistant.";
 
     dp_message_t messages[1];
+    memset(messages, 0, sizeof(messages));
     request_config.messages = messages;
     request_config.num_messages = 1;
 
     messages[0].role = DP_ROLE_USER;
-    messages[0].num_parts = 0;
-    messages[0].parts = NULL;
     if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) {
         fprintf(stderr, "Failed to add text part to user message.\n");
-        dp_free_messages(messages, request_config.num_messages);
         dp_destroy_context(context);
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
-
+    
     printf("Sending request to model: %s\n", request_config.model);
     printf("Prompt: %s\n", messages[0].parts[0].text);
 
@@ -66,29 +67,18 @@ int main() {
         } else {
             fprintf(stderr, "An unknown error occurred.\n");
         }
-        fprintf(stderr, "-------------------------------------------\n");
+        printf("-------------------------------------------\n");
     }
 
-    fflush(stdout);
-    fflush(stderr);
-
-    // Debugging the exit condition
-    bool cond1_result_is_0 = (result == 0);
-    bool cond2_error_msg_is_null = (response.error_message == NULL);
-    bool cond3_http_is_200 = (response.http_status_code == 200);
-
-    fprintf(stderr, "[TEST_EXIT_COND_DEBUG_ANTHROPIC] result==0: %d, error_msg==NULL: %d, http_status==200: %d\n",
-            cond1_result_is_0, cond2_error_msg_is_null, cond3_http_is_200);
-
-    int final_exit_code = (cond1_result_is_0 && cond2_error_msg_is_null && cond3_http_is_200) ? 0 : 1;
-    fprintf(stderr, "[TEST_EXIT_CODE_ANTHROPIC] Final exit code: %d\n", final_exit_code);
-    fflush(stderr);
+    bool success = (result == 0 && response.error_message == NULL && response.http_status_code == 200);
+    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_response_content(&response);
-    dp_free_messages(messages, request_config.num_messages);
+    dp_free_messages(messages, request_config.num_messages); 
     dp_destroy_context(context);
-
+    
     curl_global_cleanup();
     printf("Anthropic text test (Disaster Party) finished.\n");
     return final_exit_code;
 }
+

@@ -3,15 +3,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 int main() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
+        return EXIT_FAILURE;
+    }
 
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
@@ -22,7 +26,7 @@ int main() {
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for Anthropic.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("Disaster Party Context Initialized.\n");
 
@@ -47,13 +51,17 @@ int main() {
         } else {
              fprintf(stderr, "Error: dp_list_models returned NULL for model_list structure.\n");
         }
-        fprintf(stderr, "-------------------------------------------\n");
+        printf("-------------------------------------------\n");
     }
+
+    bool success = (result == 0 && model_list && model_list->error_message == NULL && model_list->http_status_code == 200);
+    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_model_list(model_list);
     dp_destroy_context(context);
-
+    
     curl_global_cleanup();
     printf("Anthropic list models test (Disaster Party) finished.\n");
-    return (result == 0 && model_list && model_list->error_message == NULL) ? 0 : 1;
+    return final_exit_code;
 }
+

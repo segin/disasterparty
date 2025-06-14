@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-// Generic text-token callback for Anthropic
 int anthropic_generic_stream_handler(const char* token, void* user_data, bool is_final, const char* error_msg) {
     if (error_msg) {
         fprintf(stderr, "\nStream Error reported by callback: %s\n", error_msg);
@@ -23,13 +23,16 @@ int anthropic_generic_stream_handler(const char* token, void* user_data, bool is
 }
 
 int main() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        fprintf(stderr, "curl_global_init() failed.\n");
+        return EXIT_FAILURE;
+    }
 
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         fprintf(stderr, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
@@ -40,7 +43,7 @@ int main() {
     if (!context) {
         fprintf(stderr, "Failed to initialize context for Anthropic.\n");
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("Disaster Party Context Initialized.\n");
 
@@ -51,17 +54,15 @@ int main() {
     request_config.stream = true;
 
     dp_message_t messages[1];
+    memset(messages, 0, sizeof(messages));
     request_config.messages = messages;
     request_config.num_messages = 1;
     messages[0].role = DP_ROLE_USER;
-    messages[0].num_parts = 0;
-    messages[0].parts = NULL;
     if (!dp_message_add_text_part(&messages[0], "Tell me about MAGIC GIANT.")) {
         fprintf(stderr, "Failed to add text part to user message.\n");
-        dp_free_messages(messages, 1);
         dp_destroy_context(context);
         curl_global_cleanup();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     printf("Sending streaming request to model: %s\n", request_config.model);
@@ -90,7 +91,8 @@ int main() {
     }
     fflush(stderr);
 
-    int final_exit_code = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200) ? 0 : 1;
+    bool success = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200);
+    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_response_content(&response_status);
     dp_free_messages(messages, 1);
@@ -99,3 +101,4 @@ int main() {
     printf("Anthropic generic streaming test (Disaster Party) finished.\n");
     return final_exit_code;
 }
+
