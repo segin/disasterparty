@@ -10,7 +10,6 @@ AM_SILENT_RULES([yes])
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_CXX # Added: Detect the C++ compiler
 AC_PROG_LN_S
 AM_PROG_AR
 LT_INIT
@@ -52,12 +51,18 @@ AC_MSG_NOTICE([
 ========================================================================
 Disaster Party $VERSION configured successfully.
 
+  Man pages will be installed in: ${mandir}/man3
+  Library version (libtool):    ${DP_LT_VERSION} (libdisasterparty.so.1.0.0)
+  Package version:              ${PACKAGE_VERSION}
+
   Prefix:           ${prefix}
-  C Compiler:       ${CC}
-  C++ Compiler:     ${CXX}
+  Compiler:         ${CC}
   CFLAGS:           ${CFLAGS}
-  CXXFLAGS:         ${CXXFLAGS}
   LIBS:             ${LIBS}
+  cURL CFLAGS:      ${CURL_CFLAGS}
+  cURL LIBS:        ${CURL_LIBS}
+  cJSON CFLAGS:     ${CJSON_CFLAGS}
+  cJSON LIBS:       ${CJSON_LIBS}
 
 Now type 'make' to build, and then (optionally) 'make install'.
 ========================================================================
