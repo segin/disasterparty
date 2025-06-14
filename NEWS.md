@@ -1,3 +1,16 @@
+# Version 0.3.0 (2025-06-14)
+* **ABI BREAKING CHANGE**: The `dp_request_config_t` struct will be modified. Recompilation of applications will be required.
+* Add support for expanded generation parameters: `top_p`, `top_k`, and `stop_sequences`.
+* Implement dedicated `system_instruction` support for the Gemini API.
+* Add new unit tests for error handling and advanced parameter submission.
+
+# Version 0.2.1 (2025-06-08)
+* Added C++ compatibility guards (`extern "C"`) to the public header file.
+* Added conversation serialization/deserialization helper functions (to/from JSON string and file).
+* Fixed a streaming bug that could cause premature write errors.
+* Added comprehensive unit tests for Anthropic API functionality and serialization.
+* Updated all documentation and man pages to reflect the current API and version.
+
 # Version 0.2.0 (2025-06-07)
 * Added support for Anthropic Claude API.
   * New provider type `DP_PROVIDER_ANTHROPIC`.
