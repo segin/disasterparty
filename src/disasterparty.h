@@ -1,8 +1,8 @@
-#ifndef DISASTERPARTY_H
+#ifndef DISASTERPARTY_H 
 #define DISASTERPARTY_H
 
-#include <stddef.h>
-#include <stdbool.h>
+#include <stddef.h> 
+#include <stdbool.h> 
 
 // Forward declaration for libcurl and cJSON
 typedef void CURL;
@@ -11,39 +11,39 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.2.2"
+#define DP_VERSION "0.3.0" 
 #define DP_VERSION_MAJOR 0
-#define DP_VERSION_MINOR 2
-#define DP_VERSION_PATCH 2
+#define DP_VERSION_MINOR 3 
+#define DP_VERSION_PATCH 0 
 
 
 /**
  * @brief Enumeration for supported LLM API providers.
  */
 typedef enum {
-    DP_PROVIDER_OPENAI_COMPATIBLE,
+    DP_PROVIDER_OPENAI_COMPATIBLE, 
     DP_PROVIDER_GOOGLE_GEMINI,
-    DP_PROVIDER_ANTHROPIC
-} dp_provider_type_t;
+    DP_PROVIDER_ANTHROPIC 
+} dp_provider_type_t; 
 
 /**
  * @brief Enumeration for the role in a message.
  */
 typedef enum {
-    DP_ROLE_SYSTEM,
+    DP_ROLE_SYSTEM, 
     DP_ROLE_USER,
     DP_ROLE_ASSISTANT,
     DP_ROLE_TOOL
-} dp_message_role_t;
+} dp_message_role_t; 
 
 /**
  * @brief Represents a part of a multimodal message content.
  */
 typedef enum {
-    DP_CONTENT_PART_TEXT,
+    DP_CONTENT_PART_TEXT, 
     DP_CONTENT_PART_IMAGE_URL,
     DP_CONTENT_PART_IMAGE_BASE64
-} dp_content_part_type_t;
+} dp_content_part_type_t; 
 
 typedef struct {
     dp_content_part_type_t type;
@@ -51,61 +51,57 @@ typedef struct {
     char* image_url;
     struct {
         char* mime_type;
-        char* data;
+        char* data; 
     } image_base64;
-} dp_content_part_t;
+} dp_content_part_t; 
 
 typedef struct {
     dp_message_role_t role;
     dp_content_part_t* parts;
     size_t num_parts;
-} dp_message_t;
+} dp_message_t; 
 
-/**
- * @brief Configuration for an LLM API request.
- */
 typedef struct {
     const char* model;
     dp_message_t* messages;
     size_t num_messages;
-    const char* system_prompt;
-    double temperature;
-    int max_tokens;
-    const char* max_tokens_key_override;
-    double top_p;                       // New parameter: Nucleus sampling. Use -1.0 to omit.
-    int top_k;                          // New parameter: Top-k sampling. Use -1 to omit.
-    const char** stop_sequences;        // New parameter: Array of stop sequences.
-    size_t num_stop_sequences;          // New parameter: Number of stop sequences.
-    bool stream;
-} dp_request_config_t;
+    const char* system_prompt; 
+    double temperature;       
+    int max_tokens;           
+    bool stream;              
+    double top_p;                   // New parameter for nucleus sampling
+    int top_k;                      // New parameter for top-k sampling
+    const char** stop_sequences;    // New: Array of stop sequences
+    size_t num_stop_sequences;      // New: Number of stop sequences
+} dp_request_config_t; 
 
 typedef struct {
-    dp_content_part_type_t type;
+    dp_content_part_type_t type; 
     char* text;
-} dp_response_part_t;
+} dp_response_part_t; 
 
 typedef struct {
-    dp_response_part_t* parts;
-    size_t num_parts;
-    char* error_message;
-    long http_status_code;
-    char* finish_reason;
-} dp_response_t;
+    dp_response_part_t* parts; 
+    size_t num_parts;          
+    char* error_message;        
+    long http_status_code;      
+    char* finish_reason;      
+} dp_response_t; 
 
 typedef struct {
-    char* model_id;
-    char* display_name;
-    char* version;
-    char* description;
-    long input_token_limit;
+    char* model_id;         
+    char* display_name;     
+    char* version;          
+    char* description;      
+    long input_token_limit; 
     long output_token_limit;
 } dp_model_info_t;
 
 typedef struct {
-    dp_model_info_t* models;
-    size_t count;
-    char* error_message;
-    long http_status_code;
+    dp_model_info_t* models;    
+    size_t count;               
+    char* error_message;        
+    long http_status_code;      
 } dp_model_list_t;
 
 typedef enum {
@@ -121,11 +117,11 @@ typedef enum {
 } dp_anthropic_event_type_t;
 
 typedef struct {
-    dp_anthropic_event_type_t event_type;
-    const char* raw_json_data;
+    dp_anthropic_event_type_t event_type; 
+    const char* raw_json_data;            
 } dp_anthropic_stream_event_t;
 
-typedef int (*dp_stream_callback_t)(const char* token,
+typedef int (*dp_stream_callback_t)(const char* token, 
                                     void* user_data,
                                     bool is_final_chunk,
                                     const char* error_during_stream);
@@ -134,9 +130,9 @@ typedef int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t*
                                               void* user_data,
                                               const char* error_during_stream);
 
-typedef struct dp_context_s dp_context_t;
+typedef struct dp_context_s dp_context_t; 
 
-dp_context_t* dp_init_context(dp_provider_type_t provider,
+dp_context_t* dp_init_context(dp_provider_type_t provider, 
                               const char* api_key,
                               const char* api_base_url);
 
@@ -148,7 +144,7 @@ int dp_perform_completion(dp_context_t* context,
 
 int dp_perform_streaming_completion(dp_context_t* context,
                                     const dp_request_config_t* request_config,
-                                    dp_stream_callback_t callback,
+                                    dp_stream_callback_t callback, 
                                     void* user_data,
                                     dp_response_t* response);
 
@@ -176,5 +172,5 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
 int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
 int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
 
-
 #endif // DISASTERPARTY_H
+
