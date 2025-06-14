@@ -1,5 +1,5 @@
 .\" Man page for dp_list_models from libdisasterparty
-.TH DP_LIST_MODELS 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_LIST_MODELS 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_list_models \- list available models from the LLM provider
@@ -42,4 +42,5 @@ Gemini (Conceptualization and initial C code generation)
 .SH SEE ALSO
 .BR dp_init_context (3),
 .BR dp_free_model_list (3),
+.BR dp_model_list (3),
 .BR disasterparty (7)

@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_completion from libdisasterparty
-.TH DP_PERFORM_COMPLETION 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_COMPLETION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_completion \- perform a non-streaming LLM completion request
@@ -12,14 +12,21 @@ dp_perform_completion \- perform a non-streaming LLM completion request
 .SH DESCRIPTION
 The
 .B dp_perform_completion()
-function sends a request to the configured LLM provider to generate a completion.
-This function operates in a non-streaming (blocking) mode, waiting for the full
-response from the API. The
+function sends a request to the configured LLM provider to generate a completion
+based on the provided messages and configuration. This function operates in a
+non-streaming (blocking) mode, waiting for the full response from the API.
+
+The
+.I request_config
+argument specifies the parameters for the request. This includes the model, messages,
+temperature, and other generation controls like `top_p`, `top_k`, and `stop_sequences`.
+The
 .BR stream
 field within
 .I request_config
 must be set to
-.BR false .
+.BR false
+for this function.
 
 The
 .I response
@@ -31,8 +38,7 @@ The caller is responsible for freeing its contents using
 after use, even if an error occurs.
 
 .SH RETURN VALUE
-Returns 0 on success. Returns -1 on critical errors (e.g., invalid arguments,
-network errors). In all cases, the
+Returns 0 on success. Returns -1 on critical errors. In all cases, the
 .I response
 struct should be checked for the HTTP status and any API-level error messages.
 
@@ -50,4 +56,5 @@ Gemini (Conceptualization and initial C code generation)
 .SH SEE ALSO
 .BR dp_perform_streaming_completion (3),
 .BR dp_free_response_content (3),
+.BR dp_request_config (3),
 .BR disasterparty (7)

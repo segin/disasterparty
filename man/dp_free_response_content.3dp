@@ -1,5 +1,5 @@
 .\" Man page for dp_free_response_content from libdisasterparty
-.TH DP_FREE_RESPONSE_CONTENT 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_FREE_RESPONSE_CONTENT 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_response_content \- free content of a Disaster Party response structure
@@ -32,4 +32,5 @@ Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_perform_completion (3),
+.BR dp_response (3),
 .BR disasterparty (7)

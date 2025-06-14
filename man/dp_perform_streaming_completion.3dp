@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_streaming_completion from libdisasterparty
-.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_STREAMING_COMPLETION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_streaming_completion \- perform a streaming LLM completion request with a generic text callback
@@ -29,9 +29,6 @@ For OpenAI and Anthropic,
 must be set to
 .BR true .
 
-.SH RETURN VALUE
-Returns 0 if the stream was successfully initiated and completed. Returns -1 on setup error.
-
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
 .PP
@@ -46,4 +43,5 @@ Gemini (Conceptualization and initial C code generation)
 .SH SEE ALSO
 .BR dp_perform_completion (3),
 .BR dp_perform_anthropic_streaming_completion (3),
+.BR dp_request_config (3),
 .BR disasterparty (7)

@@ -1,0 +1,59 @@
+.\" Man page for dp_anthropic_stream_event_t struct from libdisasterparty
+.TH DP_ANTHROPIC_STREAM_EVENT 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_anthropic_stream_event_t \- structure for a detailed Anthropic API stream event
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    dp_anthropic_event_type_t event_type;
+    const char* raw_json_data;
+} dp_anthropic_stream_event_t;
+
+typedef enum {
+    DP_ANTHROPIC_EVENT_UNKNOWN,
+    DP_ANTHROPIC_EVENT_MESSAGE_START,
+    DP_ANTHROPIC_EVENT_CONTENT_BLOCK_START,
+    DP_ANTHROPIC_EVENT_PING,
+    DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA,
+    DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP,
+    DP_ANTHROPIC_EVENT_MESSAGE_DELTA,
+    DP_ANTHROPIC_EVENT_MESSAGE_STOP,
+    DP_ANTHROPIC_EVENT_ERROR
+} dp_anthropic_event_type_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_anthropic_stream_event_t
+structure is used exclusively by the
+.BR dp_perform_anthropic_streaming_completion (3)
+function. It is passed to the user-provided callback for each Server-Sent Event (SSE)
+received from the Anthropic API, allowing for fine-grained handling of the
+streaming process.
+
+.SH MEMBERS of dp_anthropic_stream_event_t
+.TP
+.B dp_anthropic_event_type_t event_type
+An enum value identifying the type of event, such as `DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA` or `DP_ANTHROPIC_EVENT_MESSAGE_STOP`.
+.TP
+.B const char* raw_json_data
+A pointer to a string containing the raw JSON data that came with the event. This string is only valid for the duration of the callback. The application can parse this JSON to get specific details about the event.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_perform_anthropic_streaming_completion (3),
+.BR disasterparty (7)

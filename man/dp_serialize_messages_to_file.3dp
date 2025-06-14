@@ -1,5 +1,5 @@
 .\" Man page for dp_serialize_messages_to_file from libdisasterparty
-.TH DP_SERIALIZE_MESSAGES_TO_FILE 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_SERIALIZE_MESSAGES_TO_FILE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_serialize_messages_to_file \- serialize an array of messages to a file

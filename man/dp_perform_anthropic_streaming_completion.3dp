@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_anthropic_streaming_completion from libdisasterparty
-.TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "June 8, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_anthropic_streaming_completion \- perform a streaming request to Anthropic with detailed event handling
@@ -37,10 +37,6 @@ and receives a
 .BR dp_anthropic_stream_event_t
 structure containing the event type and the raw JSON data associated with it.
 
-.SH RETURN VALUE
-Returns 0 if the stream was successfully initiated and completed. Returns -1 on setup error
-or if the provider in the context is not Anthropic.
-
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
 .PP
@@ -54,4 +50,5 @@ Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_perform_streaming_completion (3),
+.BR dp_anthropic_stream_event (3),
 .BR disasterparty (7)

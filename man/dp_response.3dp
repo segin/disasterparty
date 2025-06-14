@@ -1,0 +1,61 @@
+.\" Man page for dp_response_t struct from libdisasterparty
+.TH DP_RESPONSE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_response_t \- structure for holding an LLM API response
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    dp_response_part_t* parts;
+    size_t num_parts;
+    char* error_message;
+    long http_status_code;
+    char* finish_reason;
+} dp_response_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_response_t
+structure holds the result of an API call made by a completion function.
+It contains either the successful response data or error information. Its
+contents must be freed with
+.BR dp_free_response_content (3).
+
+.SH MEMBERS
+.TP
+.B dp_response_part_t* parts
+For non-streaming responses, this will be an array of response parts. Currently, only a single text part is supported. `parts[0].text` holds the response content.
+.TP
+.B size_t num_parts
+The number of parts in the
+.I parts
+array.
+.TP
+.B char* error_message
+If an error occurs during the request (either a cURL error or an API error), this member will point to a dynamically allocated string describing the error. It will be `NULL` on success.
+.TP
+.B long http_status_code
+The HTTP status code returned by the server (e.g., 200 for OK, 401 for Unauthorized).
+.TP
+.B char* finish_reason
+A string indicating why the model stopped generating tokens (e.g., "stop", "max_tokens").
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_free_response_content (3),
+.BR dp_perform_completion (3),
+.BR disasterparty (7)

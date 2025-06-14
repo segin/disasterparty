@@ -1,0 +1,89 @@
+.\" Man page for dp_model_list_t and dp_model_info_t structs from libdisasterparty
+.TH DP_MODEL_LIST 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_model_list_t, dp_model_info_t \- structures for holding model information
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    dp_model_info_t* models;
+    size_t count;
+    char* error_message;
+    long http_status_code;
+} dp_model_list_t;
+
+typedef struct {
+    char* model_id;
+    char* display_name;
+    char* version;
+    char* description;
+    long input_token_limit;
+    long output_token_limit;
+} dp_model_info_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_model_list_t
+structure is returned by
+.BR dp_list_models (3)
+and contains an array of
+.BR dp_model_info_t
+structures, each describing an available model from the provider.
+The list must be freed with
+.BR dp_free_model_list (3).
+
+.SH MEMBERS of dp_model_list_t
+.TP
+.B dp_model_info_t* models
+A pointer to an array of model information structures.
+.TP
+.B size_t count
+The number of models in the
+.I models
+array.
+.TP
+.B char* error_message
+If an error occurs, this will contain a description of the error.
+.TP
+.B long http_status_code
+The HTTP status code from the API response.
+
+.SH MEMBERS of dp_model_info_t
+.TP
+.B char* model_id
+The unique identifier for the model (e.g., "claude-3-opus-20240229").
+.TP
+.B char* display_name
+A user-friendly name for the model, if provided by the API.
+.TP
+.B char* version
+The model version string, if provided.
+.TP
+.B char* description
+A description of the model, if provided.
+.TP
+.B long input_token_limit
+The maximum number of input tokens the model supports.
+.TP
+.B long output_token_limit
+The maximum number of output tokens the model can generate.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR dp_list_models (3),
+.BR dp_free_model_list (3),
+.BR disasterparty (7)
