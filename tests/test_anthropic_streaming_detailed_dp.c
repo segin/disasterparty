@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
     printf("Sending detailed streaming multimodal request to model: %s\n---\n", request_config.model);
 
     dp_response_t response_status = {0};
-    int result = dp_perform_anthropic_streaming_completion(context, &request_config, anthropic_detailed_multimodal_stream_handler, NULL, &response_status);
+    int result = dp_perform_anthropic_streaming_completion(context, &request_config, anthropic_detailed_stream_handler, NULL, &response_status);
     
     printf("\n---\n"); 
     if (result == 0) {
