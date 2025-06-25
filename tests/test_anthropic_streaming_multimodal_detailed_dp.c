@@ -7,13 +7,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Helper functions (prototypes)
 char* base64_encode(const unsigned char *data, size_t input_length);
 unsigned char* read_file_to_buffer(const char* filename, size_t* file_size);
 
-// Detailed event callback for Anthropic
 int anthropic_detailed_multimodal_stream_handler(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_msg) {
-    (void)user_data;
+    (void)user_data; 
 
     if (error_msg) {
         fprintf(stderr, "\nStream Error reported by callback: %s\n", error_msg);
@@ -54,13 +52,13 @@ int anthropic_detailed_multimodal_stream_handler(const dp_anthropic_stream_event
             cJSON_Delete(root);
         }
     }
-
+    
     if (event->event_type == DP_ANTHROPIC_EVENT_MESSAGE_STOP) {
         printf("\n[DETAILED MULTIMODAL STREAM END - Anthropic]\n");
         fflush(stdout);
     }
 
-    return 0;
+    return 0; 
 }
 
 int main(int argc, char* argv[]) {
@@ -71,20 +69,28 @@ int main(int argc, char* argv[]) {
     }
 
     const char* image_path = NULL;
-    if (argc > 1) { image_path = argv[1]; }
-    else { image_path = getenv("ANTHROPIC_TEST_IMAGE_PATH");}
+    if (argc > 1) { 
+        image_path = argv[1]; 
+    } else { 
+        image_path = getenv("ANTHROPIC_TEST_IMAGE_PATH");
+    }
     if (!image_path) {
         printf("SKIP: Image path not provided. Use %s [path] or set ANTHROPIC_TEST_IMAGE_PATH\n", argv[0]);
         return 77;
     }
-
+    
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
 
+    const char* model_env = getenv("ANTHROPIC_MODEL");
+    const char* model_to_use = model_env ? model_env : "claude-3-haiku-20240307";
+
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing Anthropic Detailed Streaming (Multimodal):\n");
+    if(argc > 1) printf("Using image path from argument: %s\n", image_path);
+    else printf("Using image path from ANTHROPIC_TEST_IMAGE_PATH: %s\n", image_path);
 
     dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, api_key, NULL);
     if (!context) {
@@ -94,9 +100,9 @@ int main(int argc, char* argv[]) {
     }
 
     dp_request_config_t request_config = {0};
-    request_config.model = "claude-3-haiku-20240307";
+    request_config.model = model_to_use; 
     request_config.temperature = 0.5;
-    request_config.max_tokens = 512;
+    request_config.max_tokens = 512; 
     request_config.stream = true;
 
     dp_message_t messages[1];
@@ -110,7 +116,7 @@ int main(int argc, char* argv[]) {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     size_t image_size;
     unsigned char* image_buffer = read_file_to_buffer(image_path, &image_size);
     if (!image_buffer) {
@@ -119,15 +125,15 @@ int main(int argc, char* argv[]) {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     char* base64_image_data = base64_encode(image_buffer, image_size);
     free(image_buffer);
-    if (!base64_image_data) {
+    if (!base64_image_data) { 
         fprintf(stderr, "Base64 encoding failed.\n");
         dp_free_messages(messages, 1);
         dp_destroy_context(context);
         curl_global_cleanup();
-        return EXIT_FAILURE;
+        return EXIT_FAILURE; 
     }
 
     const char* mime_type = (strstr(image_path, ".png") || strstr(image_path, ".PNG")) ? "image/png" : "image/jpeg";
@@ -139,13 +145,13 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     free(base64_image_data);
-
+    
     printf("Sending detailed streaming multimodal request to model: %s\n---\n", request_config.model);
 
     dp_response_t response_status = {0};
     int result = dp_perform_anthropic_streaming_completion(context, &request_config, anthropic_detailed_multimodal_stream_handler, NULL, &response_status);
-
-    printf("\n---\n");
+    
+    printf("\n---\n"); 
     if (result == 0) {
         printf("Anthropic detailed streaming multimodal test seems successful. HTTP: %ld\n", response_status.http_status_code);
     } else {
@@ -159,11 +165,10 @@ int main(int argc, char* argv[]) {
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
-
+    
     return final_exit_code;
 }
 
-// Function definitions for helpers
 char* base64_encode(const unsigned char *data, size_t input_length) {
     const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     size_t output_length = 4 * ((input_length + 2) / 3);

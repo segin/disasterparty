@@ -17,6 +17,9 @@ int main() {
         return EXIT_FAILURE;
     }
 
+    const char* model_env = getenv("ANTHROPIC_MODEL");
+    const char* model_to_use = model_env ? model_env : "claude-3-haiku-20240307";
+
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Anthropic API Key: ***\n");
 
@@ -29,7 +32,7 @@ int main() {
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "claude-3-haiku-20240307";
+    request_config.model = model_to_use;
     request_config.temperature = 0.7;
     request_config.max_tokens = 512;
     request_config.stream = false;
@@ -47,7 +50,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     printf("Sending request to model: %s\n", request_config.model);
     printf("Prompt: %s\n", messages[0].parts[0].text);
 
@@ -73,9 +76,9 @@ int main() {
     int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_response_content(&response);
-    dp_free_messages(messages, request_config.num_messages);
+    dp_free_messages(messages, request_config.num_messages); 
     dp_destroy_context(context);
-
+    
     curl_global_cleanup();
     printf("Anthropic text test (Disaster Party) finished.\n");
     return final_exit_code;

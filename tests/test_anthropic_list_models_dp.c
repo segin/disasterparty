@@ -58,7 +58,7 @@ int main() {
 
     dp_free_model_list(model_list);
     dp_destroy_context(context);
-
+    
     curl_global_cleanup();
     printf("Anthropic list models test (Disaster Party) finished.\n");
     return final_exit_code;

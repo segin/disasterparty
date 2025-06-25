@@ -7,8 +7,10 @@
 
 int main() {
     const char* api_key = getenv("OPENAI_API_KEY");
-    if (!api_key) {
-        printf("SKIP: OPENAI_API_KEY environment variable not set.\n");
+    const char* base_url = getenv("OPENAI_API_BASE_URL");
+
+    if (!api_key && !base_url) {
+        printf("SKIP: OPENAI_API_KEY (and optionally OPENAI_API_BASE_URL) not set.\n");
         return 77;
     }
 
@@ -16,15 +18,15 @@ int main() {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
-
-    const char* base_url = getenv("OPENAI_API_BASE_URL");
+    
+    const char* key_to_use = api_key ? api_key : "ollama";
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing OpenAI List Models:\n");
     printf("Using OpenAI API Key: ***\n");
     printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, base_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, key_to_use, base_url);
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context for OpenAI.\n");
         curl_global_cleanup();
@@ -59,7 +61,7 @@ int main() {
 
     dp_free_model_list(model_list);
     dp_destroy_context(context);
-
+    
     curl_global_cleanup();
     printf("OpenAI list models test (Disaster Party) finished.\n");
     return final_exit_code;

@@ -1,7 +1,7 @@
-#include "disasterparty.h"
+#include "disasterparty.h" 
 #include <curl/curl.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> 
 #include <string.h>
 #include <stdbool.h>
 
@@ -16,6 +16,9 @@ int main() {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
+    
+    const char* model_env = getenv("GEMINI_MODEL");
+    const char* model_to_use = model_env ? model_env : "gemini-2.0-flash";
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
@@ -29,9 +32,9 @@ int main() {
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gemini-2.0-flash";
+    request_config.model = model_to_use;
     request_config.temperature = 0.8;
-    request_config.max_tokens = 2048;
+    request_config.max_tokens = 2048; 
     request_config.stream = false;
 
     dp_message_t messages[1];
@@ -46,7 +49,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     printf("Sending request to Gemini model: %s\n", request_config.model);
     printf("Prompt: %s\n", messages[0].parts[0].text);
 

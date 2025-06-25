@@ -1,95 +1,83 @@
-#include "disasterparty.h"
-#include <curl/curl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
+# Disaster Party - Comprehensive Project Roadmap
 
-int main() {
-    const char* api_key = getenv("OPENAI_API_KEY");
-    if (!api_key) {
-        printf("SKIP: OPENAI_API_KEY environment variable not set.\n");
-        return 77;
-    }
+This document outlines potential new features and enhancements for the `libdisasterparty` library, combining all previously discussed planning items into a single roadmap.
 
-    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
-        fprintf(stderr, "curl_global_init() failed.\n");
-        return EXIT_FAILURE;
-    }
+---
 
-    const char* base_url = getenv("OPENAI_API_BASE_URL");
+## 1. Near-Term Priorities / Low-Hanging Fruit (complete)
 
-    printf("Disaster Party Library Version: %s\n", dp_get_version());
-    printf("Using OpenAI API Key: ***\n");
-    printf("Using OpenAI Base URL: %s\n", base_url ? base_url : "https://api.openai.com/v1");
+These features were relatively straightforward to implement and built directly upon the existing architecture.
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, base_url);
-    if (!context) {
-        fprintf(stderr, "Failed to initialize Disaster Party context for OpenAI (Multimodal).\n");
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
-    printf("Disaster Party Context Initialized (Multimodal).\n");
+### 1.1. Full Support for Gemini System Prompts (complete)
 
-    dp_request_config_t request_config = {0};
-    request_config.model = "gpt-4o";
-    request_config.temperature = 0.5;
-    request_config.max_tokens = 300;
-    request_config.stream = false;
+* **Status:** The library's `dp_request_config_t` has a `system_prompt` field, which is now correctly used by the payload builders for all three providers, including Gemini's `system_instruction` format.
 
-    dp_message_t messages[1];
-    memset(messages, 0, sizeof(messages));
-    request_config.messages = messages;
-    request_config.num_messages = 1;
+### 1.2. Expanded Model Parameters (complete)
 
-    messages[0].role = DP_ROLE_USER;
+* **Status:** The library now supports `top_p`, `top_k`, and `stop_sequences` in addition to `temperature` and `max_tokens`.
 
-    if (!dp_message_add_text_part(&messages[0], "What is in this image? Describe it in one sentence.")) {
-        fprintf(stderr, "Failed to add text part to multimodal message.\n");
-        dp_destroy_context(context);
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
+---
 
-    const char* image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/640px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
-    if (!dp_message_add_image_url_part(&messages[0], image_url)) {
-        fprintf(stderr, "Failed to add image URL part to multimodal message.\n");
-        dp_free_messages(messages, request_config.num_messages);
-        dp_destroy_context(context);
-        curl_global_cleanup();
-        return EXIT_FAILURE;
-    }
+## 2. Medium-Term Goals / Core Feature Enhancements
 
-    printf("Sending multimodal request to model: %s\n", request_config.model);
-    printf("Text prompt: %s\n", messages[0].parts[0].text);
-    printf("Image URL: %s\n", messages[0].parts[1].image_url);
+These features enhance the core capabilities of the library.
 
+### 2.1. Advanced Multimodality
 
-    dp_response_t response = {0};
-    int result = dp_perform_completion(context, &request_config, &response);
+* **Goal:** Formally test and document support for multiple images, inline context (e.g., Text -> Image -> Text), and general file attachments.
 
-    if (result == 0 && response.num_parts > 0 && response.parts[0].type == DP_CONTENT_PART_TEXT) {
-        printf("\n--- OpenAI Multimodal Completion Response (HTTP %ld) ---\n", response.http_status_code);
-        printf("%s\n", response.parts[0].text);
-        if (response.finish_reason) printf("Finish Reason: %s\n", response.finish_reason);
-        printf("---------------------------------------------------\n");
-    } else {
-        fprintf(stderr, "\n--- OpenAI Multimodal Completion Failed (HTTP %ld) ---\n", response.http_status_code);
-        if (response.error_message) {
-            fprintf(stderr, "Error: %s\n", response.error_message);
-        } else {
-            fprintf(stderr, "An unknown error occurred.\n");
-        }
-        printf("---------------------------------------------------\n");
-    }
+#### 2.1.1. Multiple Images & Inline Context (complete)
+* **Status:** The library's `parts` array design supports this, and a dedicated unit test (`test_inline_multimodal_dp.c`) has been created to verify the construction of interleaved messages.
 
-    bool success = (result == 0 && response.error_message == NULL && response.http_status_code == 200);
-    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
+#### 2.1.2. General File Attachments (PDFs, CSVs, etc.)
+* **Difficulty:** Medium
+* **Action Items:**
+    1.  **API Investigation:** Confirm the exact JSON structure for non-image file data for both Gemini and Anthropic. This will likely involve a two-step upload-then-reference workflow using their respective Files APIs.
+    2.  **(Optional) Header Update:** Consider adding a `DP_CONTENT_PART_FILE_DATA` enum value to `dp_content_part_type_t` for code clarity.
+    3.  **New Helper Function:** Create a new convenience function, e.g., `dp_message_add_file_data_part()`.
+    4.  **Payload Builder Updates:** Update the Gemini and Anthropic payload builders to handle this new part type.
+    5.  **New Unit Test:** Add a test case that sends a base64-encoded text file or PDF.
 
-    dp_free_response_content(&response);
-    dp_free_messages(messages, request_config.num_messages);
-    dp_destroy_context(context);
-    curl_global_cleanup();
-    printf("OpenAI multimodal test (Disaster Party) finished.\n");
-    return final_exit_code;
-}
+### 2.2. Implement Token Counting
+
+* **Goal:** Provide a way for library consumers to accurately count the number of tokens in a prompt before sending it, to manage costs and context windows.
+* **Difficulty:** Medium (due to differing provider strategies)
+* **Implementation Plan:**
+    1.  **New API Function:** Add `int dp_count_tokens(dp_context_t* context, const dp_request_config_t* request_config, size_t* token_count_out);`.
+    2.  **Network-Based (Gemini/Anthropic):** Implement the function to call their respective `countTokens` API endpoints.
+    3.  **Client-Side (OpenAI):** Implement an optional feature, enabled by a `./configure` flag (`--enable-tiktoken`), that links against a C-compatible `tiktoken` library (e.g., `kojix2/tiktoken-c`) to provide fast, local, and accurate token counts for OpenAI models.
+    4.  **New Unit Test:** Create `test_token_counting_dp.c` to verify the functionality.
+
+---
+
+## 3. Long-Term Goals / Major Architectural Additions
+
+These features represent significant new capabilities and would likely require a major version bump.
+
+### 3.1. Implement Tool Calls (Function Calling)
+
+* **Goal:** Allow the library to serve as the engine for agentic workflows by enabling the model to request the execution of application-defined functions.
+* **Difficulty:** High
+* **What it would take:** New data structures for tool definitions (`dp_tool_definition_t`) and tool call requests (`dp_tool_call_t`); adding a `tools` array to `dp_request_config_t`; and significantly enhancing response parsing to handle the `tool_calls` finish reason.
+
+### 3.2. Access to "Thinking" Tokens & Metacognition
+
+* **Goal:** Expose the reasoning process of models that support it, primarily Anthropic's Claude.
+* **Difficulty:** High
+* **Implementation Steps:** Enhance the `dp_anthropic_stream_callback_t` to handle `thinking` events from the Anthropic API and update the internal stream parser accordingly.
+
+### 3.3. Support for New Modalities
+
+* **Image Generation (DALL-E):** Requires a new function (`dp_generate_image`) and request/response structs for the `/v1/images/generations` endpoint.
+* **Speech-to-Text (Whisper):** High difficulty due to the need for `multipart/form-data` uploads. Requires a new function (`dp_transcribe_audio`).
+* **Text-to-Speech (TTS):** Medium difficulty. Requires a new function (`dp_generate_speech`) and logic to handle a binary audio stream as the response.
+* **Real-Time Conversational Audio:** Very high difficulty. Requires a new networking backend (e.g., WebSockets) and complex asynchronous I/O management.
+* **Text-to-Video (Veo):** High difficulty. Requires managing an asynchronous job submission and polling workflow with multiple new functions.
+
+### 3.4. Support for Interactive Playgrounds & Code Canvases
+
+* **Goal:** Enable `libdisasterparty` to be the backend for complex, interactive applications.
+* **Note:** This is an **application-level** goal. The library's role is to provide the necessary low-level capabilities.
+* **Prerequisites from `libdisasterparty`:**
+    1.  **Tool Calling:** This is the most critical prerequisite.
+    2.  **Conversation Serialization:** The existing serialization functions are essential for saving and loading state. (complete)

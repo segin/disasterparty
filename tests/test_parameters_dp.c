@@ -1,7 +1,7 @@
-#include "disasterparty.h"
-#include <curl/curl.h>
+#include "disasterparty.h" 
+#include <curl/curl.h> 
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> 
 #include <string.h>
 #include <stdbool.h>
 
@@ -16,6 +16,9 @@ int main() {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
     }
+    
+    const char* model_env = getenv("OPENAI_MODEL");
+    const char* model_to_use = model_env ? model_env : "gpt-4.1-nano";
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing Advanced Parameter Submission (OpenAI):\n");
@@ -29,10 +32,10 @@ int main() {
     printf("Disaster Party Context Initialized.\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gpt-4.1-nano";
+    request_config.model = model_to_use; 
     request_config.temperature = 0.6;
     request_config.max_tokens = 50;
-
+    
     // Set advanced parameters
     request_config.top_p = 0.9;
     const char* stop_seqs[] = {"\n", " Human:"};
@@ -51,7 +54,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     printf("Sending request with advanced parameters...\n");
 
     dp_response_t response = {0};
@@ -71,9 +74,9 @@ int main() {
     int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     dp_free_response_content(&response);
-    dp_free_messages(messages, 1);
+    dp_free_messages(messages, 1); 
     dp_destroy_context(context);
     curl_global_cleanup();
-
-    return final_exit_code;
+    
+    return final_exit_code; 
 }

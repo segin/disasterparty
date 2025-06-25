@@ -1,9 +1,9 @@
-#include "disasterparty.h"
-#include <curl/curl.h>
+#include "disasterparty.h" 
+#include <curl/curl.h> 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <stdlib.h> 
+#include <string.h> 
+#include <stdint.h> 
 #include <stdbool.h>
 
 char* base64_encode(const unsigned char *data, size_t input_length) {
@@ -35,33 +35,33 @@ char* base64_encode(const unsigned char *data, size_t input_length) {
 
 unsigned char* read_file_to_buffer(const char* filename, size_t* file_size) {
     FILE* f = fopen(filename, "rb");
-    if (!f) {
-        perror("fopen");
-        return NULL;
+    if (!f) { 
+        perror("fopen"); 
+        return NULL; 
     }
 
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
-    if (size < 0) {
-        fclose(f);
-        perror("ftell");
-        return NULL;
+    if (size < 0) { 
+        fclose(f); 
+        perror("ftell"); 
+        return NULL; 
     }
     *file_size = (size_t)size;
     fseek(f, 0, SEEK_SET);
 
     unsigned char* buffer = malloc(*file_size);
-    if (!buffer) {
-        fclose(f);
-        fprintf(stderr, "Failed to allocate buffer for file %s\n", filename);
-        return NULL;
+    if (!buffer) { 
+        fclose(f); 
+        fprintf(stderr, "Failed to allocate buffer for file %s\n", filename); 
+        return NULL; 
     }
 
-    if (fread(buffer, 1, *file_size, f) != *file_size) {
-        fclose(f);
-        free(buffer);
-        fprintf(stderr, "Failed to read file %s\n", filename);
-        return NULL;
+    if (fread(buffer, 1, *file_size, f) != *file_size) { 
+        fclose(f); 
+        free(buffer); 
+        fprintf(stderr, "Failed to read file %s\n", filename); 
+        return NULL; 
     }
 
     fclose(f);
@@ -76,11 +76,12 @@ int main(int argc, char *argv[]) {
     }
 
     const char* image_path = NULL;
-    if (argc > 1) {
-        image_path = argv[1];
-    } else {
+    if (argc > 1) { 
+        image_path = argv[1]; 
+    } else { 
         image_path = getenv("GEMINI_TEST_IMAGE_PATH");
     }
+
     if (!image_path) {
         printf("SKIP: Image path not provided. Use %s [path] or set GEMINI_TEST_IMAGE_PATH\n", argv[0]);
         return 77;
@@ -91,9 +92,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    const char* model_env = getenv("GEMINI_MODEL_VISION");
+    const char* model_to_use = model_env ? model_env : "gemini-2.0-flash";
+
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
-    if(argc > 1) printf("Using image path from argument: %s\n", image_path);
+    if (argc > 1) printf("Using image path from argument: %s\n", image_path);
     else printf("Using image path from GEMINI_TEST_IMAGE_PATH: %s\n", image_path);
 
     dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
@@ -105,7 +109,7 @@ int main(int argc, char *argv[]) {
     printf("Disaster Party Context Initialized (Multimodal).\n");
 
     dp_request_config_t request_config = {0};
-    request_config.model = "gemini-2.0-flash";
+    request_config.model = model_to_use;
     request_config.temperature = 0.4;
     request_config.max_tokens = 2048;
     request_config.stream = false;
@@ -119,8 +123,8 @@ int main(int argc, char *argv[]) {
 
     if (!dp_message_add_text_part(&messages[0], "Describe this image.")) {
         fprintf(stderr, "Failed to add text part to Gemini multimodal message.\n");
-        dp_destroy_context(context);
-        curl_global_cleanup();
+        dp_destroy_context(context); 
+        curl_global_cleanup(); 
         return EXIT_FAILURE;
     }
 
@@ -133,7 +137,7 @@ int main(int argc, char *argv[]) {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     char* base64_image_data = base64_encode(image_buffer, image_size);
     free(image_buffer);
     if (!base64_image_data) {
@@ -143,7 +147,7 @@ int main(int argc, char *argv[]) {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-
+    
     const char* mime_type = (strstr(image_path, ".png") || strstr(image_path, ".PNG")) ? "image/png" : "image/jpeg";
     if (!dp_message_add_base64_image_part(&messages[0], mime_type, base64_image_data)) {
         fprintf(stderr, "Failed to add base64 image part to Gemini message.\n");
@@ -156,7 +160,7 @@ int main(int argc, char *argv[]) {
     free(base64_image_data);
 
     printf("Sending multimodal request to Gemini model: %s\n", request_config.model);
-
+    
     dp_response_t response = {0};
     int result = dp_perform_completion(context, &request_config, &response);
 
@@ -167,22 +171,22 @@ int main(int argc, char *argv[]) {
         printf("---------------------------------------------------\n");
     } else {
         fprintf(stderr, "\n--- Gemini Multimodal Completion Failed (HTTP %ld) ---\n", response.http_status_code);
-        if (response.error_message) {
-            fprintf(stderr, "Error: %s\n", response.error_message);
-        } else {
-            fprintf(stderr, "An unknown error occurred.\n");
+        if (response.error_message) { 
+            fprintf(stderr, "Error: %s\n", response.error_message); 
+        } else { 
+            fprintf(stderr, "An unknown error occurred.\n"); 
         }
         printf("---------------------------------------------------\n");
     }
 
     bool success = (result == 0 && response.error_message == NULL && response.http_status_code == 200);
     int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
-
+    
     dp_free_response_content(&response);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);
     curl_global_cleanup();
     printf("Gemini multimodal test (Disaster Party) finished.\n");
-
+    
     return final_exit_code;
 }
