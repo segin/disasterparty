@@ -48,6 +48,23 @@ These features enhance the core capabilities of the library.
     3.  **Client-Side (OpenAI):** Implement an optional feature, enabled by a `./configure` flag (`--enable-tiktoken`), that links against a C-compatible `tiktoken` library (e.g., `kojix2/tiktoken-c`) to provide fast, local, and accurate token counts for OpenAI models.
     4.  **New Unit Test:** Create `test_token_counting_dp.c` to verify the functionality.
 
+### 2.3. Configurable User-Agent
+* **Goal:** Allow applications using `libdisasterparty` to prepend their own name and version to the HTTP User-Agent string for better tracking and identification by API providers. The final string would be in the format `AppName/AppVersion (disasterparty/DP_VERSION)`.
+* **Difficulty:** Low
+* **Implementation Plan:**
+    1.  **API Change:** Modify the `dp_init_context` function signature to accept two new optional parameters: `const char* app_name` and `const char* app_version`.
+        ```c
+        // New proposed signature
+        dp_context_t *dp_init_context(dp_provider_type_t provider, 
+                                      const char *api_key, 
+                                      const char *api_base_url,
+                                      const char *app_name,
+                                      const char *app_version);
+        ```
+    2.  **Internal Change:** The `dp_context_s` struct will store the fully-formed user-agent string.
+    3.  **Logic Update:** `dp_init_context` will construct the user-agent string. If `app_name` is `NULL`, it will default to `disasterparty/DP_VERSION`.
+    4.  **Usage Update:** All `curl_easy_setopt` calls for `CURLOPT_USERAGENT` will use the string stored in the context.
+
 ---
 
 ## 3. Long-Term Goals / Major Architectural Additions
