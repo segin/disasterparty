@@ -85,17 +85,17 @@
         {
           "name": "image_base64",
           "type": "struct { char* mime_type; char* data; }",
-          "description": "Base64 encoded image data (if type is DP_CONTENT_PART_IMAGE_BASE64).",
+          "description": "Base64 encoded image data (if type is DP_CONTENT_PART_IMAGE_BASE64). Can be used for general file attachments for providers that support it (e.g., Google Gemini).",
           "subfields": [
             {
               "name": "mime_type",
               "type": "char*",
-              "description": "MIME type of the image (e.g., \"image/png\")."
+              "description": "MIME type of the data (e.g., \"image/png\", \"application/pdf\")."
             },
             {
               "name": "data",
               "type": "char*",
-              "description": "Base64 encoded image data string."
+              "description": "Base64 encoded data string."
             }
           ]
         }
