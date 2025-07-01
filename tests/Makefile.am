@@ -22,7 +22,8 @@ check_PROGRAMS = \
     test_error_handling_dp \
     test_parameters_dp     test_gemini_file_attachment_dp     test_invalid_init_dp 
     test_null_or_empty_messages_dp     test_malformed_serialization_dp     test_streaming_callback_stop_dp 
-    test_gemini_file_completion_dp
+    test_gemini_file_completion_dp 
+    test_anthropic_all_event_types_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -52,6 +53,7 @@ test_null_or_empty_messages_dp_SOURCES = test_null_or_empty_messages_dp.c
 test_malformed_serialization_dp_SOURCES = test_malformed_serialization_dp.c
 test_streaming_callback_stop_dp_SOURCES = test_streaming_callback_stop_dp.c
 test_gemini_file_completion_dp_SOURCES = test_gemini_file_completion_dp.c
+test_anthropic_all_event_types_dp_SOURCES = test_anthropic_all_event_types_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
