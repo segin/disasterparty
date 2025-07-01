@@ -82,31 +82,27 @@ void* provider_test_thread(void* arg) {
 }
 
 static int test_multiprovider_multithread() {
-    pthread_t threads[3];
-    thread_data_t thread_data[3];
     int overall_status = 0;
 
-    // OpenAI Thread
-    thread_data[0].provider = DP_PROVIDER_OPENAI_COMPATIBLE;
-    thread_data[0].api_key_env = "OPENAI_API_KEY";
-    pthread_create(&threads[0], NULL, provider_test_thread, &thread_data[0]);
+    // Test OpenAI
+    thread_data_t openai_data = { .provider = DP_PROVIDER_OPENAI_COMPATIBLE, .api_key_env = "OPENAI_API_KEY" };
+    provider_test_thread(&openai_data);
+    if (openai_data.thread_status != 0) {
+        overall_status = -1;
+    }
 
-    // Gemini Thread
-    thread_data[1].provider = DP_PROVIDER_GOOGLE_GEMINI;
-    thread_data[1].api_key_env = "GEMINI_API_KEY";
-    pthread_create(&threads[1], NULL, provider_test_thread, &thread_data[1]);
+    // Test Gemini
+    thread_data_t gemini_data = { .provider = DP_PROVIDER_GOOGLE_GEMINI, .api_key_env = "GEMINI_API_KEY" };
+    provider_test_thread(&gemini_data);
+    if (gemini_data.thread_status != 0) {
+        overall_status = -1;
+    }
 
-    // Anthropic Thread
-    thread_data[2].provider = DP_PROVIDER_ANTHROPIC;
-    thread_data[2].api_key_env = "ANTHROPIC_API_KEY";
-    pthread_create(&threads[2], NULL, provider_test_thread, &thread_data[2]);
-
-    // Join threads and check status
-    for (int i = 0; i < 3; ++i) {
-        pthread_join(threads[i], NULL);
-        if (thread_data[i].thread_status != 0) {
-            overall_status = -1;
-        }
+    // Test Anthropic
+    thread_data_t anthropic_data = { .provider = DP_PROVIDER_ANTHROPIC, .api_key_env = "ANTHROPIC_API_KEY" };
+    provider_test_thread(&anthropic_data);
+    if (anthropic_data.thread_status != 0) {
+        overall_status = -1;
     }
 
     return overall_status;
