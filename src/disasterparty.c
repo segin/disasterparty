@@ -1677,6 +1677,9 @@ static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_
             free(new_part->image_base64.mime_type); new_part->image_base64.mime_type = NULL;
             free(new_part->image_base64.data); new_part->image_base64.data = NULL;
         }
+    } else if (type == DP_CONTENT_PART_FILE_REFERENCE && image_url_content) { // image_url_content is used for file_uri
+        new_part->file_uri = dp_internal_strdup(image_url_content);
+        success = (new_part->file_uri != NULL);
     }
     if (success) message->num_parts++;
     else fprintf(stderr, "Failed to allocate memory for Disaster Party message content part.\n");
@@ -1740,6 +1743,10 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
                     cJSON_AddStringToObject(part_obj, "mime_type", part->image_base64.mime_type);
                     cJSON_AddStringToObject(part_obj, "data", part->image_base64.data);
                     break;
+                case DP_CONTENT_PART_FILE_REFERENCE:
+                    cJSON_AddStringToObject(part_obj, "type", "file_reference");
+                    cJSON_AddStringToObject(part_obj, "uri", part->file_uri);
+                    break;
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -1797,6 +1804,11 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
                         cJSON* data_item = cJSON_GetObjectItemCaseSensitive(part_obj, "data");
                         if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
                             dp_message_add_base64_image_part(current_msg, mime_item->valuestring, data_item->valuestring);
+                        }
+                    } else if (strcmp(type_item->valuestring, "file_reference") == 0) {
+                        cJSON* uri_item = cJSON_GetObjectItemCaseSensitive(part_obj, "uri");
+                        if (cJSON_IsString(uri_item)) {
+                            dp_message_add_file_reference_part(current_msg, uri_item->valuestring);
                         }
                     }
                 }
