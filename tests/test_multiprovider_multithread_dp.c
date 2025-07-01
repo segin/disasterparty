@@ -35,15 +35,17 @@ void* provider_test_thread(void* arg) {
     const char* api_key = getenv(data->api_key_env);
     if (!api_key) {
         fprintf(stderr, "Thread for %s: API key %s not set. Skipping.\n", data->api_key_env, data->api_key_env);
-        data->thread_status = 0; // Treat as skipped, not failure
-        return NULL;
-    }
+    data->thread_status = 0; // Treat as skipped, not failure
+    return NULL;
+}
 
+    printf("Thread for %s: Initializing context...\n", data->api_key_env);
     dp_context_t* context = dp_init_context(data->provider, api_key, NULL);
     if (!context) {
         fprintf(stderr, "Thread for %s: Failed to initialize context.\n", data->api_key_env);
         return NULL;
     }
+    printf("Thread for %s: Context initialized. Adding message part...\n", data->api_key_env);
 
     dp_request_config_t config = {0};
     dp_response_t response = {0};
@@ -51,6 +53,7 @@ void* provider_test_thread(void* arg) {
 
     message.role = DP_ROLE_USER;
     assert(dp_message_add_text_part(&message, "Say hello."));
+    printf("Thread for %s: Message part added. Setting config model...\n", data->api_key_env);
 
     config.model = "gpt-3.5-turbo"; // Default, will be overridden for Gemini/Anthropic
     if (data->provider == DP_PROVIDER_GOOGLE_GEMINI) {
@@ -64,7 +67,10 @@ void* provider_test_thread(void* arg) {
     config.temperature = 0.0;
     config.stream = false;
 
+    printf("Thread for %s: Performing completion...\n", data->api_key_env);
     int ret = dp_perform_completion(context, &config, &response);
+    printf("Thread for %s: Completion returned %d. HTTP Status: %ld, Error: %s\n",
+           data->api_key_env, ret, response.http_status_code, response.error_message ? response.error_message : "(none)");
 
     if (ret == 0 && response.http_status_code >= 200 && response.http_status_code < 300) {
         printf("Thread for %s: Success. Response: %s\n", data->api_key_env, response.parts[0].text);
@@ -75,9 +81,13 @@ void* provider_test_thread(void* arg) {
         data->thread_status = -1;
     }
 
+    printf("Thread for %s: Freeing response content...\n", data->api_key_env);
     dp_free_response_content(&response);
+    printf("Thread for %s: Freeing messages...\n", data->api_key_env);
     dp_free_messages(&message, 1);
+    printf("Thread for %s: Destroying context...\n", data->api_key_env);
     dp_destroy_context(context);
+    printf("Thread for %s: Context destroyed.\n", data->api_key_env);
     return NULL;
 }
 
