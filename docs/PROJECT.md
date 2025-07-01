@@ -1,5 +1,5 @@
 # Disaster Party LLM Client Library - Full Documentation
-**Current Version:** 0.3.0
+**Current Version:** 0.3.1
 **Date:** 2025-06-14
 **Primary Author:** Kirn Gill II <segin2005@gmail.com>
 **Conceptualization & Initial Code Generation:** Gemini
@@ -13,7 +13,7 @@ The library is designed to be relatively simple to integrate and use, leveraging
 ### Core Features (as of v0.3.0)
 
 * **Multi-Provider Support:** A unified interface for interacting with OpenAI, Google Gemini, and Anthropic.
-* **Multimodal Inputs:** Support for sending interleaved text and image data (via URL for OpenAI, and base64 for Gemini/Anthropic) in a single prompt.
+* **Multimodal Inputs:** Support for sending interleaved text and image data (via URL for OpenAI, and base64 for Gemini/Anthropic) in a single prompt. The `dp_message_add_base64_image_part` function can also be used to attach other base64-encoded file types (e.g., PDF, CSV) for providers that support it (currently Gemini).
 * **Granular Request Control:** Support for advanced generation parameters, including `temperature`, `max_tokens`, `top_p`, `top_k`, and custom `stop_sequences`.
 * **Handling of both non-streaming (full response at once) and streaming (token-by-token) completions.
 * **A dedicated, detailed streaming callback for Anthropic's event-based stream.

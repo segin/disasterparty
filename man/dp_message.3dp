@@ -59,7 +59,7 @@ If the part is text, this points to the text content.
 If the part is an image URL, this points to the URL.
 .TP
 .B image_base64
-A nested struct containing the `mime_type` (e.g., "image/jpeg") and the base64-encoded `data` if the part is a base64 image.
+A nested struct containing the `mime_type` (e.g., "image/jpeg", "application/pdf") and the base64-encoded `data` if the part is a base64 image or other file type. For providers that support it (e.g., Google Gemini), this can be used for general file attachments.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
