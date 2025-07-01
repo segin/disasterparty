@@ -20,7 +20,7 @@ check_PROGRAMS = \
     test_serialization_dp \
     test_inline_multimodal_dp \
     test_error_handling_dp \
-    test_parameters_dp 
+    test_parameters_dp \
     test_gemini_file_attachment_dp
 
 # Sources for each test program
