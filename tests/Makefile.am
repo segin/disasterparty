@@ -20,10 +20,15 @@ check_PROGRAMS = \
     test_serialization_dp \
     test_inline_multimodal_dp \
     test_error_handling_dp \
-    test_parameters_dp     test_gemini_file_attachment_dp     test_invalid_init_dp 
-    test_null_or_empty_messages_dp     test_malformed_serialization_dp     test_streaming_callback_stop_dp 
+    test_parameters_dp 
+    test_gemini_file_attachment_dp 
+    test_invalid_init_dp 
+    test_null_or_empty_messages_dp 
+    test_malformed_serialization_dp 
+    test_streaming_callback_stop_dp 
     test_gemini_file_completion_dp 
-    test_anthropic_all_event_types_dp     test_invalid_parameters_dp 
+    test_anthropic_all_event_types_dp 
+    test_invalid_parameters_dp 
     test_large_payload_dp 
     test_free_functions_with_null_dp 
     test_multiprovider_multithread_dp 
