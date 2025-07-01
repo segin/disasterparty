@@ -21,7 +21,7 @@ check_PROGRAMS = \
     test_inline_multimodal_dp \
     test_error_handling_dp \
     test_parameters_dp     test_gemini_file_attachment_dp     test_invalid_init_dp 
-    test_null_or_empty_messages_dp     test_malformed_serialization_dp
+    test_null_or_empty_messages_dp     test_malformed_serialization_dp     test_streaming_callback_stop_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -49,6 +49,7 @@ test_gemini_file_attachment_dp_SOURCES = test_gemini_file_attachment_dp.c
 test_invalid_init_dp_SOURCES = test_invalid_init_dp.c
 test_null_or_empty_messages_dp_SOURCES = test_null_or_empty_messages_dp.c
 test_malformed_serialization_dp_SOURCES = test_malformed_serialization_dp.c
+test_streaming_callback_stop_dp_SOURCES = test_streaming_callback_stop_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
