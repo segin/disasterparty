@@ -27,15 +27,6 @@ typedef struct {
 } memory_struct_t;
 
 typedef struct {
-    char* file_id;
-    char* display_name;
-    char* mime_type;
-    long size_bytes;
-    char* create_time;
-    char* uri;
-} dp_file_t;
-
-typedef struct {
     dp_stream_callback_t user_callback; 
     void* user_data;
     char* buffer;
@@ -293,16 +284,6 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
                 char temp_text[512];
                 snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
-            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
-                cJSON *file_data_obj = cJSON_CreateObject();
-                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
-                cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
-                cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
-            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
-                cJSON *file_data_obj = cJSON_CreateObject();
-                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
-                cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
-                cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
             } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
                 cJSON *file_data_obj = cJSON_CreateObject();
                 if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
@@ -1536,7 +1517,7 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
     headers = curl_slist_append(headers, "Authorization: Bearer %s"); // Placeholder, will be replaced by formpost
 
     curl_mime *form = NULL;
-    curl_mime *field = NULL;
+    curl_mimepart *field = NULL;
 
     form = curl_mime_init(curl);
     if (!form) {
@@ -1546,16 +1527,16 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
     }
 
     field = curl_mime_addpart(form);
-    curl_mime_name(field, "metadata");
+        curl_mime_name((curl_mimepart *)field, "metadata");
     char metadata_json[256];
     snprintf(metadata_json, sizeof(metadata_json), "{\"display_name\":\"%s\", \"mime_type\":\"%s\"}", file_path, mime_type);
-    curl_mime_data(field, metadata_json, CURL_ZERO_TERMINATED);
-    curl_mime_type(field, "application/json");
+    curl_mime_data((curl_mimepart *)field, metadata_json, CURL_ZERO_TERMINATED);
+    curl_mime_type((curl_mimepart *)field, "application/json");
 
     field = curl_mime_addpart(form);
-    curl_mime_name(field, "file");
-    curl_mime_filedata(field, file_path);
-    curl_mime_type(field, mime_type);
+    curl_mime_name((curl_mimepart *)field, "file");
+    curl_mime_filedata((curl_mimepart *)field, file_path);
+    curl_mime_type((curl_mimepart *)field, mime_type);
 
     memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
     if (!chunk_mem.memory) {
