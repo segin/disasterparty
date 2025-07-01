@@ -27,7 +27,8 @@ check_PROGRAMS = \
     test_large_payload_dp 
     test_free_functions_with_null_dp 
     test_multiprovider_multithread_dp 
-    test_empty_api_key_dp
+    test_empty_api_key_dp 
+    test_conversation_serialization_multimodal_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -63,6 +64,7 @@ test_large_payload_dp_SOURCES = test_large_payload_dp.c
 test_free_functions_with_null_dp_SOURCES = test_free_functions_with_null_dp.c
 test_multiprovider_multithread_dp_SOURCES = test_multiprovider_multithread_dp.c
 test_empty_api_key_dp_SOURCES = test_empty_api_key_dp.c
+test_conversation_serialization_multimodal_dp_SOURCES = test_conversation_serialization_multimodal_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
