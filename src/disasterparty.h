@@ -11,10 +11,10 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.3.0" 
+#define DP_VERSION "0.3.1" 
 #define DP_VERSION_MAJOR 0
 #define DP_VERSION_MINOR 3 
-#define DP_VERSION_PATCH 0 
+#define DP_VERSION_PATCH 1 
 
 
 /**
