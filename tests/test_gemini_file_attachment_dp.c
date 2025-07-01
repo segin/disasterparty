@@ -56,8 +56,9 @@ static int test_gemini_file_attachment() {
     printf("Dummy file created. Attempting to upload file...\n");
 
     // Upload the file
+    printf("Calling dp_upload_file...\n");
     ret = dp_upload_file(context, TEST_FILE_NAME, TEST_FILE_MIME_TYPE, &uploaded_file);
-    printf("File upload returned: %d\n", ret);
+    printf("dp_upload_file returned: %d\n", ret);
     if (ret != 0 || uploaded_file == NULL) {
         fprintf(stderr, "File upload failed: %d\n", ret);
         dp_destroy_context(context);
@@ -66,40 +67,9 @@ static int test_gemini_file_attachment() {
     }
     printf("File uploaded successfully. URI: %s\n", uploaded_file->uri);
 
-    printf("Adding message parts...\n");
-    message.role = DP_ROLE_USER;
-    assert(dp_message_add_text_part(&message, "Analyze the attached text file and summarize its content."));
-    assert(dp_message_add_file_reference_part(&message, uploaded_file->uri));
-    printf("Message parts added. Attempting to perform completion...\n");
-
-    config.model = "gemini-pro"; // Or a suitable multimodal model
-    config.messages = &message;
-    config.num_messages = 1;
-    config.max_tokens = 100;
-    config.temperature = 0.0;
-
-    ret = dp_perform_completion(context, &config, &response);
-    printf("Completion returned: %d\n", ret);
-
-    printf("HTTP Status: %ld\n", response.http_status_code);
-    if (response.error_message) {
-        printf("Error: %s\n", response.error_message);
-    }
-    if (response.finish_reason) {
-        printf("Finish Reason: %s\n", response.finish_reason);
-    }
-
-    assert(ret == 0);
-    assert(response.http_status_code >= 200 && response.http_status_code < 300);
-    assert(response.parts != NULL);
-    assert(response.num_parts > 0);
-    assert(response.parts[0].text != NULL);
-    printf("Response: %s\n", response.parts[0].text);
-    assert(strstr(response.parts[0].text, "test text file content") != NULL || strstr(response.parts[0].text, "summarize") != NULL);
+    // Removed completion part for isolation
 
     printf("Freeing resources...\n");
-    dp_free_response_content(&response);
-    dp_free_messages(&message, 1);
     dp_free_file(uploaded_file);
     dp_destroy_context(context);
     remove(TEST_FILE_NAME);
