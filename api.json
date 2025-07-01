@@ -59,6 +59,10 @@
         {
           "name": "DP_CONTENT_PART_IMAGE_BASE64",
           "description": "Base64 encoded image data."
+        },
+        {
+          "name": "DP_CONTENT_PART_FILE_REFERENCE",
+          "description": "Reference to an uploaded file."
         }
       ]
     },
@@ -275,6 +279,43 @@
           "name": "http_status_code",
           "type": "long",
           "description": "HTTP status code of the list models API call."
+        }
+      ]
+    },
+    {
+      "name": "dp_file_t",
+      "type": "struct",
+      "description": "Holds information about an uploaded file.",
+      "fields": [
+        {
+          "name": "file_id",
+          "type": "char*",
+          "description": "Unique identifier for the file."
+        },
+        {
+          "name": "display_name",
+          "type": "char*",
+          "description": "User-friendly display name for the file."
+        },
+        {
+          "name": "mime_type",
+          "type": "char*",
+          "description": "MIME type of the file."
+        },
+        {
+          "name": "size_bytes",
+          "type": "long",
+          "description": "Size of the file in bytes."
+        },
+        {
+          "name": "create_time",
+          "type": "char*",
+          "description": "Timestamp when the file was created."
+        },
+        {
+          "name": "uri",
+          "type": "char*",
+          "description": "URI of the file, used for referencing in messages."
         }
       ]
     },
@@ -524,6 +565,34 @@
           "name": "model_list_out",
           "type": "dp_model_list_t**",
           "description": "Pointer to a dp_model_list_t pointer to be populated."
+        }
+      ]
+    },
+    {
+      "name": "dp_upload_file",
+      "description": "Uploads a file to the LLM provider's file service (if supported).",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "file_path",
+          "type": "const char*",
+          "description": "Path to the file to upload."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "MIME type of the file (e.g., \"image/jpeg\", \"application/pdf\")."
+        },
+        {
+          "name": "file_out",
+          "type": "dp_file_t**",
+          "description": "Pointer to a dp_file_t pointer to be populated with file metadata."
         }
       ]
     },

@@ -9,7 +9,7 @@
 #define API_KEY_ENV "GEMINI_API_KEY"
 #define TEST_FILE_CONTENT "This is a test text file content for Gemini multimodal attachment."
 #define TEST_FILE_MIME_TYPE "text/plain"
-#define TEST_FILE_BASE64 "VGhpcyBpcyBhIHRlc3QgdGV4dCBmaWxlIGNvbnRlbnQgZm9yIEdlbWluaSBtdWx0aW1vZGFsIGF0dGFjaG1lbnQu" // Base64 of TEST_FILE_CONTENT
+#define TEST_FILE_NAME "test_gemini_attachment.txt"
 
 static int test_count = 0;
 static int test_failures = 0;
@@ -26,25 +26,45 @@ static int test_failures = 0;
         } \
     } while (0)
 
-static int test_gemini_text_file_attachment() {
+static int test_gemini_file_attachment() {
     dp_context_t* context = NULL;
     dp_request_config_t config = {0};
     dp_response_t response = {0};
     dp_message_t message = {0};
+    dp_file_t* uploaded_file = NULL;
     int ret = -1;
 
     const char* api_key = getenv(API_KEY_ENV);
     if (!api_key) {
-        fprintf(stderr, "Skipping test_gemini_text_file_attachment: %s not set.\n", API_KEY_ENV);
+        fprintf(stderr, "Skipping test_gemini_file_attachment: %s not set.\n", API_KEY_ENV);
         return 0; // Skip test
     }
+
+    // Create a dummy file for upload
+    FILE* fp = fopen(TEST_FILE_NAME, "w");
+    if (!fp) {
+        fprintf(stderr, "Failed to create dummy file %s\n", TEST_FILE_NAME);
+        return 1;
+    }
+    fputs(TEST_FILE_CONTENT, fp);
+    fclose(fp);
 
     context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
     assert(context != NULL);
 
+    // Upload the file
+    ret = dp_upload_file(context, TEST_FILE_NAME, TEST_FILE_MIME_TYPE, &uploaded_file);
+    if (ret != 0 || uploaded_file == NULL) {
+        fprintf(stderr, "File upload failed: %d\n", ret);
+        dp_destroy_context(context);
+        remove(TEST_FILE_NAME);
+        return 1;
+    }
+    printf("Uploaded file URI: %s\n", uploaded_file->uri);
+
     message.role = DP_ROLE_USER;
     assert(dp_message_add_text_part(&message, "Analyze the attached text file and summarize its content."));
-    assert(dp_message_add_base64_image_part(&message, TEST_FILE_MIME_TYPE, TEST_FILE_BASE64));
+    assert(dp_message_add_file_reference_part(&message, uploaded_file->uri));
 
     config.model = "gemini-pro"; // Or a suitable multimodal model
     config.messages = &message;
@@ -72,14 +92,16 @@ static int test_gemini_text_file_attachment() {
 
     dp_free_response_content(&response);
     dp_free_messages(&message, 1);
+    dp_free_file(uploaded_file);
     dp_destroy_context(context);
+    remove(TEST_FILE_NAME);
 
     return 0;
 }
 
 int main() {
     printf("Starting Gemini File Attachment Tests...\n");
-    RUN_TEST(test_gemini_text_file_attachment);
+    RUN_TEST(test_gemini_file_attachment);
     printf("Gemini File Attachment Tests finished.\n");
 
     if (test_failures > 0) {

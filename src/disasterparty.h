@@ -42,7 +42,8 @@ typedef enum {
 typedef enum {
     DP_CONTENT_PART_TEXT, 
     DP_CONTENT_PART_IMAGE_URL,
-    DP_CONTENT_PART_IMAGE_BASE64
+    DP_CONTENT_PART_IMAGE_BASE64,
+    DP_CONTENT_PART_FILE_REFERENCE
 } dp_content_part_type_t; 
 
 typedef struct {
@@ -96,6 +97,15 @@ typedef struct {
     long input_token_limit; 
     long output_token_limit;
 } dp_model_info_t;
+
+typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+} dp_file_t;
 
 typedef struct {
     dp_model_info_t* models;    
@@ -156,6 +166,8 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
 
 int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
+int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out);
+
 void dp_free_model_list(dp_model_list_t* model_list);
 
 void dp_free_response_content(dp_response_t* response);
@@ -164,6 +176,7 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages);
 bool dp_message_add_text_part(dp_message_t* message, const char* text);
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url);
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
+bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_uri);
 
 const char* dp_get_version(void);
 

@@ -27,6 +27,15 @@ typedef struct {
 } memory_struct_t;
 
 typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+} dp_file_t;
+
+typedef struct {
     dp_stream_callback_t user_callback; 
     void* user_data;
     char* buffer;
@@ -284,6 +293,21 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
                 char temp_text[512];
                 snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                cJSON *file_data_obj = cJSON_CreateObject();
+                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
+                cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                cJSON *file_data_obj = cJSON_CreateObject();
+                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
+                cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                cJSON *file_data_obj = cJSON_CreateObject();
+                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
+                cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -1477,6 +1501,139 @@ void dp_free_model_list(dp_model_list_t* model_list) {
     free(model_list);
 }
 
+void dp_free_file(dp_file_t* file) {
+    if (!file) return;
+    free(file->file_id);
+    free(file->display_name);
+    free(file->mime_type);
+    free(file->create_time);
+    free(file->uri);
+    free(file);
+}
+
+int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out) {
+    if (!context || !file_path || !mime_type || !file_out) {
+        fprintf(stderr, "Invalid arguments to dp_upload_file.\n");
+        return -1;
+    }
+    if (context->provider != DP_PROVIDER_GOOGLE_GEMINI) {
+        fprintf(stderr, "dp_upload_file is currently only supported for Google Gemini provider.\n");
+        return -1;
+    }
+
+    *file_out = NULL;
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "curl_easy_init() failed for file upload.\n");
+        return -1;
+    }
+
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/files?key=%s", context->api_base_url, context->api_key);
+
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Authorization: Bearer %s"); // Placeholder, will be replaced by formpost
+
+    curl_mime *form = NULL;
+    curl_mime *field = NULL;
+
+    form = curl_mime_init(curl);
+    if (!form) {
+        fprintf(stderr, "curl_mime_init() failed.\n");
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+
+    field = curl_mime_addpart(form);
+    curl_mime_name(field, "metadata");
+    char metadata_json[256];
+    snprintf(metadata_json, sizeof(metadata_json), "{\"display_name\":\"%s\", \"mime_type\":\"%s\"}", file_path, mime_type);
+    curl_mime_data(field, metadata_json, CURL_ZERO_TERMINATED);
+    curl_mime_type(field, "application/json");
+
+    field = curl_mime_addpart(form);
+    curl_mime_name(field, "file");
+    curl_mime_filedata(field, file_path);
+    curl_mime_type(field, mime_type);
+
+    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    if (!chunk_mem.memory) {
+        fprintf(stderr, "Memory allocation for upload response chunk failed.\n");
+        curl_mime_free(form);
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+    chunk_mem.memory[0] = '\0';
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+
+    CURLcode res = curl_easy_perform(curl);
+    long http_status_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
+
+    int return_code = -1;
+
+    if (res != CURLE_OK) {
+        fprintf(stderr, "curl_easy_perform() failed for file upload: %s (HTTP status: %ld)\n",
+                curl_easy_strerror(res), http_status_code);
+    } else {
+        if (http_status_code >= 200 && http_status_code < 300) {
+            cJSON *root = cJSON_Parse(chunk_mem.memory);
+            if (root) {
+                dp_file_t* new_file = calloc(1, sizeof(dp_file_t));
+                if (new_file) {
+                    cJSON* name_item = cJSON_GetObjectItemCaseSensitive(root, "name");
+                    if (cJSON_IsString(name_item) && name_item->valuestring) {
+                        new_file->file_id = dp_internal_strdup(name_item->valuestring);
+                    }
+                    cJSON* display_name_item = cJSON_GetObjectItemCaseSensitive(root, "displayName");
+                    if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
+                        new_file->display_name = dp_internal_strdup(display_name_item->valuestring);
+                    }
+                    cJSON* mime_type_item = cJSON_GetObjectItemCaseSensitive(root, "mimeType");
+                    if (cJSON_IsString(mime_type_item) && mime_type_item->valuestring) {
+                        new_file->mime_type = dp_internal_strdup(mime_type_item->valuestring);
+                    }
+                    cJSON* size_bytes_item = cJSON_GetObjectItemCaseSensitive(root, "sizeBytes");
+                    if (cJSON_IsNumber(size_bytes_item)) {
+                        new_file->size_bytes = (long)size_bytes_item->valuedouble;
+                    }
+                    cJSON* create_time_item = cJSON_GetObjectItemCaseSensitive(root, "createTime");
+                    if (cJSON_IsString(create_time_item) && create_time_item->valuestring) {
+                        new_file->create_time = dp_internal_strdup(create_time_item->valuestring);
+                    }
+                    cJSON* uri_item = cJSON_GetObjectItemCaseSensitive(root, "uri");
+                    if (cJSON_IsString(uri_item) && uri_item->valuestring) {
+                        new_file->uri = dp_internal_strdup(uri_item->valuestring);
+                    }
+                    *file_out = new_file;
+                    return_code = 0;
+                } else {
+                    fprintf(stderr, "Failed to allocate dp_file_t structure.\n");
+                }
+                cJSON_Delete(root);
+            } else {
+                fprintf(stderr, "Failed to parse JSON response for file upload. Body: %s\n", chunk_mem.memory);
+            }
+        }
+        else {
+            fprintf(stderr, "File upload HTTP error %ld. Body: %s\n", http_status_code, chunk_mem.memory);
+        }
+    }
+
+    curl_mime_free(form);
+    free(chunk_mem.memory);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return return_code;
+}
+
 
 void dp_free_response_content(dp_response_t* response) {
     if (!response) return;
@@ -1502,6 +1659,8 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
                 if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
                     free(part->image_base64.mime_type);
                     free(part->image_base64.data);
+                } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                    free(part->file_uri);
                 }
             }
             free(messages[i].parts);
@@ -1552,6 +1711,9 @@ bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url)
 }
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
     return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
+}
+bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_uri) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_FILE_REFERENCE, NULL, file_uri, NULL, NULL);
 }
 
 // ---- START SERIALIZATION FUNCTIONS ----
