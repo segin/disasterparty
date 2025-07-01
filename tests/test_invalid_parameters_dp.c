@@ -47,14 +47,18 @@ static int test_invalid_parameters() {
 
     // Test with invalid temperature (negative)
     config.temperature = -0.5;
+    printf("Testing negative temperature (%.1f)...\n", config.temperature);
     ret = dp_perform_completion(context, &config, &response);
+    printf("  ret: %d, http_status_code: %ld, error_message: %s\n", ret, response.http_status_code, response.error_message ? response.error_message : "(null)");
     assert(ret == -1);
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
 
     // Test with invalid temperature (too high for OpenAI, but library should pass it)
     config.temperature = 2.5;
+    printf("Testing too high temperature (%.1f)...\n", config.temperature);
     ret = dp_perform_completion(context, &config, &response);
+    printf("  ret: %d, http_status_code: %ld, error_message: %s\n", ret, response.http_status_code, response.error_message ? response.error_message : "(null)");
     // Expecting API error, not library error
     assert(ret == -1); 
     assert(response.http_status_code >= 400); 
@@ -64,14 +68,18 @@ static int test_invalid_parameters() {
     // Test with invalid top_p (negative)
     config.temperature = 0.7; // Reset to valid
     config.top_p = -0.1;
+    printf("Testing negative top_p (%.1f)...\n", config.top_p);
     ret = dp_perform_completion(context, &config, &response);
+    printf("  ret: %d, http_status_code: %ld, error_message: %s\n", ret, response.http_status_code, response.error_message ? response.error_message : "(null)");
     assert(ret == -1);
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
 
     // Test with invalid top_p (too high)
     config.top_p = 1.1;
+    printf("Testing too high top_p (%.1f)...\n", config.top_p);
     ret = dp_perform_completion(context, &config, &response);
+    printf("  ret: %d, http_status_code: %ld, error_message: %s\n", ret, response.http_status_code, response.error_message ? response.error_message : "(null)");
     assert(ret == -1);
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
