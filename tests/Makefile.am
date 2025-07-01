@@ -46,3 +46,35 @@ test_error_handling_dp_SOURCES = test_error_handling_dp.c
 test_parameters_dp_SOURCES = test_parameters_dp.c
 test_anthropic_streaming_multimodal_detailed_dp_SOURCES = test_anthropic_streaming_multimodal_detailed_dp.c
 test_gemini_file_attachment_dp_SOURCES = test_gemini_file_attachment_dp.c
+
+
+LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
+
+AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
+
+# Explicitly add AM_CPPFLAGS to each test program's CFLAGS
+test_openai_text_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_openai_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_text_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_openai_streaming_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_streaming_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_openai_list_models_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_list_models_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_text_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_streaming_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_streaming_detailed_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_list_models_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_openai_streaming_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_streaming_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_streaming_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_anthropic_streaming_multimodal_detailed_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_serialization_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_inline_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_error_handling_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_parameters_dp_CPPFLAGS = $(AM_CPPFLAGS)
+test_gemini_file_attachment_dp_CPPFLAGS = $(AM_CPPFLAGS)
+
+TESTS = $(check_PROGRAMS)
+noinst_PROGRAMS = $(check_PROGRAMS)
