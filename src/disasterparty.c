@@ -1514,7 +1514,6 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
     snprintf(url, sizeof(url), "%s/files?key=%s", context->api_base_url, context->api_key);
 
     struct curl_slist* headers = NULL;
-    headers = curl_slist_append(headers, "Authorization: Bearer %s"); // Placeholder, will be replaced by formpost
 
     curl_mime *form = NULL;
     curl_mimepart *field = NULL;
