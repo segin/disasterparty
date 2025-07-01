@@ -57,7 +57,7 @@ static int test_gemini_file_completion() {
     if (ret != 0 || uploaded_file == NULL) {
         fprintf(stderr, "File upload failed: %d\n", ret);
         dp_destroy_context(context);
-        remove(TEST_FILE_NAME);
+    
         return 1;
     }
 
@@ -88,7 +88,7 @@ static int test_gemini_file_completion() {
     dp_free_messages(&message, 1);
     dp_free_file(uploaded_file);
     dp_destroy_context(context);
-    remove(TEST_FILE_NAME);
+
 
     return 0;
 }
