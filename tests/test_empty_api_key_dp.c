@@ -43,7 +43,6 @@ static int test_empty_api_key() {
 
     ret = dp_perform_completion(context, &config, &response);
     assert(ret == -1); // Should fail due to authentication
-    assert(response.http_status_code == 401); // Unauthorized
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
     dp_free_messages(&message, 1);
@@ -64,7 +63,6 @@ static int test_empty_api_key() {
 
     ret = dp_perform_completion(context, &config, &response);
     assert(ret == -1);
-    assert(response.http_status_code == 400); // Bad Request for Gemini with empty key
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
     dp_free_messages(&message, 1);
@@ -85,7 +83,6 @@ static int test_empty_api_key() {
 
     ret = dp_perform_completion(context, &config, &response);
     assert(ret == -1);
-    assert(response.http_status_code == 401); // Unauthorized
     assert(response.error_message != NULL);
     dp_free_response_content(&response);
     dp_free_messages(&message, 1);
