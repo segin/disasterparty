@@ -54,6 +54,7 @@ typedef struct {
         char* mime_type;
         char* data; 
     } image_base64;
+    char* file_uri;
 } dp_content_part_t; 
 
 typedef struct {
@@ -169,6 +170,8 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out);
 
 void dp_free_model_list(dp_model_list_t* model_list);
+
+void dp_free_file(dp_file_t* file);
 
 void dp_free_response_content(dp_response_t* response);
 void dp_free_messages(dp_message_t* messages, size_t num_messages);
