@@ -76,6 +76,12 @@ LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
 
 AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
 
+TESTS_ENVIRONMENT = \
+    GEMINI_TEST_IMAGE_PATH=$(top_srcdir)/tests/assets/sample.png \
+    ANTHROPIC_TEST_IMAGE_PATH=$(top_srcdir)/tests/assets/sample.png \
+    TEST_IMAGE_PATH_1=$(top_srcdir)/tests/assets/sample.png \
+    TEST_IMAGE_PATH_2=$(top_srcdir)/tests/assets/sample.png
+
 # Explicitly add AM_CPPFLAGS to each test program's CFLAGS
 test_openai_text_dp_CPPFLAGS = $(AM_CPPFLAGS)
 test_openai_multimodal_dp_CPPFLAGS = $(AM_CPPFLAGS)

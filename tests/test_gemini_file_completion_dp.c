@@ -71,6 +71,11 @@ int main() {
     unlink(temp_filename);
 
     if (result != 0) {
+        if (response.http_status_code == 429) {
+            fprintf(stderr, "dp_perform_completion skipped due to API quota (HTTP 429): %s\n", response.error_message);
+            dp_free_response_content(&response);
+            return 77; // Skip test
+        }
         fprintf(stderr, "dp_perform_completion failed: %s\n", response.error_message);
         dp_free_response_content(&response);
         return 1;
