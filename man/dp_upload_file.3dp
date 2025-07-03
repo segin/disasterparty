@@ -1,0 +1,34 @@
+.TH DP_UPLOAD_FILE 3 "@DP_VERSION@" "Disaster Party" "Disaster Party API Documentation"
+.SH NAME
+dp_upload_file \- upload a file to the LLM provider
+.SH SYNOPSIS
+.nf
+#include <disasterparty.h>
+
+int dp_upload_file(dp_context_t *context, const char *file_path, const char *mime_type, dp_file_t **file_out);
+.fi
+.SH DESCRIPTION
+Uploads a local file to the LLM provider's file service. Currently, this function is only supported for the Google Gemini provider. The \fIfile_path\fP must be an absolute path to the file. The \fImime_type\fP should accurately reflect the file's content (e.g., "image/png", "text/plain", "application/pdf"). On success, \fI*file_out\fP will be populated with a \fBdp_file_t\fP structure containing information about the uploaded file, including its \fIuri\fP, which can then be used in \fBdp_message_add_file_reference_part\fP(3).
+.SH PARAMETERS
+.TP
+\fIcontext\fP
+The initialized client context. Must be for \fBDP_PROVIDER_GOOGLE_GEMINI\fP.
+.TP
+\fIfile_path\fP
+The absolute path to the file to upload.
+.TP
+\fImime_type\fP
+The MIME type of the file.
+.TP
+\fIfile_out\fP
+A pointer to a \fBdp_file_t*\fP that will be allocated and populated with the uploaded file's information. This must be freed by the caller using \fBdp_free_file\fP(3).
+.SH RETURN VALUE
+Returns \fB0\fP on success, \fB-1\fP on failure. The \fI*file_out\fP will be \fBNULL\fP on failure.
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+@PACKAGE_BUGREPORT@
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+.SH SEE ALSO
+\fBdp_free_file\fP(3), \fBdp_message_add_file_reference_part\fP(3)

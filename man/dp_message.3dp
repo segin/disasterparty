@@ -22,6 +22,7 @@ typedef struct {
         char* mime_type;
         char* data;
     } image_base64;
+    char* file_uri;
 } dp_content_part_t;
 .fi
 
@@ -50,7 +51,7 @@ array.
 .SH MEMBERS of dp_content_part_t
 .TP
 .B dp_content_part_type_t type
-The type of this content part, which can be `DP_CONTENT_PART_TEXT`, `DP_CONTENT_PART_IMAGE_URL`, or `DP_CONTENT_PART_IMAGE_BASE64`.
+The type of this content part, which can be `DP_CONTENT_PART_TEXT`, `DP_CONTENT_PART_IMAGE_URL`, `DP_CONTENT_PART_IMAGE_BASE64`, or `DP_CONTENT_PART_FILE_REFERENCE`.
 .TP
 .B char* text
 If the part is text, this points to the text content.
@@ -60,6 +61,9 @@ If the part is an image URL, this points to the URL.
 .TP
 .B image_base64
 A nested struct containing the `mime_type` (e.g., "image/jpeg") and the base64-encoded `data` if the part is a base64 image.
+.TP
+.B char* file_uri
+If the part is a file reference, this points to the URI of the uploaded file.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -73,6 +77,7 @@ Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
-.BR dp_message_add_text_part (3),
+.BR dp_message_add_base64_image_part (3),
+.BR dp_message_add_file_reference_part (3),
 .BR dp_free_messages (3),
 .BR disasterparty (7)

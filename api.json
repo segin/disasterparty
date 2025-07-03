@@ -1,7 +1,7 @@
 {
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
-  "version": "0.2.1",
+  "version": "0.4.0",
   "headerFile": "disasterparty.h",
   "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
   "dependencies": [
@@ -59,6 +59,16 @@
         {
           "name": "DP_CONTENT_PART_IMAGE_BASE64",
           "description": "Base64 encoded image data."
+        },
+        {
+          "name": "DP_CONTENT_PART_FILE_REFERENCE",
+          "description": "Reference to an uploaded file."
+        }
+      ]
+    },,
+        {
+          "name": "DP_CONTENT_PART_FILE_REFERENCE",
+          "description": "Reference to an uploaded file."
         }
       ]
     },
@@ -98,6 +108,16 @@
               "description": "Base64 encoded image data string."
             }
           ]
+        },
+        {
+          "name": "file_uri",
+          "type": "char*",
+          "description": "URI of the uploaded file (if type is DP_CONTENT_PART_FILE_REFERENCE)."
+        },
+        {
+          "name": "file_uri",
+          "type": "char*",
+          "description": "URI of the uploaded file (if type is DP_CONTENT_PART_FILE_REFERENCE)."
         }
       ]
     },
@@ -248,6 +268,80 @@
           "name": "output_token_limit",
           "type": "long",
           "description": "Maximum output tokens."
+        }
+      ]
+    },
+    {
+      "name": "dp_file_t",
+      "type": "struct",
+      "description": "Holds information about an uploaded file.",
+      "fields": [
+        {
+          "name": "file_id",
+          "type": "char*",
+          "description": "Unique identifier for the file."
+        },
+        {
+          "name": "display_name",
+          "type": "char*",
+          "description": "User-provided display name for the file."
+        },
+        {
+          "name": "mime_type",
+          "type": "char*",
+          "description": "MIME type of the file."
+        },
+        {
+          "name": "size_bytes",
+          "type": "long",
+          "description": "Size of the file in bytes."
+        },
+        {
+          "name": "create_time",
+          "type": "char*",
+          "description": "Timestamp when the file was created."
+        },
+        {
+          "name": "uri",
+          "type": "char*",
+          "description": "URI of the file, used for referencing in messages."
+        }
+      ]
+    },
+    {
+      "name": "dp_file_t",
+      "type": "struct",
+      "description": "Holds information about an uploaded file.",
+      "fields": [
+        {
+          "name": "file_id",
+          "type": "char*",
+          "description": "Unique identifier for the file."
+        },
+        {
+          "name": "display_name",
+          "type": "char*",
+          "description": "User-provided display name for the file."
+        },
+        {
+          "name": "mime_type",
+          "type": "char*",
+          "description": "MIME type of the file."
+        },
+        {
+          "name": "size_bytes",
+          "type": "long",
+          "description": "Size of the file in bytes."
+        },
+        {
+          "name": "create_time",
+          "type": "char*",
+          "description": "Timestamp when the file was created."
+        },
+        {
+          "name": "uri",
+          "type": "char*",
+          "description": "URI of the file, used for referencing in messages."
         }
       ]
     },
@@ -569,6 +663,103 @@
       ]
     },
     {
+      "name": "dp_upload_file",
+      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context (must be for DP_PROVIDER_GOOGLE_GEMINI)."
+        },
+        {
+          "name": "file_path",
+          "type": "const char*",
+          "description": "Absolute path to the file to upload."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "MIME type of the file (e.g., \"image/png\", \"text/plain\")."
+        },
+        {
+          "name": "file_out",
+          "type": "dp_file_t**",
+          "description": "Output for the allocated dp_file_t structure."
+        }
+      ]
+    },
+    {
+      "name": "dp_free_file",
+      "description": "Frees the memory allocated for a dp_file_t structure.",
+      "returnType": "void",
+      "parameters": [
+        {
+          "name": "file",
+          "type": "dp_file_t*",
+          "description": "The file structure to be freed."
+        }
+      ]
+    },
+    {
+      "name": "dp_free_messages",
+      "description": "Frees the content of an array of dp_message_t, including their parts.",
+      "returnType": "void",
+      "parameters": [
+        {
+          "name": "messages",
+          "type": "dp_message_t*",
+          "description": "Array of messages."
+        },
+        {
+          "name": "num_messages",
+          "type": "size_t",
+          "description": "Number of messages in the array."
+        }
+      ]
+    },
+    {
+      "name": "dp_upload_file",
+      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context (must be for DP_PROVIDER_GOOGLE_GEMINI)."
+        },
+        {
+          "name": "file_path",
+          "type": "const char*",
+          "description": "Absolute path to the file to upload."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "MIME type of the file (e.g., \"image/png\", \"text/plain\")."
+        },
+        {
+          "name": "file_out",
+          "type": "dp_file_t**",
+          "description": "Output for the allocated dp_file_t structure."
+        }
+      ]
+    },
+    {
+      "name": "dp_free_file",
+      "description": "Frees the memory allocated for a dp_file_t structure.",
+      "returnType": "void",
+      "parameters": [
+        {
+          "name": "file",
+          "type": "dp_file_t*",
+          "description": "The file structure to be freed."
+        }
+      ]
+    },
+    {
       "name": "dp_message_add_text_part",
       "description": "Adds a text part to a message.",
       "returnType": "bool",
@@ -624,6 +815,24 @@
           "name": "base64_data",
           "type": "const char*",
           "description": "The base64 encoded image data."
+        }
+      ]
+    },
+    {
+      "name": "dp_message_add_file_reference_part",
+      "description": "Adds a file reference part to a message.",
+      "returnType": "bool",
+      "returnDescription": "true on success, false on failure.",
+      "parameters": [
+        {
+          "name": "message",
+          "type": "dp_message_t*",
+          "description": "The message to modify."
+        },
+        {
+          "name": "file_uri",
+          "type": "const char*",
+          "description": "The URI of the uploaded file."
         }
       ]
     },

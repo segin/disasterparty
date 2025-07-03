@@ -1,5 +1,5 @@
 # Disaster Party LLM Client Library - Full Documentation
-**Version: 0.2.0**
+**Version: 0.4.0**
 
 ## 1. Overview (disasterparty.7)
 
@@ -31,12 +31,13 @@ gcc my_app.c $(pkg-config --cflags --libs disasterparty)
 
 ### GETTING STARTED
 1.  Initialize a context using **dp_init_context**(3), specifying the provider and your API key.
-2.  Construct your request messages using `dp_message_t` and helper functions like **dp_message_add_text_part**(3).
+    dp_message_add_text_part(3).
 3.  Configure your request using `dp_request_config_t`, setting the model, messages, temperature, etc.
 4.  Perform the API call using either **dp_perform_completion**(3) for a blocking response or **dp_perform_streaming_completion**(3) for streaming. For Anthropic, you can use the detailed **dp_perform_anthropic_streaming_completion**(3).
 5.  To list available models, use **dp_list_models**(3).
 6.  To save/load conversations, use **dp_serialize_messages_to_file**(3) and **dp_deserialize_messages_from_file**(3).
-7.  Always free allocated resources using functions like **dp_free_response_content**(3), **dp_free_model_list**(3), **dp_free_messages**(3), and finally **dp_destroy_context**(3).
+7.  To upload files for multimodal models, use **dp_upload_file**(3).
+8.  Always free allocated resources using functions like **dp_free_response_content**(3), **dp_free_model_list**(3), **dp_free_file**(3), **dp_free_messages**(3), and finally **dp_destroy_context**(3).
 
 ### ENVIRONMENT
 The test programs and typical applications using this library expect API keys to be set in environment variables:
@@ -241,6 +242,148 @@ bool dp_message_add_base64_image_part(dp_message_t *message, const char *mime_ty
 
 **DESCRIPTION**
 These helper functions add a new content part of the specified type to a `dp_message_t` structure, reallocating memory as needed. They return `true` on success and `false` on failure.
+
+---
+### dp_message_add_base64_image_part
+**NAME**
+dp_message_add_base64_image_part - add a base64 encoded image part to a message
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+bool dp_message_add_base64_image_part(dp_message_t *message, const char *mime_type, const char *base64_data);
+```
+
+**DESCRIPTION**
+Adds a new content part containing base64 encoded image data to a `dp_message_t` structure. The `mime_type` specifies the image format (e.g., "image/png", "image/jpeg").
+
+**RETURN VALUE**
+Returns `true` on success, `false` on failure (e.g., memory allocation error).
+
+---
+### dp_message_add_file_reference_part
+**NAME**
+dp_message_add_file_reference_part - add a file reference part to a message
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+bool dp_message_add_file_reference_part(dp_message_t *message, const char *file_uri);
+```
+
+**DESCRIPTION**
+Adds a new content part referencing an already uploaded file to a `dp_message_t` structure. The `file_uri` is obtained from a successful call to **dp_upload_file**(3).
+
+**RETURN VALUE**
+Returns `true` on success, `false` on failure (e.g., memory allocation error).
+
+---
+### dp_upload_file
+**NAME**
+dp_upload_file - upload a file to the LLM provider
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+int dp_upload_file(dp_context_t *context, const char *file_path, const char *mime_type, dp_file_t **file_out);
+```
+
+**DESCRIPTION**
+Uploads a local file to the LLM provider's file service. Currently, this function is only supported for the Google Gemini provider. The `file_path` must be an absolute path to the file. The `mime_type` should accurately reflect the file's content (e.g., "image/png", "text/plain", "application/pdf"). On success, `*file_out` will be populated with a `dp_file_t` structure containing information about the uploaded file, including its `uri`, which can then be used in `dp_message_add_file_reference_part`.
+
+**PARAMETERS**
+-   `context`: The initialized client context. Must be for `DP_PROVIDER_GOOGLE_GEMINI`.
+-   `file_path`: The absolute path to the file to upload.
+-   `mime_type`: The MIME type of the file.
+-   `file_out`: A pointer to a `dp_file_t*` that will be allocated and populated with the uploaded file's information. This must be freed by the caller using **dp_free_file**(3).
+
+**RETURN VALUE**
+Returns `0` on success, `-1` on failure. The `*file_out` will be `NULL` on failure.
+
+---
+### dp_free_file
+**NAME**
+dp_free_file - free a Disaster Party file structure
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+void dp_free_file(dp_file_t *file);
+```
+
+**DESCRIPTION**
+Deallocates all memory associated with a `dp_file_t` structure that was previously allocated by **dp_upload_file**(3). Passing `NULL` is a safe no-op.
+
+---
+### dp_message_add_base64_image_part
+**NAME**
+dp_message_add_base64_image_part - add a base64 encoded image part to a message
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+bool dp_message_add_base64_image_part(dp_message_t *message, const char *mime_type, const char *base64_data);
+```
+
+**DESCRIPTION**
+Adds a new content part containing base64 encoded image data to a `dp_message_t` structure. The `mime_type` specifies the image format (e.g., "image/png", "image/jpeg").
+
+**RETURN VALUE**
+Returns `true` on success, `false` on failure (e.g., memory allocation error).
+
+---
+### dp_message_add_file_reference_part
+**NAME**
+dp_message_add_file_reference_part - add a file reference part to a message
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+bool dp_message_add_file_reference_part(dp_message_t *message, const char *file_uri);
+```
+
+**DESCRIPTION**
+Adds a new content part referencing an already uploaded file to a `dp_message_t` structure. The `file_uri` is obtained from a successful call to **dp_upload_file**(3).
+
+**RETURN VALUE**
+Returns `true` on success, `false` on failure (e.g., memory allocation error).
+
+---
+### dp_upload_file
+**NAME**
+dp_upload_file - upload a file to the LLM provider
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+int dp_upload_file(dp_context_t *context, const char *file_path, const char *mime_type, dp_file_t **file_out);
+```
+
+**DESCRIPTION**
+Uploads a local file to the LLM provider's file service. Currently, this function is only supported for the Google Gemini provider. The `file_path` must be an absolute path to the file. The `mime_type` should accurately reflect the file's content (e.g., "image/png", "text/plain", "application/pdf"). On success, `*file_out` will be populated with a `dp_file_t` structure containing information about the uploaded file, including its `uri`, which can then be used in `dp_message_add_file_reference_part`.
+
+**PARAMETERS**
+-   `context`: The initialized client context. Must be for `DP_PROVIDER_GOOGLE_GEMINI`.
+-   `file_path`: The absolute path to the file to upload.
+-   `mime_type`: The MIME type of the file.
+-   `file_out`: A pointer to a `dp_file_t*` that will be allocated and populated with the uploaded file's information. This must be freed by the caller using **dp_free_file**(3).
+
+**RETURN VALUE**
+Returns `0` on success, `-1` on failure. The `*file_out` will be `NULL` on failure.
+
+---
+### dp_free_file
+**NAME**
+dp_free_file - free a Disaster Party file structure
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+void dp_free_file(dp_file_t *file);
+```
+
+**DESCRIPTION**
+Deallocates all memory associated with a `dp_file_t` structure that was previously allocated by **dp_upload_file**(3). Passing `NULL` is a safe no-op.
 
 ---
 ### Conversation Serialization Helpers

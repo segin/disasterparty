@@ -1,0 +1,25 @@
+.TH DP_FREE_FILE 3 "@DP_VERSION@" "Disaster Party" "Disaster Party API Documentation"
+.SH NAME
+dp_free_file \- free a Disaster Party file structure
+.SH SYNOPSIS
+.nf
+#include <disasterparty.h>
+
+void dp_free_file(dp_file_t *file);
+.fi
+.SH DESCRIPTION
+Deallocates all memory associated with a \fBdp_file_t\fP structure that was previously allocated by \fBdp_upload_file\fP(3). Passing \fBNULL\fP is a safe no-op.
+.SH PARAMETERS
+.TP
+\fIfile\fP
+The \fBdp_file_t\fP structure to be freed.
+.SH RETURN VALUE
+None.
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+@PACKAGE_BUGREPORT@
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+.SH SEE ALSO
+\fBdp_upload_file\fP(3)

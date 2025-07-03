@@ -23,7 +23,9 @@ man3_MANS = \
 	dp_request_config.3 \
 	dp_response.3 \
 	dp_serialize_messages_to_file.3 \
-	dp_serialize_messages_to_json_str.3
+	dp_serialize_messages_to_json_str.3 \
+	dp_upload_file.3 \
+	dp_free_file.3
 
 # List all man pages to be installed in section 7
 man7_MANS = \
