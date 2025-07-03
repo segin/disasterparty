@@ -6,6 +6,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h> 
+#include <sys/stat.h> // For stat
+#include <libgen.h>   // For basename
+#include <errno.h>    // For errno 
 
 // Default base URLs
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
@@ -287,6 +290,11 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
             } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
                 cJSON *file_data_obj = cJSON_CreateObject();
                 if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                // Note: The mime_type for a file reference is not explicitly
+                // stored in the dp_content_part_t for a file reference.
+                // The Gemini API requires it. For now, we will use a placeholder.
+                // This should be improved in the future.
+                cJSON_AddStringToObject(file_data_obj, "mimeType", "text/plain");
                 cJSON_AddStringToObject(file_data_obj, "fileUri", part->file_uri);
                 cJSON_AddItemToObject(part_obj, "fileData", file_data_obj);
             }
@@ -689,7 +697,14 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 cJSON* err_msg = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                                 if(cJSON_IsString(err_type) && cJSON_IsString(err_msg)){
                                      char* temp_err;
-                                     asprintf(&temp_err, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring);
+                                     size_t needed = snprintf(NULL, 0, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring) + 1;
+                                     temp_err = (char*)malloc(needed);
+                                     if (temp_err) {
+                                         snprintf(temp_err, needed, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring);
+                                     } else {
+                                         // Handle allocation failure, though asprintf would also fail in this case
+                                         temp_err = NULL;
+                                     }
                                      if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = temp_err; else free(temp_err);
                                 }
                             }
@@ -877,6 +892,15 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
         if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_completion.");
         return -1;
     }
+    if (request_config->temperature < 0.0 || request_config->temperature > 2.0) {
+        if (response) response->error_message = dp_internal_strdup("Invalid temperature value. Must be between 0.0 and 2.0.");
+        return -1;
+    }
+    if (request_config->top_p < 0.0 || request_config->top_p > 1.0) {
+        if (response) response->error_message = dp_internal_strdup("Invalid top_p value. Must be between 0.0 and 1.0.");
+        return -1;
+    }
+
     if (request_config->stream) {
         if (response) response->error_message = dp_internal_strdup("dp_perform_completion called with stream=true. Use streaming functions instead.");
         return -1;
@@ -942,8 +966,11 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
     if (res != CURLE_OK) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
-                 curl_easy_strerror(res), response->http_status_code);
+        size_t needed = snprintf(NULL, 0, "curl_easy_perform() failed: %s (HTTP status: %ld)", curl_easy_strerror(res), response->http_status_code) + 1;
+        response->error_message = (char*)malloc(needed);
+        if (response->error_message) {
+            snprintf(response->error_message, needed, "curl_easy_perform() failed: %s (HTTP status: %ld)", curl_easy_strerror(res), response->http_status_code);
+        }
     } else {
         if (response->http_status_code >= 200 && response->http_status_code < 300) {
             char* extracted_text = extract_text_from_full_response_with_cjson(chunk_mem.memory, context->provider, &response->finish_reason);
@@ -964,22 +991,38 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                     if (error_obj) { 
                         cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                         if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                             asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
+                             size_t needed = snprintf(NULL, 0, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring) + 1;
+                                response->error_message = (char*)malloc(needed);
+                                if (response->error_message) {
+                                    snprintf(response->error_message, needed, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
+                                }
                         }
                     } else { 
                          cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
                          cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message"); 
                          if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                             cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                            asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
+                                                        size_t needed = snprintf(NULL, 0, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring) + 1;
+                            response->error_message = (char*)malloc(needed);
+                            if (response->error_message) {
+                                snprintf(response->error_message, needed, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
+                            }
                          }
                     }
                     cJSON_Delete(error_root);
                 }
                 if (!response->error_message && chunk_mem.memory) { 
-                    asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
+                    size_t needed = snprintf(NULL, 0, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory) + 1;
+                    response->error_message = (char*)malloc(needed);
+                    if (response->error_message) {
+                        snprintf(response->error_message, needed, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
+                    }
                 } else if (!response->error_message) {
-                    asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
+                    size_t needed = snprintf(NULL, 0, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code) + 1;
+                    response->error_message = (char*)malloc(needed);
+                    if (response->error_message) {
+                        snprintf(response->error_message, needed, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
+                    }
                 }
             }
         } else { 
@@ -1002,11 +1045,23 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 }
              }
             if(api_err_detail){
-                asprintf(&response->error_message, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
+                size_t needed = snprintf(NULL, 0, "HTTP error %ld: %s", response->http_status_code, api_err_detail) + 1;
+                response->error_message = (char*)malloc(needed);
+                if (response->error_message) {
+                    snprintf(response->error_message, needed, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
+                }
             } else if (chunk_mem.memory) {
-                asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
+                size_t needed = snprintf(NULL, 0, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory) + 1;
+                response->error_message = (char*)malloc(needed);
+                if (response->error_message) {
+                    snprintf(response->error_message, needed, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
+                }
             } else {
-                asprintf(&response->error_message, "HTTP error %ld. (no response body)", response->http_status_code);
+                size_t needed = snprintf(NULL, 0, "HTTP error %ld. (no response body)", response->http_status_code) + 1;
+                response->error_message = (char*)malloc(needed);
+                if (response->error_message) {
+                    snprintf(response->error_message, needed, "HTTP error %ld. (no response body)", response->http_status_code);
+                }
             }
             if(error_root) cJSON_Delete(error_root);
         }
@@ -1142,7 +1197,11 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     }
 
     if (res != CURLE_OK && !response->error_message) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        size_t needed = snprintf(NULL, 0, "curl_easy_perform() failed: %s", curl_easy_strerror(res)) + 1;
+        response->error_message = (char*)malloc(needed);
+        if (response->error_message) {
+            snprintf(response->error_message, needed, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        }
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          char* temp_err_msg = NULL;
          if (processor.buffer_size > 0) {
@@ -1152,14 +1211,22 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                 if (error_obj) {
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                        asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
+                        size_t needed = snprintf(NULL, 0, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring) + 1;
+                        char* temp_err_msg = (char*)malloc(needed);
+                        if (temp_err_msg) {
+                            snprintf(temp_err_msg, needed, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
+                        }
                     }
                 } else {
                      cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "type");
                      cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "message");
                      if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                         cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                        asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
+                        size_t needed = snprintf(NULL, 0, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring) + 1;
+                        char* temp_err_msg = (char*)malloc(needed);
+                        if (temp_err_msg) {
+                            snprintf(temp_err_msg, needed, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
+                        }
                      }
                 }
                 cJSON_Delete(error_json);
@@ -1168,9 +1235,17 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
          if (temp_err_msg) {
             response->error_message = temp_err_msg;
          } else if (processor.buffer_size > 0) {
-            asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
+            size_t needed = snprintf(NULL, 0, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer) + 1;
+            response->error_message = (char*)malloc(needed);
+            if (response->error_message) {
+                snprintf(response->error_message, needed, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
+            }
          } else {
-            asprintf(&response->error_message, "HTTP error %ld (empty body)", response->http_status_code);
+            size_t needed = snprintf(NULL, 0, "HTTP error %ld (empty body)", response->http_status_code) + 1;
+            response->error_message = (char*)malloc(needed);
+            if (response->error_message) {
+                snprintf(response->error_message, needed, "HTTP error %ld (empty body)", response->http_status_code);
+            }
          }
     }
 
@@ -1178,7 +1253,11 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         if (response->error_message) {
              char* combined_error;
              if (strstr(response->error_message, processor.accumulated_error_during_stream) == NULL) {
-                asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
+                size_t needed = snprintf(NULL, 0, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream) + 1;
+                char* combined_error = (char*)malloc(needed);
+                if (combined_error) {
+                    snprintf(combined_error, needed, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
+                }
                 free(response->error_message);
                 response->error_message = combined_error;
              }
@@ -1285,7 +1364,11 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     }
     
     if (res != CURLE_OK && !response->error_message) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        size_t needed = snprintf(NULL, 0, "curl_easy_perform() failed: %s", curl_easy_strerror(res)) + 1;
+        response->error_message = (char*)malloc(needed);
+        if (response->error_message) {
+            snprintf(response->error_message, needed, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        }
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          // ... (error message population as in generic streaming) ...
     }
@@ -1368,14 +1451,21 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     int return_code = 0;
 
     if (res != CURLE_OK) {
-        asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
-                 curl_easy_strerror(res), (*model_list_out)->http_status_code);
+        size_t needed = snprintf(NULL, 0, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)", curl_easy_strerror(res), (*model_list_out)->http_status_code) + 1;
+        (*model_list_out)->error_message = (char*)malloc(needed);
+        if ((*model_list_out)->error_message) {
+            snprintf((*model_list_out)->error_message, needed, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)", curl_easy_strerror(res), (*model_list_out)->http_status_code);
+        }
         return_code = -1;
     } else {
         if ((*model_list_out)->http_status_code >= 200 && (*model_list_out)->http_status_code < 300) {
             cJSON *root = cJSON_Parse(chunk_mem.memory);
             if (!root) {
-                asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                size_t needed = snprintf(NULL, 0, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)") + 1;
+                (*model_list_out)->error_message = (char*)malloc(needed);
+                if ((*model_list_out)->error_message) {
+                    snprintf((*model_list_out)->error_message, needed, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                }
                 return_code = -1;
             } else {
                 cJSON *data_array = NULL;
@@ -1444,13 +1534,21 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                         }
                     }
                 } else {
-                     asprintf(&(*model_list_out)->error_message, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                     size_t needed = snprintf(NULL, 0, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)") + 1;
+                     (*model_list_out)->error_message = (char*)malloc(needed);
+                     if ((*model_list_out)->error_message) {
+                         snprintf((*model_list_out)->error_message, needed, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                     }
                     return_code = -1;
                 }
                 cJSON_Delete(root);
             }
         } else { 
-            asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+            size_t needed = snprintf(NULL, 0, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)") + 1;
+            (*model_list_out)->error_message = (char*)malloc(needed);
+            if ((*model_list_out)->error_message) {
+                snprintf((*model_list_out)->error_message, needed, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+            }
             return_code = -1;
         }
     }
@@ -1492,11 +1590,52 @@ void dp_free_file(dp_file_t* file) {
     free(file);
 }
 
+typedef struct {
+    char* upload_url;
+    memory_struct_t response_body;
+} upload_response_data_t;
+
+static size_t header_callback(char* buffer, size_t size, size_t nitems, void* userdata) {
+    size_t realsize = size * nitems;
+    upload_response_data_t* data = (upload_response_data_t*)userdata;
+
+    // Look for X-Goog-Upload-URL header
+    if (realsize > strlen("X-Goog-Upload-URL: ") &&
+        strncasecmp(buffer, "X-Goog-Upload-URL: ", strlen("X-Goog-Upload-URL: ")) == 0) {
+        char* url_start = buffer + strlen("X-Goog-Upload-URL: ");
+        char* url_end = strchr(url_start, '\r');
+        if (url_end) {
+            size_t url_len = url_end - url_start;
+            data->upload_url = malloc(url_len + 1);
+            if (data->upload_url) {
+                strncpy(data->upload_url, url_start, url_len);
+                data->upload_url[url_len] = '\0';
+            }
+        }
+    }
+    return realsize;
+}
+
+static size_t read_file_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
+    FILE *read_file = (FILE*)userp;
+    return fread(ptr, size, nmemb, read_file);
+}
+
 int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out) {
+    int return_code = -1;
+    CURL* curl = NULL;
+    struct curl_slist* headers = NULL;
+    char* json_payload_str = NULL;
+    upload_response_data_t upload_data = { .upload_url = NULL, .response_body = { .memory = NULL, .size = 0 } };
+    FILE* fp = NULL;
+    struct stat file_info;
+    char* file_basename_copy = NULL; // To hold a mutable copy for basename()
+
     if (!context || !file_path || !mime_type || !file_out) {
         fprintf(stderr, "Invalid arguments to dp_upload_file.\n");
         return -1;
     }
+
     if (context->provider != DP_PROVIDER_GOOGLE_GEMINI) {
         fprintf(stderr, "dp_upload_file is currently only supported for Google Gemini provider.\n");
         return -1;
@@ -1504,112 +1643,187 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
 
     *file_out = NULL;
 
-    CURL* curl = curl_easy_init();
+    // Get file size
+    if (stat(file_path, &file_info) != 0) {
+        fprintf(stderr, "Failed to get file info for %s: %s\n", file_path, strerror(errno));
+        return -1;
+    }
+    long file_size = file_info.st_size;
+
+    // Create a mutable copy of file_path for basename()
+    file_basename_copy = dp_internal_strdup(file_path);
+    if (!file_basename_copy) {
+        fprintf(stderr, "Failed to duplicate file_path for basename.\n");
+        return -1;
+    }
+    const char* display_name = basename(file_basename_copy);
+
+    // Step 1: Initiate Resumable Upload
+    curl = curl_easy_init();
     if (!curl) {
-        fprintf(stderr, "curl_easy_init() failed for file upload.\n");
-        return -1;
+        fprintf(stderr, "curl_easy_init() failed for file upload initiation.\n");
+        goto cleanup;
     }
 
-    char url[1024];
-    snprintf(url, sizeof(url), "%s/files?key=%s", context->api_base_url, context->api_key);
+    char init_url[1024];
+    snprintf(init_url, sizeof(init_url), "https://generativelanguage.googleapis.com/upload/v1beta/files?key=%s", context->api_key);
 
-    struct curl_slist* headers = NULL;
-
-    curl_mime *form = NULL;
-    curl_mimepart *field = NULL;
-
-    form = curl_mime_init(curl);
-    if (!form) {
-        fprintf(stderr, "curl_mime_init() failed.\n");
-        curl_easy_cleanup(curl);
-        return -1;
+    cJSON *root = cJSON_CreateObject();
+    if (!root) {
+        fprintf(stderr, "Failed to create JSON object for upload initiation.\n");
+        goto cleanup;
+    }
+    cJSON *file_obj = cJSON_AddObjectToObject(root, "file");
+    if (!file_obj) {
+        fprintf(stderr, "Failed to create 'file' JSON object.\n");
+        cJSON_Delete(root);
+        goto cleanup;
+    }
+    cJSON_AddStringToObject(file_obj, "display_name", display_name);
+    json_payload_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!json_payload_str) {
+        fprintf(stderr, "Failed to print JSON payload for upload initiation.\n");
+        goto cleanup;
     }
 
-    field = curl_mime_addpart(form);
-        curl_mime_name((curl_mimepart *)field, "metadata");
-    char metadata_json[256];
-    snprintf(metadata_json, sizeof(metadata_json), "{\"display_name\":\"%s\", \"mime_type\":\"%s\"}", file_path, mime_type);
-    curl_mime_data((curl_mimepart *)field, metadata_json, CURL_ZERO_TERMINATED);
-    curl_mime_type((curl_mimepart *)field, "application/json");
+    headers = curl_slist_append(headers, "X-Goog-Upload-Protocol: resumable");
+    headers = curl_slist_append(headers, "X-Goog-Upload-Command: start");
+    char content_length_header[128];
+    snprintf(content_length_header, sizeof(content_length_header), "X-Goog-Upload-Header-Content-Length: %ld", file_size);
+    headers = curl_slist_append(headers, content_length_header);
+    char content_type_header[256];
+    snprintf(content_type_header, sizeof(content_type_header), "X-Goog-Upload-Header-Content-Type: %s", mime_type);
+    headers = curl_slist_append(headers, content_type_header);
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "Accept: application/json"); // Explicitly request JSON response
 
-    field = curl_mime_addpart(form);
-    curl_mime_name((curl_mimepart *)field, "file");
-    curl_mime_filedata((curl_mimepart *)field, file_path);
-    curl_mime_type((curl_mimepart *)field, mime_type);
-
-    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
-    if (!chunk_mem.memory) {
-        fprintf(stderr, "Memory allocation for upload response chunk failed.\n");
-        curl_mime_free(form);
-        curl_easy_cleanup(curl);
-        return -1;
-    }
-    chunk_mem.memory[0] = '\0';
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+    curl_easy_setopt(curl, CURLOPT_URL, init_url);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void*)&upload_data);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&upload_data.response_body);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); // Enable verbose logging
 
     CURLcode res = curl_easy_perform(curl);
     long http_status_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
 
-    int return_code = -1;
+    fprintf(stderr, "Initiation response (HTTP %ld): %s\n", http_status_code, upload_data.response_body.memory ? upload_data.response_body.memory : "(empty)");
 
-    if (res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed for file upload: %s (HTTP status: %ld)\n",
-                curl_easy_strerror(res), http_status_code);
-    } else {
-        if (http_status_code >= 200 && http_status_code < 300) {
-            cJSON *root = cJSON_Parse(chunk_mem.memory);
-            if (root) {
-                dp_file_t* new_file = calloc(1, sizeof(dp_file_t));
-                if (new_file) {
-                    cJSON* name_item = cJSON_GetObjectItemCaseSensitive(root, "name");
-                    if (cJSON_IsString(name_item) && name_item->valuestring) {
-                        new_file->file_id = dp_internal_strdup(name_item->valuestring);
-                    }
-                    cJSON* display_name_item = cJSON_GetObjectItemCaseSensitive(root, "displayName");
-                    if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
-                        new_file->display_name = dp_internal_strdup(display_name_item->valuestring);
-                    }
-                    cJSON* mime_type_item = cJSON_GetObjectItemCaseSensitive(root, "mimeType");
-                    if (cJSON_IsString(mime_type_item) && mime_type_item->valuestring) {
-                        new_file->mime_type = dp_internal_strdup(mime_type_item->valuestring);
-                    }
-                    cJSON* size_bytes_item = cJSON_GetObjectItemCaseSensitive(root, "sizeBytes");
-                    if (cJSON_IsNumber(size_bytes_item)) {
-                        new_file->size_bytes = (long)size_bytes_item->valuedouble;
-                    }
-                    cJSON* create_time_item = cJSON_GetObjectItemCaseSensitive(root, "createTime");
-                    if (cJSON_IsString(create_time_item) && create_time_item->valuestring) {
-                        new_file->create_time = dp_internal_strdup(create_time_item->valuestring);
-                    }
-                    cJSON* uri_item = cJSON_GetObjectItemCaseSensitive(root, "uri");
-                    if (cJSON_IsString(uri_item) && uri_item->valuestring) {
-                        new_file->uri = dp_internal_strdup(uri_item->valuestring);
-                    }
-                    *file_out = new_file;
-                    return_code = 0;
-                } else {
-                    fprintf(stderr, "Failed to allocate dp_file_t structure.\n");
-                }
-                cJSON_Delete(root);
-            } else {
-                fprintf(stderr, "Failed to parse JSON response for file upload. Body: %s\n", chunk_mem.memory);
-            }
-        }
-        else {
-            fprintf(stderr, "File upload HTTP error %ld. Body: %s\n", http_status_code, chunk_mem.memory);
-        }
+    if (res != CURLE_OK || http_status_code < 200 || http_status_code >= 300 || !upload_data.upload_url) {
+        fprintf(stderr, "File upload initiation failed: %s (HTTP status: %ld), Upload URL: %s\n",
+                curl_easy_strerror(res), http_status_code, upload_data.upload_url ? upload_data.upload_url : "N/A");
+        goto cleanup;
     }
 
-    curl_mime_free(form);
-    free(chunk_mem.memory);
-    curl_slist_free_all(headers);
+    // Cleanup for step 1
     curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+    free(json_payload_str);
+    free(upload_data.response_body.memory); // Free memory from initiation response
+    headers = NULL; // Reset headers for step 2
+    json_payload_str = NULL; // Reset payload for step 2
+    upload_data.response_body.memory = NULL;
+    upload_data.response_body.size = 0;
+
+    // Step 2: Upload File Data
+    curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "curl_easy_init() failed for file data upload.\n");
+        goto cleanup;
+    }
+
+    fp = fopen(file_path, "rb");
+    if (!fp) {
+        fprintf(stderr, "Failed to open file %s for reading: %s\n", file_path, strerror(errno));
+        goto cleanup;
+    }
+
+    headers = curl_slist_append(headers, "Content-Type: application/octet-stream"); // Or the actual mime_type
+    char offset_header[128];
+    snprintf(offset_header, sizeof(offset_header), "X-Goog-Upload-Offset: %d", 0);
+    headers = curl_slist_append(headers, offset_header);
+    headers = curl_slist_append(headers, "X-Goog-Upload-Command: upload, finalize");
+
+    curl_easy_setopt(curl, CURLOPT_URL, upload_data.upload_url);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_file_callback);
+    curl_easy_setopt(curl, CURLOPT_READDATA, (void*)fp);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, file_size);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&upload_data.response_body);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); // Enable verbose logging
+
+    res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
+
+    fprintf(stderr, "File data upload response (HTTP %ld): %s\n", http_status_code, upload_data.response_body.memory ? upload_data.response_body.memory : "(empty)");
+
+    if (res != CURLE_OK || http_status_code < 200 || http_status_code >= 300) {
+        fprintf(stderr, "File data upload failed: %s (HTTP status: %ld)\n",
+                curl_easy_strerror(res), http_status_code);
+        goto cleanup;
+    }
+
+    // Parse the final response
+    cJSON *root_final = cJSON_Parse(upload_data.response_body.memory);
+    if (root_final) {
+        cJSON* file_obj = cJSON_GetObjectItemCaseSensitive(root_final, "file");
+        if (file_obj) {
+            dp_file_t* new_file = calloc(1, sizeof(dp_file_t));
+            if (new_file) {
+                cJSON* name_item = cJSON_GetObjectItemCaseSensitive(file_obj, "name");
+                if (cJSON_IsString(name_item) && name_item->valuestring) {
+                    new_file->file_id = dp_internal_strdup(name_item->valuestring);
+                }
+                cJSON* display_name_item = cJSON_GetObjectItemCaseSensitive(file_obj, "displayName");
+                if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
+                    new_file->display_name = dp_internal_strdup(display_name_item->valuestring);
+                }
+                cJSON* mime_type_item = cJSON_GetObjectItemCaseSensitive(file_obj, "mimeType");
+                if (cJSON_IsString(mime_type_item) && mime_type_item->valuestring) {
+                    new_file->mime_type = dp_internal_strdup(mime_type_item->valuestring);
+                }
+                cJSON* size_bytes_item = cJSON_GetObjectItemCaseSensitive(file_obj, "sizeBytes");
+                if (cJSON_IsNumber(size_bytes_item)) {
+                    new_file->size_bytes = (long)size_bytes_item->valuedouble;
+                }
+                cJSON* create_time_item = cJSON_GetObjectItemCaseSensitive(file_obj, "createTime");
+                if (cJSON_IsString(create_time_item) && create_time_item->valuestring) {
+                    new_file->create_time = dp_internal_strdup(create_time_item->valuestring);
+                }
+                cJSON* uri_item = cJSON_GetObjectItemCaseSensitive(file_obj, "uri");
+                if (cJSON_IsString(uri_item) && uri_item->valuestring) {
+                    new_file->uri = dp_internal_strdup(uri_item->valuestring);
+                }
+                *file_out = new_file;
+                return_code = 0;
+            } else {
+                fprintf(stderr, "Failed to allocate dp_file_t structure for final response.\n");
+            }
+        } else {
+            fprintf(stderr, "Final JSON response missing 'file' object. Body: %s\n", upload_data.response_body.memory ? upload_data.response_body.memory : "(empty)");
+        }
+        cJSON_Delete(root_final);
+    } else {
+        fprintf(stderr, "Failed to parse final JSON response for file upload. Body: %s\n", upload_data.response_body.memory ? upload_data.response_body.memory : "(empty)");
+    }
+
+cleanup:
+    if (curl) curl_easy_cleanup(curl);
+    if (headers) curl_slist_free_all(headers);
+    if (json_payload_str) free(json_payload_str);
+    if (upload_data.upload_url) free(upload_data.upload_url);
+    if (upload_data.response_body.memory) free(upload_data.response_body.memory);
+    if (fp) fclose(fp);
+    if (file_basename_copy) free(file_basename_copy);
 
     return return_code;
 }
@@ -1695,10 +1909,10 @@ bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url)
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
     return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
 }
+
 bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_uri) {
     return dp_message_add_part_internal(message, DP_CONTENT_PART_FILE_REFERENCE, NULL, file_uri, NULL, NULL);
 }
-
 // ---- START SERIALIZATION FUNCTIONS ----
 
 int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_messages, char** json_str_out) {
