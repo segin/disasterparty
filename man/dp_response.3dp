@@ -1,5 +1,5 @@
 .\" Man page for dp_response_t struct from libdisasterparty
-.TH DP_RESPONSE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_RESPONSE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_response_t \- structure for holding an LLM API response
@@ -54,6 +54,41 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    // This is a simplified example. In a real scenario, dp_response_t
+    // would be populated by a call to dp_perform_completion or similar.
+    dp_response_t response = {0};
+    response.http_status_code = 200;
+    response.num_parts = 1;
+    response.parts = (dp_response_part_t*)malloc(sizeof(dp_response_part_t));
+    if (response.parts) {
+        response.parts[0].type = DP_CONTENT_PART_TEXT;
+        response.parts[0].text = strdup("This is a sample response.");
+    }
+    response.finish_reason = strdup("stop");
+
+    if (response.http_status_code >= 200 && response.http_status_code < 300) {
+        printf("HTTP Status: %ld\n", response.http_status_code);
+        printf("Finish Reason: %s\n", response.finish_reason);
+        if (response.num_parts > 0 && response.parts[0].text) {
+            printf("Response Text: %s\n", response.parts[0].text);
+        }
+    } else {
+        fprintf(stderr, "Error: HTTP Status %ld, Message: %s\n",
+                response.http_status_code, response.error_message ? response.error_message : "(none)");
+    }
+
+    dp_free_response_content(&response);
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_free_response_content (3),

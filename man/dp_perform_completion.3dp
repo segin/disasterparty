@@ -1,4 +1,4 @@
-.\" Man page for dp_perform_completion from libdisasterparty
+." Man page for dp_perform_completion from libdisasterparty
 .TH DP_PERFORM_COMPLETION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
@@ -52,6 +52,61 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("OPENAI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "OPENAI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    dp_message_t message = { .role = DP_ROLE_USER };
+    dp_message_add_text_part(&message, "Hello, how are you?");
+
+    dp_request_config_t config = {
+        .model = "gpt-4o-mini",
+        .messages = &message,
+        .num_messages = 1,
+        .temperature = 0.7,
+        .max_tokens = 50,
+        .stream = false
+    };
+
+    dp_response_t response = {0};
+    int ret = dp_perform_completion(context, &config, &response);
+
+    if (ret == 0 && response.http_status_code >= 200 && response.http_status_code < 300) {
+        printf("Completion successful:\n");
+        for (size_t i = 0; i < response.num_parts; ++i) {
+            if (response.parts[i].text) {
+                printf("%s", response.parts[i].text);
+            }
+        }
+        printf("\n");
+    } else {
+        fprintf(stderr, "Completion failed: HTTP %ld, Error: %s\n",
+                response.http_status_code, response.error_message ? response.error_message : "(none)");
+    }
+
+    dp_free_response_content(&response);
+    dp_free_messages(&message, 1);
+    dp_destroy_context(context);
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_perform_streaming_completion (3),

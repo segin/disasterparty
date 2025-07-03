@@ -1,5 +1,5 @@
-.\" Man page for dp_serialize_messages_to_json_str from libdisasterparty
-.TH DP_SERIALIZE_MESSAGES_TO_JSON_STR 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_serialize_messages_to_json_str from libdisasterparty
+.TH DP_SERIALIZE_MESSAGES_TO_JSON_STR 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_serialize_messages_to_json_str \- serialize an array of messages to a JSON string
@@ -35,6 +35,36 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    dp_message_t messages[2];
+
+    messages[0].role = DP_ROLE_USER;
+    dp_message_add_text_part(&messages[0], "Hello, how are you?");
+
+    messages[1].role = DP_ROLE_ASSISTANT;
+    dp_message_add_text_part(&messages[1], "I am doing well, thank you!");
+
+    char* json_str = NULL;
+    int ret = dp_serialize_messages_to_json_str(messages, 2, &json_str);
+
+    if (ret == 0 && json_str) {
+        printf("Serialized JSON:\n%s\n", json_str);
+    } else {
+        fprintf(stderr, "Failed to serialize messages.\n");
+    }
+
+    free(json_str);
+    dp_free_messages(messages, 2);
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_deserialize_messages_from_json_str (3),

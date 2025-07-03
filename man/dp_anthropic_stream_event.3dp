@@ -1,5 +1,5 @@
-.\" Man page for dp_anthropic_stream_event_t struct from libdisasterparty
-.TH DP_ANTHROPIC_STREAM_EVENT 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_anthropic_stream_event_t struct from libdisasterparty
+.TH DP_ANTHROPIC_STREAM_EVENT 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_anthropic_stream_event_t \- structure for a detailed Anthropic API stream event
@@ -53,6 +53,64 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <cjson/cJSON.h>
+
+// Example of how to use dp_anthropic_stream_event_t in a callback
+int my_anthropic_callback(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_during_stream) {
+    if (error_during_stream) {
+        fprintf(stderr, "Stream error: %s\n", error_during_stream);
+        return 1; // Stop streaming on error
+    }
+
+    printf("Received Anthropic Event: ");
+    switch (event->event_type) {
+        case DP_ANTHROPIC_EVENT_MESSAGE_START: printf("MESSAGE_START"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_START: printf("CONTENT_BLOCK_START"); break;
+        case DP_ANTHROPIC_EVENT_PING: printf("PING"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA: printf("CONTENT_BLOCK_DELTA"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP: printf("CONTENT_BLOCK_STOP"); break;
+        case DP_ANTHROPIC_EVENT_MESSAGE_DELTA: printf("MESSAGE_DELTA"); break;
+        case DP_ANTHROPIC_EVENT_MESSAGE_STOP: printf("MESSAGE_STOP"); break;
+        case DP_ANTHROPIC_EVENT_ERROR: printf("ERROR"); break;
+        case DP_ANTHROPIC_EVENT_UNKNOWN: printf("UNKNOWN"); break;
+    }
+    printf("\n");
+
+    if (event->raw_json_data) {
+        printf("  Raw JSON: %s\n", event->raw_json_data);
+        // Parse JSON to extract specific fields if needed
+        cJSON* json = cJSON_Parse(event->raw_json_data);
+        if (json) {
+            // Example: Extracting text from content_block_delta
+            if (event->event_type == DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA) {
+                cJSON* delta = cJSON_GetObjectItemCaseSensitive(json, "delta");
+                if (delta) {
+                    cJSON* text = cJSON_GetObjectItemCaseSensitive(delta, "text");
+                    if (cJSON_IsString(text) && text->valuestring) {
+                        printf("    Text Delta: %s\n", text->valuestring);
+                    }
+                }
+            }
+            cJSON_Delete(json);
+        }
+    }
+    return 0; // Continue streaming
+}
+
+int main() {
+    // This example only shows the callback usage. For a full example,
+    // see dp_perform_anthropic_streaming_completion(3).
+    printf("This example demonstrates the structure of dp_anthropic_stream_event_t.\n");
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_perform_anthropic_streaming_completion (3),

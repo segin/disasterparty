@@ -1,5 +1,5 @@
-.\" Man page for dp_free_model_list from libdisasterparty
-.TH DP_FREE_MODEL_LIST 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_free_model_list from libdisasterparty
+.TH DP_FREE_MODEL_LIST 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_model_list \- free a Disaster Party model list structure
@@ -29,6 +29,44 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    // Simulate a dp_model_list_t structure that would be returned by dp_list_models
+    dp_model_list_t* model_list = (dp_model_list_t*)malloc(sizeof(dp_model_list_t));
+    if (!model_list) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    model_list->count = 1;
+    model_list->models = (dp_model_info_t*)malloc(sizeof(dp_model_info_t));
+    if (!model_list->models) {
+        free(model_list);
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    model_list->models[0].model_id = strdup("gemini-pro");
+    model_list->models[0].display_name = strdup("Gemini Pro");
+    model_list->models[0].version = strdup("1.0");
+    model_list->models[0].description = strdup("A powerful model.");
+    model_list->models[0].input_token_limit = 32768;
+    model_list->models[0].output_token_limit = 2048;
+    model_list->error_message = NULL;
+    model_list->http_status_code = 200;
+
+    printf("Model list created. Now freeing it.\n");
+dp_free_model_list(model_list);
+    printf("Model list freed.\n");
+
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_list_models (3),

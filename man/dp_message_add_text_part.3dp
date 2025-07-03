@@ -1,5 +1,5 @@
 .\" Man page for dp_message_add_text_part from libdisasterparty
-.TH DP_MESSAGE_ADD_TEXT_PART 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_TEXT_PART 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_text_part \- add a text content part to a message
@@ -37,6 +37,27 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+
+int main() {
+    dp_message_t user_message = { .role = DP_ROLE_USER };
+
+    if (dp_message_add_text_part(&user_message, "Hello, LLM!")) {
+        printf("Text part added successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to add text part.\n");
+        return 1;
+    }
+
+    // Don't forget to free the message content when done
+    dp_free_messages(&user_message, 1);
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_message_add_image_url_part (3),

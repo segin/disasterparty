@@ -1,5 +1,5 @@
-.\" Man page for dp_serialize_messages_to_file from libdisasterparty
-.TH DP_SERIALIZE_MESSAGES_TO_FILE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_serialize_messages_to_file from libdisasterparty
+.TH DP_SERIALIZE_MESSAGES_TO_FILE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_serialize_messages_to_file \- serialize an array of messages to a file
@@ -32,6 +32,35 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    dp_message_t messages[2];
+
+    messages[0].role = DP_ROLE_USER;
+    dp_message_add_text_part(&messages[0], "Hello, file!");
+
+    messages[1].role = DP_ROLE_ASSISTANT;
+    dp_message_add_text_part(&messages[1], "I am a file-based assistant.");
+
+    const char* filename = "conversation.json";
+    int ret = dp_serialize_messages_to_file(messages, 2, filename);
+
+    if (ret == 0) {
+        printf("Messages serialized to %s successfully.\n", filename);
+    } else {
+        fprintf(stderr, "Failed to serialize messages to file.\n");
+    }
+
+    dp_free_messages(messages, 2);
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_deserialize_messages_from_file (3),

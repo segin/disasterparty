@@ -1,4 +1,4 @@
-.\" Man page for dp_init_context from libdisasterparty
+." Man page for dp_init_context from libdisasterparty
 .TH DP_INIT_CONTEXT 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
@@ -45,6 +45,32 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    printf("Context initialized successfully!\n");
+
+    dp_destroy_context(context);
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_destroy_context (3),

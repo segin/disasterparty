@@ -1,5 +1,5 @@
-.\" Man page for dp_message_add_base64_image_part from libdisasterparty
-.TH DP_MESSAGE_ADD_BASE64_IMAGE_PART 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_message_add_base64_image_part from libdisasterparty
+.TH DP_MESSAGE_ADD_BASE64_IMAGE_PART 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_base64_image_part \- add a base64 encoded image content part to a message
@@ -39,6 +39,30 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    dp_message_t user_message = { .role = DP_ROLE_USER };
+    const char* base64_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; // A 1x1 transparent PNG
+
+    if (dp_message_add_base64_image_part(&user_message, "image/png", base64_data)) {
+        printf("Base64 image part added successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to add base64 image part.\n");
+        return 1;
+    }
+
+    // Don't forget to free the message content when done
+    dp_free_messages(&user_message, 1);
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_message_add_text_part (3),

@@ -1,5 +1,5 @@
 .\" Man page for dp_message_t and related structs from libdisasterparty
-.TH DP_MESSAGE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_t, dp_content_part_t \- structures for representing conversational messages
@@ -33,7 +33,7 @@ The
 represents a single turn in the conversation, which can consist of one or more
 .BR dp_content_part_t
 structures. This allows for creating complex, multimodal messages with interleaved
-text and images.
+text, images, and file references.
 
 .SH MEMBERS of dp_message_t
 .TP
@@ -77,6 +77,8 @@ Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
+.BR dp_message_add_text_part (3),
+.BR dp_message_add_image_url_part (3),
 .BR dp_message_add_base64_image_part (3),
 .BR dp_message_add_file_reference_part (3),
 .BR dp_free_messages (3),

@@ -1,5 +1,5 @@
-.\" Man page for dp_free_response_content from libdisasterparty
-.TH DP_FREE_RESPONSE_CONTENT 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_free_response_content from libdisasterparty
+.TH DP_FREE_RESPONSE_CONTENT 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_response_content \- free content of a Disaster Party response structure
@@ -29,6 +29,38 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    // Simulate a dp_response_t structure that would be returned by a completion function
+    dp_response_t response = {0};
+    response.num_parts = 1;
+    response.parts = (dp_response_part_t*)malloc(sizeof(dp_response_part_t));
+    if (!response.parts) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    response.parts[0].type = DP_CONTENT_PART_TEXT;
+    response.parts[0].text = strdup("This is a sample response text.");
+    response.error_message = strdup("No error.");
+    response.finish_reason = strdup("stop");
+
+    printf("Response content created. Now freeing it.\n");
+    dp_free_response_content(&response);
+    printf("Response content freed.\n");
+
+    // Note: The response struct itself (not its contents) is on the stack
+    // and does not need to be freed with free().
+
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_perform_completion (3),

@@ -1,5 +1,5 @@
-.\" Man page for dp_get_version from libdisasterparty
-.TH DP_GET_VERSION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_get_version from libdisasterparty
+.TH DP_GET_VERSION 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_get_version \- get the version string of the Disaster Party library
@@ -26,6 +26,18 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+
+int main() {
+    const char* version = dp_get_version();
+    printf("Disaster Party Library Version: %s\n", version);
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR disasterparty (7)

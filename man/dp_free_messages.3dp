@@ -1,5 +1,5 @@
-.\" Man page for dp_free_messages from libdisasterparty
-.TH DP_FREE_MESSAGES 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_free_messages from libdisasterparty
+.TH DP_FREE_MESSAGES 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_messages \- free content of an array of Disaster Party messages
@@ -31,6 +31,34 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    dp_message_t* messages = (dp_message_t*)calloc(2, sizeof(dp_message_t));
+    if (!messages) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+
+    messages[0].role = DP_ROLE_USER;
+    dp_message_add_text_part(&messages[0], "Hello.");
+
+    messages[1].role = DP_ROLE_ASSISTANT;
+    dp_message_add_text_part(&messages[1], "Hi there!");
+
+    printf("Messages created. Now freeing their content.\n");
+    dp_free_messages(messages, 2);
+    printf("Message content freed. Now freeing the message array.\n");
+    free(messages);
+
+    return 0;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_message_add_text_part (3),

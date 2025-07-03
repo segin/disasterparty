@@ -1,0 +1,68 @@
+." Man page for dp_message_add_file_reference_part from libdisasterparty
+.TH DP_MESSAGE_ADD_FILE_REFERENCE_PART 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_message_add_file_reference_part \- add a file reference part to a message
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "bool dp_message_add_file_reference_part(dp_message_t *" message ", const char *" file_uri ");"
+
+.SH DESCRIPTION
+The
+.B dp_message_add_file_reference_part()
+function adds a new content part referencing an already uploaded file to an existing
+.BR dp_message_t
+structure. The
+.I file_uri
+is obtained from a successful call to
+.BR dp_upload_file (3).
+
+.SH RETURN VALUE
+Returns
+.BR true
+on success, and
+.BR false
+on error.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    // This example assumes a file has already been uploaded
+    // and its URI is available (e.g., from a previous dp_upload_file call).
+    const char* uploaded_file_uri = "files/your-uploaded-file-id"; // Replace with actual URI
+
+    dp_message_t user_message = { .role = DP_ROLE_USER };
+
+    if (dp_message_add_file_reference_part(&user_message, uploaded_file_uri)) {
+        printf("File reference part added successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to add file reference part.\n");
+        return 1;
+    }
+
+    // Don't forget to free the message content when done
+    dp_free_messages(&user_message, 1);
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_upload_file (3),
+.BR dp_free_messages (3)

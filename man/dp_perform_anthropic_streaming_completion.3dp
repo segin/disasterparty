@@ -1,5 +1,5 @@
 .\" Man page for dp_perform_anthropic_streaming_completion from libdisasterparty
-.TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_perform_anthropic_streaming_completion \- perform a streaming request to Anthropic with detailed event handling
@@ -36,6 +36,119 @@ This callback is invoked for each SSE event (e.g.,
 and receives a
 .BR dp_anthropic_stream_event_t
 structure containing the event type and the raw JSON data associated with it.
+
+.SH CALLBACK SIGNATURE
+.nf
+int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event,
+                                              void* user_data,
+                                              const char* error_during_stream);
+.fi
+.PP
+- \fBevent\fP: Pointer to the detailed Anthropic event structure.
+- \fBuser_data\fP: User-defined data passed from the streaming call.
+- \fBerror_during_stream\fP: Error message if an error occurred during stream processing. NULL otherwise.
+.PP
+Return \fB0\fP to continue streaming, non-zero to attempt to stop.
+
+.SH RETURN VALUE
+Returns \fB0\fP if the stream was successfully initiated and \fB-1\fP on setup error or if provider is not Anthropic. The \fIresponse\fP struct contains the final status.
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <cjson/cJSON.h>
+
+// Callback to handle detailed Anthropic stream events
+int anthropic_stream_callback(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_during_stream) {
+    if (error_during_stream) {
+        fprintf(stderr, "Anthropic stream error: %s\n", error_during_stream);
+        return 1; // Stop streaming on error
+    }
+
+    printf("Event Type: ");
+    switch (event->event_type) {
+        case DP_ANTHROPIC_EVENT_MESSAGE_START: printf("MESSAGE_START"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_START: printf("CONTENT_BLOCK_START"); break;
+        case DP_ANTHROPIC_EVENT_PING: printf("PING"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA: printf("CONTENT_BLOCK_DELTA"); break;
+        case DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP: printf("CONTENT_BLOCK_STOP"); break;
+        case DP_ANTHROPIC_EVENT_MESSAGE_DELTA: printf("MESSAGE_DELTA"); break;
+        case DP_ANTHROPIC_EVENT_MESSAGE_STOP: printf("MESSAGE_STOP"); break;
+        case DP_ANTHROPIC_EVENT_ERROR: printf("ERROR"); break;
+        case DP_ANTHROPIC_EVENT_UNKNOWN: printf("UNKNOWN"); break;
+    }
+    printf("\n");
+
+    if (event->raw_json_data) {
+        printf("Raw JSON Data: %s\n", event->raw_json_data);
+        // You can parse raw_json_data using cJSON for more details
+        cJSON* data_json = cJSON_Parse(event->raw_json_data);
+        if (data_json) {
+            // Example: Extracting text from content_block_delta
+            if (event->event_type == DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA) {
+                cJSON* delta = cJSON_GetObjectItemCaseSensitive(data_json, "delta");
+                if (delta) {
+                    cJSON* text = cJSON_GetObjectItemCaseSensitive(delta, "text");
+                    if (cJSON_IsString(text) && text->valuestring) {
+                        printf("  Text Delta: %s\n", text->valuestring);
+                    }
+                }
+            }
+            cJSON_Delete(data_json);
+        }
+    }
+    printf("\n");
+
+    return 0; // Continue streaming
+}
+
+int main() {
+    const char* api_key = getenv("ANTHROPIC_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "ANTHROPIC_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    dp_message_t message = { .role = DP_ROLE_USER };
+    dp_message_add_text_part(&message, "Describe the process of photosynthesis in brief.");
+
+    dp_request_config_t config = {
+        .model = "claude-3-haiku-20240307",
+        .messages = &message,
+        .num_messages = 1,
+        .temperature = 0.7,
+        .max_tokens = 100,
+        .stream = true
+    };
+
+    dp_response_t response = {0};
+    printf("Streaming Anthropic completion (detailed events):\n");
+    int ret = dp_perform_anthropic_streaming_completion(context, &config, anthropic_stream_callback, NULL, &response);
+
+    if (ret != 0) {
+        fprintf(stderr, "Anthropic streaming completion failed to start: %s\n",
+                response.error_message ? response.error_message : "(none)");
+    } else if (response.http_status_code >= 400) {
+        fprintf(stderr, "Anthropic streaming completion finished with HTTP error: %ld, Error: %s\n",
+                response.http_status_code, response.error_message ? response.error_message : "(none)");
+    }
+
+    dp_free_response_content(&response);
+    dp_free_messages(&message, 1);
+    dp_destroy_context(context);
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:

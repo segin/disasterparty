@@ -1,4 +1,4 @@
-.TH DP_UPLOAD_FILE 3 "@DP_VERSION@" "Disaster Party" "Disaster Party API Documentation"
+.TH DP_UPLOAD_FILE 3 "July 03, 2025" "Disaster Party" "Disaster Party API Documentation"
 .SH NAME
 dp_upload_file \- upload a file to the LLM provider
 .SH SYNOPSIS
@@ -30,5 +30,55 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    // Create a dummy file for upload
+    char temp_filename[] = "/tmp/test_upload_XXXXXX";
+    int fd = mkstemp(temp_filename);
+    if (fd == -1) {
+        perror("mkstemp");
+        dp_destroy_context(context);
+        return 1;
+    }
+    write(fd, "This is a test file.", strlen("This is a test file."));
+    close(fd);
+
+    dp_file_t* uploaded_file = NULL;
+    int ret = dp_upload_file(context, temp_filename, "text/plain", &uploaded_file);
+
+    if (ret == 0 && uploaded_file) {
+        printf("File uploaded successfully! URI: %s\n", uploaded_file->uri);
+    } else {
+        fprintf(stderr, "File upload failed.\n");
+    }
+
+    dp_free_file(uploaded_file);
+    dp_destroy_context(context);
+    unlink(temp_filename); // Clean up dummy file
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
+
 .SH SEE ALSO
-\fBdp_free_file\fP(3), \fBdp_message_add_file_reference_part\fP(3)
+.BR dp_free_file (3),
+.BR dp_message_add_file_reference_part (3)

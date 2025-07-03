@@ -1,5 +1,5 @@
-.\" Man page for dp_deserialize_messages_from_file from libdisasterparty
-.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_deserialize_messages_from_file from libdisasterparty
+.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_deserialize_messages_from_file \- deserialize an array of messages from a file
@@ -39,6 +39,51 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main() {
+    const char* filename = "conversation.json";
+    // Create a dummy file for deserialization
+    FILE* fp = fopen(filename, "w");
+    if (!fp) {
+        perror("fopen");
+        return 1;
+    }
+    fprintf(fp, "[ { \"role\": \"user\", \"parts\": [ { \"type\": \"text\", \"text\": \"Hello from file!\" } ] } ]");
+    fclose(fp);
+
+    dp_message_t* messages = NULL;
+    size_t num_messages = 0;
+
+    int ret = dp_deserialize_messages_from_file(filename, &messages, &num_messages);
+
+    if (ret == 0 && messages) {
+        printf("Deserialized %zu messages from %s:\n", num_messages, filename);
+        for (size_t i = 0; i < num_messages; ++i) {
+            printf("  Message %zu (Role: %s):\n", i + 1, messages[i].role == DP_ROLE_USER ? "user" : "assistant");
+            for (size_t j = 0; j < messages[i].num_parts; ++j) {
+                if (messages[i].parts[j].type == DP_CONTENT_PART_TEXT) {
+                    printf("    Text: %s\n", messages[i].parts[j].text);
+                }
+            }
+        }
+    } else {
+        fprintf(stderr, "Failed to deserialize messages from file.\n");
+    }
+
+    dp_free_messages(messages, num_messages);
+    free(messages);
+    unlink(filename); // Clean up dummy file
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_serialize_messages_to_file (3),

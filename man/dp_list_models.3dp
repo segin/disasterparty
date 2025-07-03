@@ -1,5 +1,5 @@
-.\" Man page for dp_list_models from libdisasterparty
-.TH DP_LIST_MODELS 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_list_models from libdisasterparty
+.TH DP_LIST_MODELS 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_list_models \- list available models from the LLM provider
@@ -38,6 +38,47 @@ Please report any bugs or issues by opening a ticket on the GitHub issue tracker
 Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    dp_model_list_t* model_list = NULL;
+    int ret = dp_list_models(context, &model_list);
+
+    if (ret == 0 && model_list && model_list->count > 0) {
+        printf("Available Models:\n");
+        for (size_t i = 0; i < model_list->count; ++i) {
+            printf("- ID: %s, Display Name: %s\n",
+                   model_list->models[i].model_id,
+                   model_list->models[i].display_name ? model_list->models[i].display_name : "N/A");
+        }
+    } else {
+        fprintf(stderr, "Failed to list models: %s\n",
+                model_list && model_list->error_message ? model_list->error_message : "(unknown error)");
+    }
+
+    dp_free_model_list(model_list);
+    dp_destroy_context(context);
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH SEE ALSO
 .BR dp_init_context (3),
