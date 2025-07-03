@@ -55,7 +55,7 @@ static int test_empty_api_key() {
     message.role = DP_ROLE_USER;
     assert(dp_message_add_text_part(&message, "Hello."));
 
-    config.model = "gemini-pro";
+    config.model = "gemini-2.5-flash";
     config.messages = &message;
     config.num_messages = 1;
     config.max_tokens = 10;

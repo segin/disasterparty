@@ -6,6 +6,7 @@
 #include <pthread.h>
 
 #include <disasterparty.h>
+#include <curl/curl.h>
 
 static int test_count = 0;
 static int test_failures = 0;
@@ -55,9 +56,9 @@ void* provider_test_thread(void* arg) {
     assert(dp_message_add_text_part(&message, "Say hello."));
     printf("Thread for %s: Message part added. Setting config model...\n", data->api_key_env);
 
-    config.model = "gpt-3.5-turbo"; // Default, will be overridden for Gemini/Anthropic
+    config.model = "gpt-4o-mini"; // Default, will be overridden for Gemini/Anthropic
     if (data->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        config.model = "gemini-pro";
+        config.model = "gemini-2.5-flash";
     } else if (data->provider == DP_PROVIDER_ANTHROPIC) {
         config.model = "claude-3-haiku-20240307";
     }
@@ -73,11 +74,16 @@ void* provider_test_thread(void* arg) {
            data->api_key_env, ret, response.http_status_code, response.error_message ? response.error_message : "(none)");
 
     if (ret == 0 && response.http_status_code >= 200 && response.http_status_code < 300) {
-        printf("Thread for %s: Success. Response: %s\n", data->api_key_env, response.parts[0].text);
-        data->thread_status = 0;
+        if (response.parts != NULL && response.num_parts > 0) {
+            printf("Thread for %s: Success. Response: %s\n", data->api_key_env, response.parts[0].text);
+            data->thread_status = 0;
+        } else {
+            fprintf(stderr, "Thread for %s: Success, but no content parts in response.\n", data->api_key_env);
+            data->thread_status = -1;
+        }
     } else {
-        fprintf(stderr, "Thread for %s: Failed. HTTP Status: %ld, Error: %s\n",
-                data->api_key_env, response.http_status_code, response.error_message ? response.error_message : "(none)");
+        fprintf(stderr, "Thread for %s: Failed. Return code: %d, HTTP Status: %ld, Error: %s\n",
+                data->api_key_env, ret, response.http_status_code, response.error_message ? response.error_message : "(none)");
         data->thread_status = -1;
     }
 
@@ -93,24 +99,37 @@ void* provider_test_thread(void* arg) {
 
 static int test_multiprovider_multithread() {
     int overall_status = 0;
+    pthread_t openai_thread, gemini_thread, anthropic_thread;
 
-    // Test OpenAI
     thread_data_t openai_data = { .provider = DP_PROVIDER_OPENAI_COMPATIBLE, .api_key_env = "OPENAI_API_KEY" };
-    provider_test_thread(&openai_data);
+    thread_data_t gemini_data = { .provider = DP_PROVIDER_GOOGLE_GEMINI, .api_key_env = "GEMINI_API_KEY" };
+    thread_data_t anthropic_data = { .provider = DP_PROVIDER_ANTHROPIC, .api_key_env = "ANTHROPIC_API_KEY" };
+
+    // Create threads
+    if (pthread_create(&openai_thread, NULL, provider_test_thread, &openai_data) != 0) {
+        fprintf(stderr, "Failed to create OpenAI thread.\n");
+        overall_status = -1;
+    }
+    if (pthread_create(&gemini_thread, NULL, provider_test_thread, &gemini_data) != 0) {
+        fprintf(stderr, "Failed to create Gemini thread.\n");
+        overall_status = -1;
+    }
+    if (pthread_create(&anthropic_thread, NULL, provider_test_thread, &anthropic_data) != 0) {
+        fprintf(stderr, "Failed to create Anthropic thread.\n");
+        overall_status = -1;
+    }
+
+    // Join threads
+    pthread_join(openai_thread, NULL);
+    pthread_join(gemini_thread, NULL);
+    pthread_join(anthropic_thread, NULL);
+
     if (openai_data.thread_status != 0) {
         overall_status = -1;
     }
-
-    // Test Gemini
-    thread_data_t gemini_data = { .provider = DP_PROVIDER_GOOGLE_GEMINI, .api_key_env = "GEMINI_API_KEY" };
-    provider_test_thread(&gemini_data);
     if (gemini_data.thread_status != 0) {
         overall_status = -1;
     }
-
-    // Test Anthropic
-    thread_data_t anthropic_data = { .provider = DP_PROVIDER_ANTHROPIC, .api_key_env = "ANTHROPIC_API_KEY" };
-    provider_test_thread(&anthropic_data);
     if (anthropic_data.thread_status != 0) {
         overall_status = -1;
     }
@@ -120,7 +139,9 @@ static int test_multiprovider_multithread() {
 
 int main() {
     printf("Starting Multi-Provider Multi-Thread Tests...\n");
+    curl_global_init(CURL_GLOBAL_ALL);
     RUN_TEST(test_multiprovider_multithread);
+    curl_global_cleanup();
     printf("Multi-Provider Multi-Thread Tests finished.\n");
 
     if (test_failures > 0) {
