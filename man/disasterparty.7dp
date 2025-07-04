@@ -1,5 +1,5 @@
-.\" Man page for disasterparty library overview
-.TH disasterparty 7 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for disasterparty library overview
+.TH disasterparty 7 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 disasterparty \- overview of the Disaster Party LLM client library
@@ -33,6 +33,8 @@ A dedicated, detailed streaming callback for Anthropic's event-based stream.
 Interface for listing available models from the supported providers.
 .IP \(bu 2
 Helper functions for constructing request messages and serializing/deserializing conversations to/from JSON or files.
+.IP \(bu 2
+Support for file uploads and file references in messages (Gemini only).
 
 .SH SYNOPSIS
 To use the Disaster Party library in your C program, include the main header file:
@@ -71,9 +73,18 @@ Using pkg-config is recommended if available:
 5. To list available models, use
 .BR dp_list_models (3).
 .br
-6. Always free allocated resources using functions like
+6. To save/load conversations, use
+.BR dp_serialize_messages_to_file (3)
+   and
+.BR dp_deserialize_messages_from_file (3).
+.br
+7. To upload files for multimodal models, use
+.BR dp_upload_file (3).
+.br
+8. Always free allocated resources using functions like
 .BR dp_free_response_content (3),
 .BR dp_free_model_list (3),
+.BR dp_free_file (3),
 .BR dp_free_messages (3),
    and finally
 .BR dp_destroy_context (3).
@@ -104,6 +115,59 @@ The main header file to include in your C programs.
 .TP
 .I libdisasterparty.so
 The shared library file.
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set. Skipping example.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    dp_message_t message = { .role = DP_ROLE_USER };
+    dp_message_add_text_part(&message, "Hello, tell me a fun fact.");
+
+    dp_request_config_t config = {
+        .model = "gemini-2.5-flash",
+        .messages = &message,
+        .num_messages = 1,
+        .max_tokens = 50,
+        .stream = false
+    };
+
+    dp_response_t response = {0};
+    int ret = dp_perform_completion(context, &config, &response);
+
+    if (ret == 0 && response.http_status_code >= 200 && response.http_status_code < 300) {
+        printf("LLM Response: ");
+        if (response.num_parts > 0 && response.parts[0].text) {
+            printf("%s\n", response.parts[0].text);
+        } else {
+            printf("(No text content in response)\n");
+        }
+    } else {
+        fprintf(stderr, "API call failed: HTTP %ld, Error: %s\n",
+                response.http_status_code, response.error_message ? response.error_message : "(none)");
+    }
+
+    dp_free_response_content(&response);
+    dp_free_messages(&message, 1);
+    dp_destroy_context(context);
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
