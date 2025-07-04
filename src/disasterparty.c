@@ -127,20 +127,6 @@ void dp_destroy_context(dp_context_t* context) {
     free(context);
 }
 
-static void add_common_parameters_to_payload(cJSON* root, const dp_request_config_t* request_config) {
-    if (request_config->top_p > 0.0) {
-        cJSON_AddNumberToObject(root, "top_p", request_config->top_p);
-    }
-    // Note: Anthropic uses "stop_sequences", OpenAI uses "stop". We will use "stop_sequences"
-    // as the field name and map it to "stop" for OpenAI for compatibility.
-    if (request_config->stop_sequences && request_config->num_stop_sequences > 0) {
-        cJSON* stop_array = cJSON_CreateStringArray(request_config->stop_sequences, request_config->num_stop_sequences);
-        // Field name depends on provider; handled by specific builders
-        // For now, let's assume the callers will handle the key name.
-        // No, let's handle it here based on provider. Wait, this helper is too generic.
-        // Let's add it in the main builders.
-    }
-}
 
 static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
