@@ -59,16 +59,16 @@ To run the full test suite, the following environment variables are needed:
 export OPENAI_API_KEY="sk-..."
 export GEMINI_API_KEY="..."
 export ANTHROPIC_API_KEY="..."
-export GEMINI_TEST_IMAGE_PATH="/path/to/your/image.jpg"
-export ANTHROPIC_TEST_IMAGE_PATH="/path/to/your/image.jpg"
-export TEST_IMAGE_PATH_1="/path/to/your/first_image.jpg"
-export TEST_IMAGE_PATH_2="/path/to/your/second_image.jpg"
+export GEMINI_TEST_IMAGE_PATH="tests/assets/sample.png"
+export ANTHROPIC_TEST_IMAGE_PATH="tests/assets/sample.png"
+export TEST_IMAGE_PATH_1="tests/assets/sample.png"
+export TEST_IMAGE_PATH_2="tests/assets/sample.pdf"
 
 make check
 ```
 
 ### Full List of Unit Tests
-The test suite currently includes the following 21 test programs:
+The test suite currently includes the following 25 test programs:
 
 * `test_openai_text_dp`
 * `test_openai_multimodal_dp`
@@ -80,14 +80,18 @@ The test suite currently includes the following 21 test programs:
 * `test_gemini_streaming_dp`
 * `test_gemini_list_models_dp`
 * `test_gemini_streaming_multimodal_dp`
+* `test_gemini_file_completion_dp`
+* `test_gemini_file_attachment_dp`
 * `test_anthropic_text_dp`
 * `test_anthropic_multimodal_dp`
 * `test_anthropic_streaming_dp`
 * `test_anthropic_streaming_detailed_dp`
 * `test_anthropic_list_models_dp`
 * `test_anthropic_streaming_multimodal_dp`
+* `test_anthropic_all_event_types_dp`
 * `test_serialization_dp`
 * `test_inline_multimodal_dp`
 * `test_error_handling_dp`
 * `test_parameters_dp`
 * `test_anthropic_streaming_multimodal_detailed_dp`
+* `test_multiprovider_multithread_dp`
