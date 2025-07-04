@@ -1,3 +1,11 @@
+# Version 0.4.0 (2025-07-03)
+* **ABI BREAKING CHANGE**: The `dp_content_part_t` struct has been modified with the addition of a `file_uri` member. The `dp_content_part_type_t` enum has also been updated with `DP_CONTENT_PART_FILE_REFERENCE`. Recompilation of applications will be required.
+* Added support for file uploads and file references in messages (Gemini only).
+* Updated Gemini default models in tests to `gemini-2.5-flash`.
+* Improved test robustness and reporting, treating API quota errors (HTTP 429) as skips.
+* Updated all manual pages with correct dates and properly formatted example code.
+* Updated `README.md` and `api.json` to reflect new features and version.
+
 # Version 0.3.0 (2025-06-14)
 * **ABI BREAKING CHANGE**: The `dp_request_config_t` struct will be modified. Recompilation of applications will be required.
 * Add support for expanded generation parameters: `top_p`, `top_k`, and `stop_sequences`.
