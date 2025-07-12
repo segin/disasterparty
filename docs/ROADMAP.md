@@ -38,17 +38,8 @@ These features enhance the core capabilities of the library.
     4.  **Payload Builder Updates:** Update the Gemini and Anthropic payload builders to handle this new part type.
     5.  **New Unit Test:** Add a test case that sends a base64-encoded text file or PDF.
 
-### 2.2. Implement Token Counting
+## [2.2] - 2024-03-21
 
-* **Goal:** Provide a way for library consumers to accurately count the number of tokens in a prompt before sending it, to manage costs and context windows.
-* **Difficulty:** Medium (due to differing provider strategies)
-* **Implementation Plan:**
-    1.  **New API Function:** Add `int dp_count_tokens(dp_context_t* context, const dp_request_config_t* request_config, size_t* token_count_out);`.
-    2.  **Network-Based (Gemini/Anthropic):** Implement the function to call their respective `countTokens` API endpoints.
-    3.  **Client-Side (OpenAI):** Implement an optional feature, enabled by a `./configure` flag (`--enable-tiktoken`), that links against a C-compatible `tiktoken` library (e.g., `kojix2/tiktoken-c`) to provide fast, local, and accurate token counts for OpenAI models.
-    4.  **New Unit Test:** Create `test_token_counting_dp.c` to verify the functionality.
-
-### 2.3. Configurable User-Agent
 * **Goal:** Allow applications using `libdisasterparty` to prepend their own name and version to the HTTP User-Agent string for better tracking and identification by API providers. The final string would be in the format `AppName/AppVersion (disasterparty/DP_VERSION)`.
 * **Difficulty:** Low
 * **Implementation Plan:**
@@ -64,6 +55,16 @@ These features enhance the core capabilities of the library.
     2.  **Internal Change:** The `dp_context_s` struct will store the fully-formed user-agent string.
     3.  **Logic Update:** `dp_init_context` will construct the user-agent string. If `app_name` is `NULL`, it will default to `disasterparty/DP_VERSION`.
     4.  **Usage Update:** All `curl_easy_setopt` calls for `CURLOPT_USERAGENT` will use the string stored in the context.
+
+## [2.3] - 2025-07-11
+
+* **Goal:** Provide a way for library consumers to accurately count the number of tokens in a prompt before sending it, to manage costs and context windows.
+* **Difficulty:** Medium (due to differing provider strategies)
+* **Implementation Plan:**
+    1.  **New API Function:** Add `int dp_count_tokens(dp_context_t* context, const dp_request_config_t* request_config, size_t* token_count_out);`.
+    2.  **Network-Based (Gemini/Anthropic):** Implement the function to call their respective `countTokens` API endpoints.
+    3.  **Client-Side (OpenAI):** Implement an optional feature, enabled by a `./configure` flag (`--enable-tiktoken`), that links against a C-compatible `tiktoken` library (e.g., `kojix2/tiktoken-c`) to provide fast, local, and accurate token counts for OpenAI models.
+    4.  **New Unit Test:** Create `test_token_counting_dp.c` to verify the functionality.
 
 ---
 
