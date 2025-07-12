@@ -127,6 +127,128 @@ void dp_destroy_context(dp_context_t* context) {
     free(context);
 }
 
+static char* build_gemini_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+
+    if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
+        cJSON* sys_instruction = cJSON_AddObjectToObject(root, "system_instruction");
+        if (!sys_instruction) { cJSON_Delete(root); return NULL; }
+        cJSON* sys_parts_array = cJSON_AddArrayToObject(sys_instruction, "parts");
+        if (!sys_parts_array) { cJSON_Delete(root); return NULL; }
+        cJSON* sys_part_obj = cJSON_CreateObject();
+        if (!sys_part_obj) { cJSON_Delete(root); return NULL; }
+        cJSON_AddStringToObject(sys_part_obj, "text", request_config->system_prompt);
+        cJSON_AddItemToArray(sys_parts_array, sys_part_obj);
+    }
+
+    cJSON *contents_array = cJSON_AddArrayToObject(root, "contents");
+    if (!contents_array) { cJSON_Delete(root); return NULL; }
+
+    for (size_t i = 0; i < request_config->num_messages; ++i) {
+        const dp_message_t* msg = &request_config->messages[i];
+        if (msg->role == DP_ROLE_SYSTEM) continue;
+
+        cJSON *content_obj = cJSON_CreateObject();
+        if (!content_obj) { cJSON_Delete(root); return NULL; }
+
+        const char* role_str = (msg->role == DP_ROLE_ASSISTANT) ? "model" : "user";
+        cJSON_AddStringToObject(content_obj, "role", role_str);
+
+        cJSON *parts_array = cJSON_AddArrayToObject(content_obj, "parts");
+        if (!parts_array) { cJSON_Delete(root); return NULL; }
+
+        for (size_t j = 0; j < msg->num_parts; ++j) {
+            const dp_content_part_t* part = &msg->parts[j];
+            cJSON *part_obj = cJSON_CreateObject();
+            if (!part_obj) { cJSON_Delete(root); return NULL; }
+
+            if (part->type == DP_CONTENT_PART_TEXT) {
+                cJSON_AddStringToObject(part_obj, "text", part->text);
+            } else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
+                cJSON *inline_data_obj = cJSON_CreateObject();
+                if (!inline_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(inline_data_obj, "mime_type", part->image_base64.mime_type);
+                cJSON_AddStringToObject(inline_data_obj, "data", part->image_base64.data); 
+                cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
+            } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
+                char temp_text[512];
+                snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
+                cJSON_AddStringToObject(part_obj, "text", temp_text);
+            }
+            cJSON_AddItemToArray(parts_array, part_obj);
+        }
+        cJSON_AddItemToArray(contents_array, content_obj);
+    }
+
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string; 
+}
+
+static char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+
+    cJSON_AddStringToObject(root, "model", request_config->model);
+
+    if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
+        cJSON_AddStringToObject(root, "system", request_config->system_prompt);
+    }
+
+    cJSON *messages_array = cJSON_AddArrayToObject(root, "messages");
+    if (!messages_array) { cJSON_Delete(root); return NULL; }
+
+    for (size_t i = 0; i < request_config->num_messages; ++i) {
+        const dp_message_t* msg = &request_config->messages[i];
+        if (msg->role == DP_ROLE_SYSTEM) continue;
+
+        cJSON *msg_obj = cJSON_CreateObject();
+        if (!msg_obj) { cJSON_Delete(root); return NULL; }
+
+        const char* role_str = (msg->role == DP_ROLE_ASSISTANT) ? "assistant" : "user";
+        cJSON_AddStringToObject(msg_obj, "role", role_str);
+
+        if (msg->num_parts == 1 && msg->parts[0].type == DP_CONTENT_PART_TEXT) {
+            cJSON_AddStringToObject(msg_obj, "content", msg->parts[0].text);
+        } else {
+            cJSON *content_array_for_anthropic = cJSON_CreateArray();
+            if(!content_array_for_anthropic) { cJSON_Delete(msg_obj); cJSON_Delete(root); return NULL; }
+
+            for (size_t j = 0; j < msg->num_parts; ++j) {
+                const dp_content_part_t* part = &msg->parts[j];
+                cJSON *part_obj = cJSON_CreateObject();
+                if (!part_obj) { cJSON_Delete(content_array_for_anthropic) ;cJSON_Delete(msg_obj); cJSON_Delete(root); return NULL; }
+
+                if (part->type == DP_CONTENT_PART_TEXT) {
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", part->text);
+                } else if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
+                    cJSON_AddStringToObject(part_obj, "type", "image");
+                    cJSON *source_obj = cJSON_CreateObject();
+                    if(!source_obj) {cJSON_Delete(part_obj); cJSON_Delete(content_array_for_anthropic); cJSON_Delete(msg_obj); cJSON_Delete(root); return NULL;}
+                    cJSON_AddStringToObject(source_obj, "type", "base64");
+                    cJSON_AddStringToObject(source_obj, "media_type", part->image_base64.mime_type);
+                    cJSON_AddStringToObject(source_obj, "data", part->image_base64.data);
+                    cJSON_AddItemToObject(part_obj, "source", source_obj);
+                } else if (part->type == DP_CONTENT_PART_IMAGE_URL) {
+                    char temp_text[512];
+                    snprintf(temp_text, sizeof(temp_text), "Image referenced by URL: %s (Anthropic prefers direct image data)", part->image_url);
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", temp_text);
+                }
+                cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
+            }
+            cJSON_AddItemToObject(msg_obj, "content", content_array_for_anthropic);
+        }
+        cJSON_AddItemToArray(messages_array, msg_obj);
+    }
+    
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string;
+}
+
 
 static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
@@ -1718,38 +1840,55 @@ int dp_count_tokens(dp_context_t* context,
     }
     *token_count_out = 0;
 
-    if (context->provider != DP_PROVIDER_GOOGLE_GEMINI) {
-        fprintf(stderr, "dp_count_tokens currently only supports the Gemini provider.\n");
-        return -1;
-    }
-
     CURL* curl = curl_easy_init();
     if (!curl) {
         fprintf(stderr, "curl_easy_init() failed for dp_count_tokens.\n");
         return -1;
     }
 
-    char* json_payload_str = build_gemini_json_payload_with_cjson(request_config);
-    if (!json_payload_str) {
-        fprintf(stderr, "Failed to build JSON payload for dp_count_tokens.\n");
-        curl_easy_cleanup(curl);
-        return -1;
-    }
-
+    char* json_payload_str = NULL;
     char url[1024];
-    snprintf(url, sizeof(url), "%s/models/%s:countTokens?key=%s",
-             context->api_base_url, request_config->model, context->api_key);
-
     struct curl_slist* headers = NULL;
+    int return_code = -1;
+    long http_status_code = 0;
+
     headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    switch (context->provider) {
+        case DP_PROVIDER_OPENAI_COMPATIBLE:
+            fprintf(stderr, "dp_count_tokens is not implemented for OpenAI provider.\n");
+            return_code = -1;
+            goto cleanup;
+        case DP_PROVIDER_GOOGLE_GEMINI:
+            json_payload_str = build_gemini_count_tokens_json_payload_with_cjson(request_config);
+            if (!json_payload_str) {
+                fprintf(stderr, "Failed to build JSON payload for dp_count_tokens (Gemini).\n");
+                goto cleanup;
+            }
+            snprintf(url, sizeof(url), "%s/models/%s:countTokens?key=%s",
+                     context->api_base_url, request_config->model, context->api_key);
+            break;
+        case DP_PROVIDER_ANTHROPIC:
+            json_payload_str = build_anthropic_count_tokens_json_payload_with_cjson(request_config);
+            if (!json_payload_str) {
+                fprintf(stderr, "Failed to build JSON payload for dp_count_tokens (Anthropic).\n");
+                goto cleanup;
+            }
+            snprintf(url, sizeof(url), "%s/messages/count_tokens", context->api_base_url);
+            char api_key_header[512];
+            snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
+            headers = curl_slist_append(headers, api_key_header);
+            headers = curl_slist_append(headers, "anthropic-version: 2023-06-01");
+            break;
+        default:
+            fprintf(stderr, "Unsupported provider for dp_count_tokens.\n");
+            goto cleanup;
+    }
 
     memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
     if (!chunk_mem.memory) {
         fprintf(stderr, "Memory allocation for response chunk failed in dp_count_tokens.\n");
-        free(json_payload_str);
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-        return -1;
+        goto cleanup;
     }
     chunk_mem.memory[0] = '\0';
 
@@ -1761,25 +1900,36 @@ int dp_count_tokens(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
 
     CURLcode res = curl_easy_perform(curl);
-    long http_status_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
-
-    int return_code = -1;
 
     if (res == CURLE_OK && http_status_code >= 200 && http_status_code < 300) {
         cJSON *root = cJSON_Parse(chunk_mem.memory);
         if (root) {
-            cJSON *total_tokens_item = cJSON_GetObjectItemCaseSensitive(root, "totalTokens");
+            cJSON *total_tokens_item = NULL;
+            if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                total_tokens_item = cJSON_GetObjectItemCaseSensitive(root, "totalTokens");
+            } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
+                total_tokens_item = cJSON_GetObjectItemCaseSensitive(root, "input_tokens");
+            }
+
             if (cJSON_IsNumber(total_tokens_item)) {
                 *token_count_out = (size_t)total_tokens_item->valuedouble;
                 return_code = 0;
             }
             cJSON_Delete(root);
+        } else {
+            fprintf(stderr, "Failed to parse JSON response for token count.\n");
+        }
+    } else {
+        fprintf(stderr, "API call for token count failed: %s (HTTP status: %ld)\n", curl_easy_strerror(res), http_status_code);
+        if (chunk_mem.memory) {
+            fprintf(stderr, "Response body: %s\n", chunk_mem.memory);
         }
     }
 
+cleanup:
     free(json_payload_str);
-    free(chunk_mem.memory);
+    if (chunk_mem.memory) free(chunk_mem.memory);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
