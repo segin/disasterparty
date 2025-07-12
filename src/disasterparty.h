@@ -156,6 +156,10 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
 
 int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
+int dp_count_tokens(dp_context_t* context,
+                    const dp_request_config_t* request_config,
+                    size_t* token_count_out);
+
 void dp_free_model_list(dp_model_list_t* model_list);
 
 void dp_free_response_content(dp_response_t* response);

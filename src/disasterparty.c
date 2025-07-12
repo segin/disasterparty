@@ -1710,3 +1710,80 @@ int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_
 
 // ---- END SERIALIZATION FUNCTIONS ----
 
+int dp_count_tokens(dp_context_t* context,
+                    const dp_request_config_t* request_config,
+                    size_t* token_count_out) {
+    if (!context || !request_config || !token_count_out) {
+        return -1;
+    }
+    *token_count_out = 0;
+
+    if (context->provider != DP_PROVIDER_GOOGLE_GEMINI) {
+        fprintf(stderr, "dp_count_tokens currently only supports the Gemini provider.\n");
+        return -1;
+    }
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "curl_easy_init() failed for dp_count_tokens.\n");
+        return -1;
+    }
+
+    char* json_payload_str = build_gemini_json_payload_with_cjson(request_config);
+    if (!json_payload_str) {
+        fprintf(stderr, "Failed to build JSON payload for dp_count_tokens.\n");
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/models/%s:countTokens?key=%s",
+             context->api_base_url, request_config->model, context->api_key);
+
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    if (!chunk_mem.memory) {
+        fprintf(stderr, "Memory allocation for response chunk failed in dp_count_tokens.\n");
+        free(json_payload_str);
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+    chunk_mem.memory[0] = '\0';
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+
+    CURLcode res = curl_easy_perform(curl);
+    long http_status_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
+
+    int return_code = -1;
+
+    if (res == CURLE_OK && http_status_code >= 200 && http_status_code < 300) {
+        cJSON *root = cJSON_Parse(chunk_mem.memory);
+        if (root) {
+            cJSON *total_tokens_item = cJSON_GetObjectItemCaseSensitive(root, "totalTokens");
+            if (cJSON_IsNumber(total_tokens_item)) {
+                *token_count_out = (size_t)total_tokens_item->valuedouble;
+                return_code = 0;
+            }
+            cJSON_Delete(root);
+        }
+    }
+
+    free(json_payload_str);
+    free(chunk_mem.memory);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return return_code;
+}
+
+

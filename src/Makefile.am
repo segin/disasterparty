@@ -12,5 +12,5 @@ libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS)
 pkgincludedir = $(includedir)/$(PACKAGE_TARNAME)
 pkginclude_HEADERS = disasterparty.h 
 
-AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src 
+AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src -I$(top_srcdir)/thirdparty/libcjson/install/include -I$(top_srcdir)/thirdparty/libcjson/install/include 
 

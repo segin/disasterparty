@@ -34,7 +34,7 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-DP_LT_VERSION="2:0:0"
+DP_LT_VERSION="3:0:0"
 AC_SUBST(DP_LT_VERSION)
 AC_SUBST(PACKAGE_VERSION)
 
