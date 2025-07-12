@@ -63,7 +63,7 @@ These features enhance the core capabilities of the library.
 * **Implementation Plan:**
     1.  **New API Function:** Add `int dp_count_tokens(dp_context_t* context, const dp_request_config_t* request_config, size_t* token_count_out);`.
     2.  **Network-Based (Gemini/Anthropic):** Implement the function to call their respective `countTokens` API endpoints.
-    3.  **Client-Side (OpenAI):** Implement an optional feature, enabled by a `./configure` flag (`--enable-tiktoken`), that links against a C-compatible `tiktoken` library (e.g., `kojix2/tiktoken-c`) to provide fast, local, and accurate token counts for OpenAI models.
+    3.  **OpenAI:** Token counting is not supported for the OpenAI provider. The `dp_count_tokens` function will return an error for this provider.
     4.  **New Unit Test:** Create `test_token_counting_dp.c` to verify the functionality.
 
 ---

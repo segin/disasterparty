@@ -1856,7 +1856,7 @@ int dp_count_tokens(dp_context_t* context,
 
     switch (context->provider) {
         case DP_PROVIDER_OPENAI_COMPATIBLE:
-            fprintf(stderr, "dp_count_tokens is not implemented for OpenAI provider.\n");
+            fprintf(stderr, "dp_count_tokens is not supported for the OpenAI provider.\n");
             return_code = -1;
             goto cleanup;
         case DP_PROVIDER_GOOGLE_GEMINI:
