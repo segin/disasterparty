@@ -42,7 +42,8 @@ typedef enum {
 typedef enum {
     DP_CONTENT_PART_TEXT, 
     DP_CONTENT_PART_IMAGE_URL,
-    DP_CONTENT_PART_IMAGE_BASE64
+    DP_CONTENT_PART_IMAGE_BASE64,
+    DP_CONTENT_PART_FILE_REFERENCE
 } dp_content_part_type_t; 
 
 typedef struct {
@@ -53,6 +54,10 @@ typedef struct {
         char* mime_type;
         char* data; 
     } image_base64;
+    struct {
+        char* file_id;
+        char* mime_type;
+    } file_reference;
 } dp_content_part_t; 
 
 typedef struct {
@@ -168,6 +173,7 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages);
 bool dp_message_add_text_part(dp_message_t* message, const char* text);
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url);
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
+bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_id, const char* mime_type);
 
 const char* dp_get_version(void);
 
