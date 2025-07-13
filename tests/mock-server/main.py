@@ -24,7 +24,7 @@ def completions_openai():
     if scenario == 'ABRUPT_STREAM':
         def generate_abrupt_stream():
             # Send a valid chunk first
-            yield "data: " + json.dumps({"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":None}]}) + "\n\n"
+            yield "data: " + json.dumps({"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant"}},{"finish_reason":None}]}) + "\n\n"
             time.sleep(0.01)
             # Send a deliberately truncated JSON object. Note the missing closing braces and quotes.
             yield "data: {\"id\":\"truncated_chunk\", \"content\":\"partial"
@@ -57,6 +57,18 @@ def completions_gemini(model_id):
 
     return Response(json.dumps({"error": "No test scenario triggered for Gemini completions endpoint"}), status=400, mimetype='application/json')
 
+@app.route('/v1/messages', methods=['POST'])
+def completions_anthropic():
+    data = request.get_json()
+    scenario = None
+    if 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+
+    if scenario == 'AUTH_FAILURE_ANTHROPIC':
+        return Response(json.dumps({"type": "error", "message": "Authentication Error"}), status=401, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for Anthropic completions endpoint"}), status=400, mimetype='application/json')
+
 @app.route('/v1/models', methods=['GET'])
 def list_models():
     scenario = None
@@ -67,6 +79,8 @@ def list_models():
     elif 'key' in request.args:
         scenario = request.args.get('key')
 
+    print(f"list_models: Received scenario: {scenario}") # Debug print
+
     # --- Scenario: Empty Model List ---
     if scenario == 'EMPTY_LIST':
         return Response(json.dumps({"object": "list", "data": []}), mimetype='application/json')
@@ -76,7 +90,7 @@ def list_models():
         return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
 
     # --- Scenario: Authentication Failure (401) ---
-    if scenario == 'AUTH_FAILURE_OPENAI' or scenario == 'AUTH_FAILURE_GEMINI':
+    if scenario == 'AUTH_FAILURE_OPENAI' or scenario == 'AUTH_FAILURE_GEMINI' or scenario == 'AUTH_FAILURE_ANTHROPIC':
         return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
 
     # --- Default: A valid, successful response (can be added later) ---
@@ -136,7 +150,7 @@ def upload_file_gemini():
     return Response(json.dumps({"error": "No test scenario triggered for files:upload endpoint"}), status=400, mimetype='application/json')
 
 @app.route('/v1/models/<model_id>:countTokens', methods=['POST'])
-def count_tokens(model_id):
+def count_tokens_gemini(model_id):
     scenario = None
     if 'Authorization' in request.headers:
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
@@ -149,6 +163,17 @@ def count_tokens(model_id):
         return Response(json.dumps({"error": {"message": "Invalid Authentication", "code": 401}}), status=401, mimetype='application/json')
 
     return Response(json.dumps({"error": "No test scenario triggered for countTokens endpoint"}), status=400, mimetype='application/json')
+
+@app.route('/v1/messages/count_tokens', methods=['POST'])
+def count_tokens_anthropic():
+    scenario = None
+    if 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+
+    if scenario == 'AUTH_FAILURE_ANTHROPIC':
+        return Response(json.dumps({"type": "error", "message": "Authentication Error"}), status=401, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for Anthropic count_tokens endpoint"}), status=400, mimetype='application/json')
 
 if __name__ == '__main__':
     app.run(port=8080)
