@@ -110,6 +110,12 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
                         if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
                             dp_message_add_base64_image_part(current_msg, mime_item->valuestring, data_item->valuestring);
                         }
+                    } else if (strcmp(type_item->valuestring, "file_reference") == 0) {
+                        cJSON* file_id_item = cJSON_GetObjectItemCaseSensitive(part_obj, "file_id");
+                        cJSON* mime_item = cJSON_GetObjectItemCaseSensitive(part_obj, "mime_type");
+                        if (cJSON_IsString(file_id_item) && cJSON_IsString(mime_item)) {
+                            dp_message_add_file_reference_part(current_msg, file_id_item->valuestring, mime_item->valuestring);
+                        }
                     }
                 }
             }
