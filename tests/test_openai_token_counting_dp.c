@@ -24,7 +24,8 @@ int main() {
     dp_message_add_text_part(&messages[0], "This should fail because token counting is not supported for OpenAI.");
 
     size_t token_count = 0;
-    int result = dp_count_tokens(context, &request_config, &token_count);
+    long http_status_code = 0;
+    int result = dp_count_tokens(context, &request_config, &token_count, &http_status_code);
 
     dp_free_messages(messages, request_config.num_messages);
     dp_destroy_context(context);

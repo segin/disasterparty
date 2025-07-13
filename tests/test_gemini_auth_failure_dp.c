@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TEST_API_KEY "AUTH_FAILURE_OPENAI"
-#define TEST_MODEL "gpt-3.5-turbo"
+#define TEST_API_KEY "AUTH_FAILURE_GEMINI"
+#define TEST_MODEL "gemini-pro"
 
 // Helper function to run a test case and check for 401
-int run_auth_test(dp_context_t* context, const char* test_name, int (*test_func)(dp_context_t*, ...)) {
+int run_auth_test(dp_context_t* context, const char* test_name) {
     printf("  Testing %s for 401...\n", test_name);
     int ret = -1;
     long http_status = 0;
@@ -33,7 +33,7 @@ int run_auth_test(dp_context_t* context, const char* test_name, int (*test_func)
         dp_free_model_list(model_list);
     } else if (strcmp(test_name, "dp_upload_file") == 0) {
         // Create a dummy file for upload
-        const char* dummy_file_path = "./dummy_auth_test_file.txt";
+        const char* dummy_file_path = "./dummy_auth_test_file_gemini.txt";
         FILE* fp = fopen(dummy_file_path, "w");
         if (fp) { fputs("dummy content", fp); fclose(fp); }
 
@@ -43,7 +43,6 @@ int run_auth_test(dp_context_t* context, const char* test_name, int (*test_func)
         dp_free_file(uploaded_file);
         remove(dummy_file_path);
     } else if (strcmp(test_name, "dp_count_tokens") == 0) {
-        // OpenAI does not have a direct token counting endpoint, so this should return DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED
         size_t token_count = 0;
         long count_tokens_http_status = 0;
         dp_request_config_t request_config = {0};
@@ -55,14 +54,8 @@ int run_auth_test(dp_context_t* context, const char* test_name, int (*test_func)
         request_config.messages = messages;
         request_config.num_messages = 1;
         ret = dp_count_tokens(context, &request_config, &token_count, &count_tokens_http_status);
-        // For this specific case, we expect DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED, not 401 from mock
-        if (ret == DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED) {
-            printf("  SUCCESS: dp_count_tokens correctly returned NOT_SUPPORTED for OpenAI.\n");
-            return 0; // Indicate success for this specific sub-test
-        } else {
-            fprintf(stderr, "  FAILURE: dp_count_tokens did not return NOT_SUPPORTED for OpenAI (ret: %d, status: %ld).\n", ret, count_tokens_http_status);
-            return -1; // Indicate failure for this specific sub-test
-        }
+        http_status = count_tokens_http_status;
+        dp_free_messages(messages, 1);
     } else {
         fprintf(stderr, "  ERROR: Unknown test function %s\n", test_name);
         return -1;
@@ -84,9 +77,9 @@ int main() {
         return 77;
     }
 
-    printf("Testing OpenAI API authentication failure (HTTP 401)...\n");
+    printf("Testing Google Gemini API authentication failure (HTTP 401)...\n");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, TEST_API_KEY, mock_server_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, TEST_API_KEY, mock_server_url);
     if (!context) {
         fprintf(stderr, "Failed to initialize context for mock server.\n");
         return EXIT_FAILURE;
@@ -94,10 +87,10 @@ int main() {
 
     int overall_success = EXIT_SUCCESS;
 
-    if (run_auth_test(context, "dp_perform_completion", NULL) != 0) overall_success = EXIT_FAILURE;
-    if (run_auth_test(context, "dp_list_models", NULL) != 0) overall_success = EXIT_FAILURE;
-    if (run_auth_test(context, "dp_upload_file", NULL) != 0) overall_success = EXIT_FAILURE;
-    if (run_auth_test(context, "dp_count_tokens", NULL) != 0) overall_success = EXIT_FAILURE;
+    if (run_auth_test(context, "dp_perform_completion") != 0) overall_success = EXIT_FAILURE;
+    if (run_auth_test(context, "dp_list_models") != 0) overall_success = EXIT_FAILURE;
+    if (run_auth_test(context, "dp_upload_file") != 0) overall_success = EXIT_FAILURE;
+    if (run_auth_test(context, "dp_count_tokens") != 0) overall_success = EXIT_FAILURE;
 
     dp_destroy_context(context);
 

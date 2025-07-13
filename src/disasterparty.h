@@ -187,7 +187,8 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
 int dp_count_tokens(dp_context_t* context,
                     const dp_request_config_t* request_config,
-                    size_t* token_count_out);
+                    size_t* token_count_out,
+                    long* http_status_code_out);
 
 void dp_free_model_list(dp_model_list_t* model_list);
 

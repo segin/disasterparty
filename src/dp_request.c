@@ -513,7 +513,8 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
         json_payload_str = build_openai_json_payload_with_cjson(request_config);
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
         json_payload_str = build_gemini_json_payload_with_cjson(request_config);
-    } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
+    }
+    else if (context->provider == DP_PROVIDER_ANTHROPIC) {
         json_payload_str = build_anthropic_json_payload_with_cjson(request_config);
     }
     
@@ -548,7 +549,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
         response->error_message = dp_internal_strdup("Memory allocation for response chunk failed.");
         free(json_payload_str); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; 
     }
-    chunk_mem.memory[0] = ' ';
+    chunk_mem.memory[0] = '\0';
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
@@ -556,9 +557,13 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L); // Set a timeout for the entire operation
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // Set a timeout for connection phase
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+
+    fprintf(stderr, "dp_perform_completion: CURLcode: %d, HTTP Status: %ld, Body: %s\n", res, response->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(null)");
 
     if (res != CURLE_OK) {
         asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
@@ -585,13 +590,6 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                         if (cJSON_IsString(msg_item) && msg_item->valuestring) {
                              asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
                         }
-                    } else { 
-                         cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
-                         cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message"); 
-                         if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
-                            cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                            asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
-                         }
                     }
                     cJSON_Delete(error_root);
                 }
@@ -611,13 +609,6 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                     if(cJSON_IsString(msg_item) && msg_item->valuestring){
                         api_err_detail = msg_item->valuestring; 
                     }
-                } else {
-                     cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
-                     cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message");
-                     if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
-                        cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                        api_err_detail = msg_item_anthropic->valuestring;
-                     }
                 }
              }
             if(api_err_detail){
@@ -640,7 +631,8 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
 
 int dp_count_tokens(dp_context_t* context,
                     const dp_request_config_t* request_config,
-                    size_t* token_count_out) {
+                    size_t* token_count_out,
+                    long* http_status_code_out) {
     if (!context || !request_config || !token_count_out) {
         return -1;
     }
@@ -660,7 +652,6 @@ int dp_count_tokens(dp_context_t* context,
     char url[1024];
     struct curl_slist* headers = NULL;
     int return_code = -1;
-    long http_status_code = 0;
     memory_struct_t chunk_mem = { .memory = NULL, .size = 0 };
 
 
@@ -706,11 +697,17 @@ int dp_count_tokens(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L); // Set a timeout for the entire operation
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // Set a timeout for connection phase
 
     CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);
+    if (http_status_code_out) {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code_out);
+    }
 
-    if (res == CURLE_OK && http_status_code >= 200 && http_status_code < 300) {
+    fprintf(stderr, "dp_count_tokens: CURLcode: %d, HTTP Status: %ld, Body: %s\n", res, http_status_code_out ? *http_status_code_out : 0, chunk_mem.memory ? chunk_mem.memory : "(null)");
+
+    if (res == CURLE_OK && (http_status_code_out ? *http_status_code_out : 0) >= 200 && (http_status_code_out ? *http_status_code_out : 0) < 300) {
         cJSON *root = cJSON_Parse(chunk_mem.memory);
         if (root) {
             cJSON *total_tokens_item = NULL;
@@ -729,7 +726,7 @@ int dp_count_tokens(dp_context_t* context,
             fprintf(stderr, "Failed to parse JSON response for token count.\n");
         }
     } else {
-        fprintf(stderr, "API call for token count failed: %s (HTTP status: %ld)\n", curl_easy_strerror(res), http_status_code);
+        fprintf(stderr, "API call for token count failed: %s (HTTP status: %ld)\n", curl_easy_strerror(res), http_status_code_out ? *http_status_code_out : 0);
         if (chunk_mem.memory) {
             fprintf(stderr, "Response body: %s\n", chunk_mem.memory);
         }
@@ -796,7 +793,7 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
         *file_out = NULL;
         return -1;
     }
-    chunk_mem.memory[0] = ' ';
+    chunk_mem.memory[0] = '\0';
 
     // Determine URL and headers based on provider
     if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
@@ -832,9 +829,13 @@ int dp_upload_file(dp_context_t* context, const char* file_path, const char* mim
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L); // Set a timeout for the entire operation
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // Set a timeout for connection phase
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &(*file_out)->http_status_code); // Set HTTP status code here
+
+    fprintf(stderr, "dp_upload_file: CURLcode: %d, HTTP Status: %ld, Body: %s\n", res, (*file_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(null)");
 
     int return_code = -1;
 

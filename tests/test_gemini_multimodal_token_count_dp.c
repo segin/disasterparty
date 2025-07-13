@@ -24,7 +24,8 @@ int main() {
     request_config.num_messages = 1;
 
     size_t token_count = 0;
-    int ret = dp_count_tokens(context, &request_config, &token_count);
+    long http_status_code = 0;
+    int ret = dp_count_tokens(context, &request_config, &token_count, &http_status_code);
 
     if (ret != 0) {
         printf("SUCCESS: dp_count_tokens correctly failed with a dummy API key.\n");

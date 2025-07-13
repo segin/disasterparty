@@ -14,7 +14,7 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test API rate limiting (HTTP 429 response) handling for `dp_perform_completion`.
 - [x] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
 - [x] Test OpenAI API authentication failure (HTTP 401 response) for all major functions.
-- [ ] Test Google Gemini API authentication failure (HTTP 401 response) for all major functions.
+- [x] Test Google Gemini API authentication failure (HTTP 401 response) for all major functions.
 - [ ] Test Anthropic API authentication failure (HTTP 401 response) for all major functions.
 - [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of the `ping` event, ensuring it does not interrupt the stream or get passed to the text callback.
 - [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of an `error` event received mid-stream.

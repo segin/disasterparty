@@ -6,19 +6,15 @@ app = Flask(__name__)
 
 # This single endpoint will simulate different responses based on the prompt.
 @app.route('/v1/chat/completions', methods=['POST'])
-def completions():
+def completions_openai():
     data = request.get_json()
     scenario = None
     if 'Authorization' in request.headers:
-        print(f"Received Authorization header (completions): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
-        print(f"Received x-api-key header (completions): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
-        print(f"Received key arg (completions): {request.args.get('key')}")
         scenario = request.args.get('key')
-    print(f"Extracted scenario (completions): {scenario}")
 
     # --- Scenario 1: Non-JSON Error ---
     if scenario == 'NON_JSON_ERROR':
@@ -45,19 +41,31 @@ def completions():
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered in mock server"}', status=400, mimetype='application/json')
 
+@app.route('/v1/models/<model_id>:generateContent', methods=['POST'])
+def completions_gemini(model_id):
+    data = request.get_json()
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
+
+    if scenario == 'AUTH_FAILURE_GEMINI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "code": 401}}), status=401, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for Gemini completions endpoint"}), status=400, mimetype='application/json')
+
 @app.route('/v1/models', methods=['GET'])
 def list_models():
     scenario = None
     if 'Authorization' in request.headers:
-        print(f"Received Authorization header (models): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
-        print(f"Received x-api-key header (models): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
-        print(f"Received key arg (models): {request.args.get('key')}")
         scenario = request.args.get('key')
-    print(f"Extracted scenario (models): {scenario}")
 
     # --- Scenario: Empty Model List ---
     if scenario == 'EMPTY_LIST':
@@ -68,7 +76,7 @@ def list_models():
         return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
 
     # --- Scenario: Authentication Failure (401) ---
-    if scenario == 'AUTH_FAILURE_OPENAI':
+    if scenario == 'AUTH_FAILURE_OPENAI' or scenario == 'AUTH_FAILURE_GEMINI':
         return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
 
     # --- Default: A valid, successful response (can be added later) ---
@@ -76,18 +84,14 @@ def list_models():
 
 
 @app.route('/v1/files', methods=['POST'])
-def upload_file():
+def upload_file_openai():
     scenario = None
     if 'Authorization' in request.headers:
-        print(f"Received Authorization header (files): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
-        print(f"Received x-api-key header (files): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
-        print(f"Received key arg (files): {request.args.get('key')}")
         scenario = request.args.get('key')
-    print(f"Extracted scenario (files): {scenario}")
 
     if scenario == 'ZERO_BYTE_FILE':
         if request.content_length == 0:
@@ -104,6 +108,47 @@ def upload_file():
         return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
 
     return Response(json.dumps({"error": "No test scenario triggered for files endpoint"}), status=400, mimetype='application/json')
+
+@app.route('/v1/files:upload', methods=['POST'])
+def upload_file_gemini():
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
+
+    if scenario == 'ZERO_BYTE_FILE':
+        if request.content_length == 0:
+            return Response(json.dumps({"error": {"message": "File is empty", "code": 400}}), status=400, mimetype='application/json')
+        else:
+            return Response(json.dumps({"id": "file-123", "filename": "test_file.txt", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
+    elif scenario == 'LARGE_FILE_UPLOAD':
+        # Simulate a provider size limit error
+        if request.content_length > (100 * 1024 * 1024): # > 100MB
+            return Response(json.dumps({"error": {"message": "File size exceeds limit", "code": 413}}), status=413, mimetype='application/json')
+        else:
+            return Response(json.dumps({"id": "file-456", "filename": "large_test_file.bin", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
+    elif scenario == 'AUTH_FAILURE_GEMINI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "code": 401}}), status=401, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for files:upload endpoint"}), status=400, mimetype='application/json')
+
+@app.route('/v1/models/<model_id>:countTokens', methods=['POST'])
+def count_tokens(model_id):
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
+
+    if scenario == 'AUTH_FAILURE_GEMINI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "code": 401}}), status=401, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for countTokens endpoint"}), status=400, mimetype='application/json')
 
 if __name__ == '__main__':
     app.run(port=8080)

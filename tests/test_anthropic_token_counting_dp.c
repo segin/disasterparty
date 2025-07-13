@@ -34,7 +34,8 @@ int main() {
     }
 
     size_t token_count = 0;
-    int result = dp_count_tokens(context, &request_config, &token_count);
+    long http_status_code = 0;
+    int result = dp_count_tokens(context, &request_config, &token_count, &http_status_code);
 
     if (result == 0) {
         printf("Successfully counted tokens.\n");
