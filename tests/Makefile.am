@@ -28,10 +28,10 @@ check_PROGRAMS = \
     test_user_agent_dp \
     test_unsupported_file_uploads_dp \
     test_invalid_provider_dp \
-    test_non_json_error_dp
+    test_gemini_multimodal_token_count_dp
 
 # Sources for each test program
-test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
+test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c
 test_invalid_provider_dp_SOURCES = test_invalid_provider_dp.c
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
 test_openai_multimodal_dp_SOURCES = test_openai_multimodal_dp.c
