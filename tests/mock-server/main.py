@@ -79,8 +79,6 @@ def list_models():
     elif 'key' in request.args:
         scenario = request.args.get('key')
 
-    print(f"list_models: Received scenario: {scenario}") # Debug print
-
     # --- Scenario: Empty Model List ---
     if scenario == 'EMPTY_LIST':
         return Response(json.dumps({"object": "list", "data": []}), mimetype='application/json')
