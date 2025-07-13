@@ -64,11 +64,11 @@ unsigned char* read_file_to_buffer(const char* filename, size_t* file_size) {
 int main(int argc, char* argv[]) {
     printf("Running Inline Multimodal Context Test...\n");
 
-    const char* image_path_1 = getenv("TEST_IMAGE_PATH_1");
+    const char* image_path_1 = getenv("TEST_IMAGE_PATH");
     const char* image_path_2 = getenv("TEST_IMAGE_PATH_2");
 
     if (!image_path_1 || !image_path_2) {
-        printf("SKIP: Set TEST_IMAGE_PATH_1 and TEST_IMAGE_PATH_2 to run this test.\n");
+        printf("SKIP: Set TEST_IMAGE_PATH and TEST_IMAGE_PATH_2 to run this test.\n");
         return 77;
     }
 

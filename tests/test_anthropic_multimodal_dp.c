@@ -36,12 +36,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    const char* image_path = NULL;
-    if (argc > 1) { image_path = argv[1]; }
-    else { image_path = getenv("ANTHROPIC_TEST_IMAGE_PATH");}
+    const char* image_path = getenv("TEST_IMAGE_PATH");
     if (!image_path) {
-        printf("SKIP: Image path not provided. Use %s [path] or set ANTHROPIC_TEST_IMAGE_PATH\n", argv[0]);
-        curl_global_cleanup();
+        printf("SKIP: TEST_IMAGE_PATH environment variable not set. Please set it to the path of an image file.\n");
         return 77;
     }
 
