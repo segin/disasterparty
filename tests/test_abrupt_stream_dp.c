@@ -22,7 +22,7 @@ int main() {
 
     printf("Testing abrupt stream handling...\n");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "dummy_key", mock_server_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "ABRUPT_STREAM", mock_server_url);
     if (!context) {
         fprintf(stderr, "Failed to initialize context for mock server.\n");
         return EXIT_FAILURE;
@@ -34,7 +34,7 @@ int main() {
     dp_message_t messages[1];
     memset(messages, 0, sizeof(messages));
     messages[0].role = DP_ROLE_USER;
-    dp_message_add_text_part(&messages[0], "test [ABRUPT_STREAM]");
+    dp_message_add_text_part(&messages[0], "test message");
     request_config.messages = messages;
     request_config.num_messages = 1;
 

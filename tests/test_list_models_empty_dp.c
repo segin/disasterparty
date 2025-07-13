@@ -15,7 +15,7 @@ int main() {
     printf("Testing Empty Model List Scenario:\n");
 
     dp_context_t* context = NULL;
-    context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "dummy_key", "http://localhost:8080/v1");
+    context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "EMPTY_LIST", "http://localhost:8080/v1");
     if (!context) {
         fprintf(stderr, "Failed to initialize Disaster Party context.\n");
         curl_global_cleanup();

@@ -8,7 +8,13 @@ app = Flask(__name__)
 @app.route('/v1/chat/completions', methods=['POST'])
 def completions():
     data = request.get_json()
-    scenario = request.headers.get('X-Test-Scenario')
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
 
     # --- Scenario 1: Non-JSON Error ---
     if scenario == 'NON_JSON_ERROR':
@@ -29,8 +35,16 @@ def completions():
 
 @app.route('/v1/models', methods=['GET'])
 def list_models():
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
+
     # --- Scenario: Empty Model List ---
-    if request.headers.get('X-Test-Scenario') == 'EMPTY_LIST':
+    if scenario == 'EMPTY_LIST':
         return Response(json.dumps({"object": "list", "data": []}), mimetype='application/json')
 
     # --- Default: A valid, successful response (can be added later) ---
