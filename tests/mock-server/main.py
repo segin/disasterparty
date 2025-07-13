@@ -66,6 +66,16 @@ def completions_anthropic():
 
     if scenario == 'AUTH_FAILURE_ANTHROPIC':
         return Response(json.dumps({"type": "error", "message": "Authentication Error"}), status=401, mimetype='application/json')
+    elif scenario == 'STREAM_PING_ANTHROPIC':
+        def generate_ping_stream():
+            yield "event: message_start\ndata: {\"message\":{\"id\":\"msg_01J1.1\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"claude-3-opus-20240229\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":10,\"output_tokens\":1}}}\n\n"
+            yield "event: content_block_start\ndata: {\"content_block\":{\"type\":\"text\",\"text\":\"\"},\"index\":0}\n\n"
+            yield "event: content_block_delta\ndata: {\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"},\"index\":0}\n\n"
+            yield "event: ping\ndata: {}\n\n" # Ping event
+            yield "event: content_block_delta\ndata: {\"delta\":{\"type\":\"text_delta\",\"text\":\" World!\"},\"index\":0}\n\n"
+            yield "event: message_delta\ndata: {\"usage\":{\"output_tokens\":2},\"stop_reason\":\"end_turn\",\"stop_sequence\":null}\n\n"
+            yield "event: message_stop\ndata: {}\n\n"
+        return Response(generate_ping_stream(), mimetype='text/event-stream')
 
     return Response(json.dumps({"error": "No test scenario triggered for Anthropic completions endpoint"}), status=400, mimetype='application/json')
 
@@ -88,8 +98,10 @@ def list_models():
         return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
 
     # --- Scenario: Authentication Failure (401) ---
-    if scenario == 'AUTH_FAILURE_OPENAI' or scenario == 'AUTH_FAILURE_GEMINI' or scenario == 'AUTH_FAILURE_ANTHROPIC':
+    if scenario == 'AUTH_FAILURE_OPENAI' or scenario == 'AUTH_FAILURE_GEMINI':
         return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
+    elif scenario == 'AUTH_FAILURE_ANTHROPIC':
+        return Response(json.dumps({"type": "error", "message": "Authentication Error"}), status=401, mimetype='application/json')
 
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered for models endpoint"}', status=400, mimetype='application/json')

@@ -41,7 +41,8 @@ check_PROGRAMS = \
     test_rate_limit_list_models_dp \
     test_openai_auth_failure_dp \
     test_gemini_auth_failure_dp \
-    test_anthropic_auth_failure_dp
+    test_anthropic_auth_failure_dp \
+    test_anthropic_streaming_ping_dp
 
 # Sources for each test program
 test_abrupt_stream_dp_SOURCES = test_abrupt_stream_dp.c
@@ -55,6 +56,7 @@ test_rate_limit_list_models_dp_SOURCES = test_rate_limit_list_models_dp.c
 test_openai_auth_failure_dp_SOURCES = test_openai_auth_failure_dp.c
 test_gemini_auth_failure_dp_SOURCES = test_gemini_auth_failure_dp.c
 test_anthropic_auth_failure_dp_SOURCES = test_anthropic_auth_failure_dp.c
+test_anthropic_streaming_ping_dp_SOURCES = test_anthropic_streaming_ping_dp.c
 test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
 test_anthropic_multimodal_token_count_dp_SOURCES = test_anthropic_multimodal_token_count_dp.c
 test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c

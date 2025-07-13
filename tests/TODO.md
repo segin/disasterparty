@@ -16,7 +16,7 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test OpenAI API authentication failure (HTTP 401 response) for all major functions.
 - [x] Test Google Gemini API authentication failure (HTTP 401 response) for all major functions.
 - [x] Test Anthropic API authentication failure (HTTP 401 response) for all major functions.
-- [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of the `ping` event, ensuring it does not interrupt the stream or get passed to the text callback.
+- [x] Test `dp_perform_anthropic_streaming_completion` for correct handling of the `ping` event, ensuring it does not interrupt the stream or get passed to the text callback.
 - [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of an `error` event received mid-stream.
 - [ ] Test creating a `dp_message_t` with more than 10 parts to verify the dynamic resizing of the internal parts array.
 - [ ] Test `dp_set_user_agent` with both an empty string and a very long string to check for boundary conditions.
