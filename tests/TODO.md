@@ -13,7 +13,9 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test `dp_deserialize_messages_from_file` with a malformed or corrupt JSON file to ensure it fails without crashing.
 - [ ] Test API rate limiting (HTTP 429 response) handling for `dp_perform_completion`.
 - [ ] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
-- [ ] Test API authentication failure (HTTP 401 response) for all major functions (`dp_perform_completion`, `dp_list_models`, `dp_upload_file`, `dp_count_tokens`).
+- [ ] Test OpenAI API authentication failure (HTTP 401 response) for all major functions.
+- [ ] Test Google Gemini API authentication failure (HTTP 401 response) for all major functions.
+- [ ] Test Anthropic API authentication failure (HTTP 401 response) for all major functions.
 - [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of the `ping` event, ensuring it does not interrupt the stream or get passed to the text callback.
 - [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of an `error` event received mid-stream.
 - [ ] Test creating a `dp_message_t` with more than 10 parts to verify the dynamic resizing of the internal parts array.
