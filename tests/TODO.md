@@ -5,7 +5,7 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test `dp_perform_completion` against a mock server that returns a non-JSON error response (e.g., an HTML error page).
 - [ ] Test `dp_perform_streaming_completion` where the stream from a mock server terminates abruptly mid-JSON object.
 - [x] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Gemini provider.
-- [ ] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Anthropic provider.
+- [x] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Anthropic provider.
 - [ ] Test `dp_list_models` against a mock server that returns a valid JSON structure but with an empty list of models.
 - [ ] Test `dp_upload_file` with a zero-byte file to ensure it is handled gracefully.
 - [ ] Test `dp_upload_file` with a very large file (e.g., > 100MB) to check for timeouts or provider size limits.

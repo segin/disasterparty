@@ -28,9 +28,11 @@ check_PROGRAMS = \
     test_user_agent_dp \
     test_unsupported_file_uploads_dp \
     test_invalid_provider_dp \
-    test_gemini_multimodal_token_count_dp
+    test_gemini_multimodal_token_count_dp \
+    test_anthropic_multimodal_token_count_dp
 
 # Sources for each test program
+test_anthropic_multimodal_token_count_dp_SOURCES = test_anthropic_multimodal_token_count_dp.c
 test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c
 test_invalid_provider_dp_SOURCES = test_invalid_provider_dp.c
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
