@@ -1,3 +1,0 @@
-Running File Attachment Test...
-SKIP: DP_TEST_PDF environment variable not set. Please set it to the path of a PDF file.
-SKIP test_file_attachments_dp (exit status: 77)

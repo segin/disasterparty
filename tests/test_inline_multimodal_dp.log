@@ -1,3 +1,0 @@
-Running Inline Multimodal Context Test...
-SKIP: Set DP_TEST_IMAGE and DP_TEST_IMAGE2 to run this test.
-SKIP test_inline_multimodal_dp (exit status: 77)
