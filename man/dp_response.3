@@ -1,8 +1,8 @@
-.\" Man page for dp_response_t struct from libdisasterparty
-.TH DP_RESPONSE 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+." Man page for dp_response_t struct from libdisasterparty
+.TH DP_RESPONSE 3 "July 14, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
 
 .SH NAME
-dp_response_t \- structure for holding an LLM API response
+dp_response_t, dp_response_part_t \- structure for holding an LLM API response
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
@@ -15,6 +15,11 @@ typedef struct {
     long http_status_code;
     char* finish_reason;
 } dp_response_t;
+
+typedef struct {
+    dp_content_part_type_t type; 
+    char* text;
+} dp_response_part_t; 
 .fi
 
 .SH DESCRIPTION
@@ -25,7 +30,7 @@ It contains either the successful response data or error information. Its
 contents must be freed with
 .BR dp_free_response_content (3).
 
-.SH MEMBERS
+.SH MEMBERS of dp_response_t
 .TP
 .B dp_response_part_t* parts
 For non-streaming responses, this will be an array of response parts. Currently, only a single text part is supported. `parts[0].text` holds the response content.
@@ -43,6 +48,14 @@ The HTTP status code returned by the server (e.g., 200 for OK, 401 for Unauthori
 .TP
 .B char* finish_reason
 A string indicating why the model stopped generating tokens (e.g., "stop", "max_tokens").
+
+.SH MEMBERS of dp_response_part_t
+.TP
+.B dp_content_part_type_t type
+The type of this content part. Currently, only `DP_CONTENT_PART_TEXT` is supported.
+.TP
+.B char* text
+If the part is text, this points to the text content.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
