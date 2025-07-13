@@ -12,7 +12,7 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test `dp_serialize_messages_to_file` and `dp_deserialize_messages_from_file` with a conversation history containing all supported `dp_content_part_type_t` variants (text, image URL, base64 image, file reference).
 - [x] Test `dp_deserialize_messages_from_file` with a malformed or corrupt JSON file to ensure it fails without crashing.
 - [x] Test API rate limiting (HTTP 429 response) handling for `dp_perform_completion`.
-- [ ] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
+- [x] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
 - [ ] Test OpenAI API authentication failure (HTTP 401 response) for all major functions.
 - [ ] Test Google Gemini API authentication failure (HTTP 401 response) for all major functions.
 - [ ] Test Anthropic API authentication failure (HTTP 401 response) for all major functions.

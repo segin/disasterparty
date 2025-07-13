@@ -55,6 +55,10 @@ def list_models():
     if scenario == 'EMPTY_LIST':
         return Response(json.dumps({"object": "list", "data": []}), mimetype='application/json')
 
+    # --- Scenario: Rate Limit Exceeded ---
+    if scenario == 'RATE_LIMIT_LIST_MODELS':
+        return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
+
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered for models endpoint"}', status=400, mimetype='application/json')
 
