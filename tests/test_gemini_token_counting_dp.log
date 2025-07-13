@@ -1,3 +1,0 @@
-Successfully counted tokens for Gemini.
-Token count: 8
-PASS test_gemini_token_counting_dp (exit status: 0)

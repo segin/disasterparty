@@ -1,2 +1,0 @@
-SKIP: Image path not provided. Use /data/data/com.termux/files/home/disasterparty/tests/.libs/test_anthropic_streaming_multimodal_detailed_dp [path] or set ANTHROPIC_TEST_IMAGE_PATH
-SKIP test_anthropic_streaming_multimodal_detailed_dp (exit status: 77)
