@@ -58,9 +58,11 @@ tests/test_openai_text_dp
 disasterparty.pc
 src/disasterparty.c
 tests/tmp/
+tests/tmp/
 
 # User-added ignores
 build-aux/
 *~
 m4/
 man/*.3
+thirdparty/
