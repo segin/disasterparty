@@ -10,11 +10,15 @@ def completions():
     data = request.get_json()
     scenario = None
     if 'Authorization' in request.headers:
+        print(f"Received Authorization header (completions): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
+        print(f"Received x-api-key header (completions): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
+        print(f"Received key arg (completions): {request.args.get('key')}")
         scenario = request.args.get('key')
+    print(f"Extracted scenario (completions): {scenario}")
 
     # --- Scenario 1: Non-JSON Error ---
     if scenario == 'NON_JSON_ERROR':
@@ -33,6 +37,10 @@ def completions():
     # --- Scenario 3: Rate Limit Exceeded ---
     if scenario == 'RATE_LIMIT_COMPLETION':
         return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
+
+    # --- Scenario 4: Authentication Failure (401) ---
+    if scenario == 'AUTH_FAILURE_OPENAI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
 
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered in mock server"}', status=400, mimetype='application/json')
@@ -59,6 +67,10 @@ def list_models():
     if scenario == 'RATE_LIMIT_LIST_MODELS':
         return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
 
+    # --- Scenario: Authentication Failure (401) ---
+    if scenario == 'AUTH_FAILURE_OPENAI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
+
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered for models endpoint"}', status=400, mimetype='application/json')
 
@@ -67,11 +79,15 @@ def list_models():
 def upload_file():
     scenario = None
     if 'Authorization' in request.headers:
+        print(f"Received Authorization header (files): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
+        print(f"Received x-api-key header (files): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
+        print(f"Received key arg (files): {request.args.get('key')}")
         scenario = request.args.get('key')
+    print(f"Extracted scenario (files): {scenario}")
 
     if scenario == 'ZERO_BYTE_FILE':
         if request.content_length == 0:
@@ -84,6 +100,8 @@ def upload_file():
             return Response(json.dumps({"error": {"message": "File size exceeds limit", "code": 413}}), status=413, mimetype='application/json')
         else:
             return Response(json.dumps({"id": "file-456", "filename": "large_test_file.bin", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
+    elif scenario == 'AUTH_FAILURE_OPENAI':
+        return Response(json.dumps({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "code": 401}}), status=401, mimetype='application/json')
 
     return Response(json.dumps({"error": "No test scenario triggered for files endpoint"}), status=400, mimetype='application/json')
 

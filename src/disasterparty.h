@@ -116,6 +116,8 @@ typedef struct {
     long size_bytes;
     char* create_time;
     char* uri;
+    long http_status_code;      // New: HTTP status code for file operations
+    char* error_message;        // New: Error message for file operations
 } dp_file_t;
 
 typedef enum {
