@@ -30,6 +30,10 @@ def completions():
             yield "data: {\"id\":\"truncated_chunk\", \"content\":\"partial"
         return Response(generate_abrupt_stream(), mimetype='text/event-stream')
 
+    # --- Scenario 3: Rate Limit Exceeded ---
+    if scenario == 'RATE_LIMIT_COMPLETION':
+        return Response(json.dumps({"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": 429}}), status=429, mimetype='application/json')
+
     # --- Default: A valid, successful response (can be added later) ---
     return Response('{"error": "No test scenario triggered in mock server"}', status=400, mimetype='application/json')
 
