@@ -51,5 +51,23 @@ def list_models():
     return Response('{"error": "No test scenario triggered for models endpoint"}', status=400, mimetype='application/json')
 
 
+@app.route('/v1/files', methods=['POST'])
+def upload_file():
+    scenario = None
+    if 'Authorization' in request.headers:
+        scenario = request.headers.get('Authorization').replace('Bearer ', '')
+    elif 'x-api-key' in request.headers:
+        scenario = request.headers.get('x-api-key')
+    elif 'key' in request.args:
+        scenario = request.args.get('key')
+
+    if scenario == 'ZERO_BYTE_FILE':
+        if request.content_length == 0:
+            return Response(json.dumps({"error": {"message": "File is empty", "code": 400}}), status=400, mimetype='application/json')
+        else:
+            return Response(json.dumps({"id": "file-123", "filename": "test_file.txt", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
+
+    return Response(json.dumps({"error": "No test scenario triggered for files endpoint"}), status=400, mimetype='application/json')
+
 if __name__ == '__main__':
     app.run(port=8080)
