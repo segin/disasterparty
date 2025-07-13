@@ -61,7 +61,7 @@ Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
 
 ### SEE ALSO
-**dp_init_context**(3), **dp_perform_completion**(3), **dp_list_models**(3), **curl**(1), **cJSON**(3)
+**dp_init_context**(3), **dp_perform_completion**(3), **dp_list_models**(3), **dp_serialize**(3), **curl**(1), **cJSON**(3)
 
 ---
 ## 2. API Functions (section 3)
@@ -123,11 +123,11 @@ dp_set_user_agent - set a custom user-agent for the Disaster Party context
 **SYNOPSIS**
 ```c
 #include <disasterparty.h>
-void dp_set_user_agent(dp_context_t *context, const char *app_name, const char *app_version);
+void dp_set_user_agent(dp_context_t *context, const char *user_agent);
 ```
 
 **DESCRIPTION**
-Sets a custom user-agent string for all subsequent requests made with the given context. The user-agent will be in the format `app_name/app_version (disasterparty/DP_VERSION)`.
+Sets a custom user-agent string for all subsequent requests made with the given context.
 
 ---
 ### dp_get_user_agent

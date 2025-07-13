@@ -1,5 +1,5 @@
-.\" Man page for dp_message_t and related structs from libdisasterparty
-.TH DP_MESSAGE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+." Man page for dp_message_t and related structs from libdisasterparty
+.TH DP_MESSAGE 3 "July 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_t, dp_content_part_t \- structures for representing conversational messages
@@ -22,7 +22,10 @@ typedef struct {
         char* mime_type;
         char* data;
     } image_base64;
-    char* file_uri;
+    struct {
+        char* file_id;
+        char* mime_type;
+    } file_reference;
 } dp_content_part_t;
 .fi
 
@@ -62,8 +65,8 @@ If the part is an image URL, this points to the URL.
 .B image_base64
 A nested struct containing the `mime_type` (e.g., "image/jpeg") and the base64-encoded `data` if the part is a base64 image.
 .TP
-.B char* file_uri
-If the part is a file reference, this points to the URI of the uploaded file.
+.B file_reference
+A nested struct containing the `file_id` and `mime_type` of an uploaded file.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:

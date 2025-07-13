@@ -3,16 +3,22 @@
 # List all man pages to be installed in section 3
 man3_MANS = \
 	dp_anthropic_stream_event.3 \
-	dp_destroy_context.3 \
+	dp_count_tokens.3 \
 	dp_deserialize_messages_from_file.3 \
 	dp_deserialize_messages_from_json_str.3 \
+	dp_destroy_context.3 \
+	dp_error_code_t.3 \
+	dp_file.3 \
+	dp_free_file.3 \
 	dp_free_messages.3 \
 	dp_free_model_list.3 \
 	dp_free_response_content.3 \
+	dp_get_user_agent.3 \
 	dp_get_version.3 \
 	dp_init_context.3 \
 	dp_list_models.3 \
 	dp_message_add_base64_image_part.3 \
+	dp_message_add_file_reference_part.3 \
 	dp_message_add_image_url_part.3 \
 	dp_message_add_text_part.3 \
 	dp_message.3 \
@@ -24,12 +30,9 @@ man3_MANS = \
 	dp_response.3 \
 	dp_serialize_messages_to_file.3 \
 	dp_serialize_messages_to_json_str.3 \
-	dp_count_tokens.3 \
-	dp_error_code_t.3 \
-	dp_upload_file.3 \
-	dp_free_file.3 \
+	dp_serialize.3 \
 	dp_set_user_agent.3 \
-	dp_get_user_agent.3
+	dp_upload_file.3
 
 # List all man pages to be installed in section 7
 man7_MANS = \
@@ -65,13 +68,13 @@ CLEANFILES = $(man3_MANS) $(man7_MANS)
 # Hook to safely uninstall exactly the files we installed, using POSIX-compliant shell logic.
 uninstall-hook:
 	@echo "Uninstalling man pages..."
-	@list='$(man3_MANS)'; for p in $$list; do \
-	  f=$(DESTDIR)$(mandir)/man3/$$p; \
-	  echo " rm -f '$$f'"; \
-	  rm -f "$$f"; \
+	@list='$(man3_MANS)'; for p in $list; do \
+	  f=$(DESTDIR)$(mandir)/man3/$p; \
+	  echo " rm -f '$f'"; \
+	  rm -f "$f"; \
 	done
-	@list='$(man7_MANS)'; for p in $$list; do \
-	  f=$(DESTDIR)$(mandir)/man7/$$p; \
-	  echo " rm -f '$$f'"; \
-	  rm -f "$$f"; \
+	@list='$(man7_MANS)'; for p in $list; do \
+	  f=$(DESTDIR)$(mandir)/man7/$p; \
+	  echo " rm -f '$f'"; \
+	  rm -f "$f"; \
 	done

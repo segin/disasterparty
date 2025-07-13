@@ -1,23 +1,49 @@
-. Man page for dp_free_file from libdisasterparty
-.TH DP_FREE_FILE 3 "July 12, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH dp_file 3dp "July 14, 2025" "Disaster Party" "Disaster Party Manual"
 
 .SH NAME
-dp_free_file \- free a Disaster Party file structure
+dp_file_t \- structure for holding file information
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
 .PP
-.BI "void dp_free_file(dp_file_t *" file ");"
+.nf
+typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+} dp_file_t;
+.fi
 
 .SH DESCRIPTION
 The
-.B dp_free_file()
-function deallocates a
-.BR dp_file_t
-previously created by
-.BR dp_upload_file (3).
-It frees all resources associated with the file structure. Passing a NULL pointer to
-this function is a safe no-op.
+.B dp_file_t
+structure holds the result of an API call made by a file upload function.
+It contains the successful response data. Its
+contents must be freed with
+.BR dp_free_file (3).
+
+.SH MEMBERS
+.TP
+.B char* file_id
+The unique identifier for the file.
+.TP
+.B char* display_name
+The user-friendly name for the file.
+.TP
+.B char* mime_type
+The MIME type of the file.
+.TP
+.B long size_bytes
+The size of the file in bytes.
+.TP
+.B char* create_time
+The time the file was created.
+.TP
+.B char* uri
+The URI of the file.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -35,7 +61,6 @@ Gemini (Conceptualization and initial C code generation)
 #include <disasterparty.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 int main() {
     // This is a simplified example. In a real scenario, dp_file_t
@@ -57,5 +82,6 @@ int main() {
 .fi
 
 .SH SEE ALSO
+.BR dp_free_file (3),
 .BR dp_upload_file (3),
 .BR disasterparty (7)

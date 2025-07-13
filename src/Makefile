@@ -14,8 +14,6 @@
 
 
 
-# src/Makefile.am
-
 
 
 am__is_gnu_make = { \
@@ -137,7 +135,9 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libdisasterparty_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am_libdisasterparty_la_OBJECTS = disasterparty.lo
+am_libdisasterparty_la_OBJECTS = dp_context.lo dp_request.lo \
+	dp_message.lo dp_serialize.lo dp_file.lo dp_constants.lo \
+	dp_utils.lo dp_stream.lo dp_models.lo
 libdisasterparty_la_OBJECTS = $(am_libdisasterparty_la_OBJECTS)
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
@@ -162,7 +162,11 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/disasterparty.Plo
+am__depfiles_remade = ./$(DEPDIR)/dp_constants.Plo \
+	./$(DEPDIR)/dp_context.Plo ./$(DEPDIR)/dp_file.Plo \
+	./$(DEPDIR)/dp_message.Plo ./$(DEPDIR)/dp_models.Plo \
+	./$(DEPDIR)/dp_request.Plo ./$(DEPDIR)/dp_serialize.Plo \
+	./$(DEPDIR)/dp_stream.Plo ./$(DEPDIR)/dp_utils.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -210,9 +214,6 @@ am__define_uniq_tagged_files = \
 am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-
-# Use PACKAGE_TARNAME for the directory, which is 'disasterparty' (no space)
-# This comes from the 4th argument to AC_INIT in configure.ac
 pkgincludedir = $(includedir)/$(PACKAGE_TARNAME)
 ACLOCAL = ${SHELL} '/data/data/com.termux/files/home/disasterparty/build-aux/missing' aclocal-1.17
 AMTAR = $${TAR-tar}
@@ -331,7 +332,7 @@ mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr/local
+prefix = /data/data/com.termux/files/usr
 program_transform_name = s,x,x,
 psdir = ${docdir}
 runstatedir = ${localstatedir}/run
@@ -343,12 +344,12 @@ target_alias =
 top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
-lib_LTLIBRARIES = libdisasterparty.la 
-libdisasterparty_la_SOURCES = disasterparty.c disasterparty.h 
+lib_LTLIBRARIES = libdisasterparty.la
+libdisasterparty_la_SOURCES = dp_context.c dp_request.c dp_message.c dp_serialize.c dp_file.c dp_constants.c dp_utils.c dp_stream.c dp_models.c
+AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
+pkginclude_HEADERS = disasterparty.h
 libdisasterparty_la_LDFLAGS = -version-info $(DP_LT_VERSION)
-libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS) 
-pkginclude_HEADERS = disasterparty.h 
-AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src -I$(top_srcdir)/thirdparty/libcjson/install/include -I$(top_srcdir)/thirdparty/libcjson/install/include 
+libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -425,7 +426,15 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/disasterparty.Plo # am--include-marker
+include ./$(DEPDIR)/dp_constants.Plo # am--include-marker
+include ./$(DEPDIR)/dp_context.Plo # am--include-marker
+include ./$(DEPDIR)/dp_file.Plo # am--include-marker
+include ./$(DEPDIR)/dp_message.Plo # am--include-marker
+include ./$(DEPDIR)/dp_models.Plo # am--include-marker
+include ./$(DEPDIR)/dp_request.Plo # am--include-marker
+include ./$(DEPDIR)/dp_serialize.Plo # am--include-marker
+include ./$(DEPDIR)/dp_stream.Plo # am--include-marker
+include ./$(DEPDIR)/dp_utils.Plo # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -608,7 +617,15 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -f ./$(DEPDIR)/disasterparty.Plo
+	-rm -f ./$(DEPDIR)/dp_constants.Plo
+	-rm -f ./$(DEPDIR)/dp_context.Plo
+	-rm -f ./$(DEPDIR)/dp_file.Plo
+	-rm -f ./$(DEPDIR)/dp_message.Plo
+	-rm -f ./$(DEPDIR)/dp_models.Plo
+	-rm -f ./$(DEPDIR)/dp_request.Plo
+	-rm -f ./$(DEPDIR)/dp_serialize.Plo
+	-rm -f ./$(DEPDIR)/dp_stream.Plo
+	-rm -f ./$(DEPDIR)/dp_utils.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -654,7 +671,15 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -f ./$(DEPDIR)/disasterparty.Plo
+	-rm -f ./$(DEPDIR)/dp_constants.Plo
+	-rm -f ./$(DEPDIR)/dp_context.Plo
+	-rm -f ./$(DEPDIR)/dp_file.Plo
+	-rm -f ./$(DEPDIR)/dp_message.Plo
+	-rm -f ./$(DEPDIR)/dp_models.Plo
+	-rm -f ./$(DEPDIR)/dp_request.Plo
+	-rm -f ./$(DEPDIR)/dp_serialize.Plo
+	-rm -f ./$(DEPDIR)/dp_stream.Plo
+	-rm -f ./$(DEPDIR)/dp_utils.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

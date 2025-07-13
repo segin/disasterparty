@@ -1,91 +1,34 @@
-." Man page for dp_deserialize_messages_from_file from libdisasterparty
-.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH dp_deserialize_messages_from_file 3dp "July 14, 2025" "Disaster Party" "Disaster Party Manual"
 
 .SH NAME
-dp_deserialize_messages_from_file \- deserialize an array of messages from a file
+dp_deserialize_messages_from_file \- deserializes a file into an array of dp_message_t structures
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
-.PP
-.BI "int dp_deserialize_messages_from_file(const char *" path ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+.sp
+.BI "int dp_deserialize_messages_from_file(const char* " "path" ", dp_message_t** " "messages_out" ", size_t* " "num_messages_out" ");"
 
 .SH DESCRIPTION
-The
 .B dp_deserialize_messages_from_file()
-function reads a JSON file from the specified
+reads a JSON formatted string from the file specified by
 .I path
-and deserializes it into a newly allocated array of
+and deserializes it into an array of
 .BR dp_message_t
-structures. It is a convenience wrapper around
-.BR dp_deserialize_messages_from_json_str (3).
-
-The caller is responsible for freeing the returned array and all its contents
-using
-.BR dp_free_messages (3)
-followed by
-.BR free (3)
-on the array pointer (`*messages_out`).
+structures. The caller is responsible for freeing the output array
+.I messages_out
+and its contents by calling
+.BR dp_free_messages(3dp).
 
 .SH RETURN VALUE
-Returns 0 on success. Returns -1 on failure (e.g., file not found, read error, JSON parse error).
+Returns 0 on success and a negative value on failure.
+
+.SH SEE ALSO
+.BR dp_serialize (3dp),
+.BR dp_serialize_messages_to_file (3dp),
+.BR dp_free_messages (3dp)
 
 .SH BUGS
-Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
-.PP
-.UR https://github.com/segin/disasterparty/issues
-.UE
+No known bugs.
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
-.br
-Gemini (Conceptualization and initial C code generation)
-
-.SH EXAMPLE
-.nf
-#include <disasterparty.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-int main() {
-    const char* filename = "conversation.json";
-    // Create a dummy file for deserialization
-    FILE* fp = fopen(filename, "w");
-    if (!fp) {
-        perror("fopen");
-        return 1;
-    }
-    fprintf(fp, "[ { \"role\": \"user\", \"parts\": [ { \"type\": \"text\", \"text\": \"Hello from file!\" } ] } ]");
-    fclose(fp);
-
-    dp_message_t* messages = NULL;
-    size_t num_messages = 0;
-
-    int ret = dp_deserialize_messages_from_file(filename, &messages, &num_messages);
-
-    if (ret == 0 && messages) {
-        printf("Deserialized %zu messages from %s:\n", num_messages, filename);
-        for (size_t i = 0; i < num_messages; ++i) {
-            printf("  Message %zu (Role: %s):\n", i + 1, messages[i].role == DP_ROLE_USER ? "user" : "assistant");
-            for (size_t j = 0; j < messages[i].num_parts; ++j) {
-                if (messages[i].parts[j].type == DP_CONTENT_PART_TEXT) {
-                    printf("    Text: %s\n", messages[i].parts[j].text);
-                }
-            }
-        }
-    } else {
-        fprintf(stderr, "Failed to deserialize messages from file.\n");
-    }
-
-    dp_free_messages(messages, num_messages);
-    free(messages);
-    unlink(filename); // Clean up dummy file
-    return ret == 0 ? 0 : 1;
-}
-.fi
-
-.SH SEE ALSO
-.BR dp_serialize_messages_to_file (3),
-.BR dp_free_messages (3),
-.BR disasterparty (7)

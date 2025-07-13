@@ -274,7 +274,7 @@ mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr/local
+prefix = /data/data/com.termux/files/usr
 program_transform_name = s,x,x,
 psdir = ${docdir}
 runstatedir = ${localstatedir}/run
@@ -311,8 +311,12 @@ man3_MANS = \
 	dp_response.3 \
 	dp_serialize_messages_to_file.3 \
 	dp_serialize_messages_to_json_str.3 \
+	dp_count_tokens.3 \
+	dp_error_code_t.3 \
 	dp_upload_file.3 \
-	dp_free_file.3
+	dp_free_file.3 \
+	dp_set_user_agent.3 \
+	dp_get_user_agent.3
 
 
 # List all man pages to be installed in section 7

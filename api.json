@@ -522,14 +522,9 @@
           "description": "The context to modify."
         },
         {
-          "name": "app_name",
+          "name": "user_agent",
           "type": "const char*",
-          "description": "The name of the application."
-        },
-        {
-          "name": "app_version",
-          "type": "const char*",
-          "description": "The version of the application."
+          "description": "The user-agent string."
         }
       ]
     },

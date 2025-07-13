@@ -1,71 +1,47 @@
-.\" Man page for dp_serialize functions from libdisasterparty
-.TH DP_SERIALIZE 3 "June 14, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH dp_serialize 3dp "July 14, 2025" "Disaster Party" "Disaster Party Manual"
 
 .SH NAME
-dp_serialize_messages_to_json_str, dp_deserialize_messages_from_json_str, dp_serialize_messages_to_file, dp_deserialize_messages_from_file \- helper functions for conversation serialization
+dp_serialize \- functions for serializing and deserializing Disaster Party messages
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
-.PP
-.BI "int dp_serialize_messages_to_json_str(const dp_message_t *" messages ", size_t " num_messages ", char **" json_str_out ");"
-.br
-.BI "int dp_deserialize_messages_from_json_str(const char *" json_str ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
-.br
-.BI "int dp_serialize_messages_to_file(const dp_message_t *" messages ", size_t " num_messages ", const char *" path ");"
-.br
-.BI "int dp_deserialize_messages_from_file(const char *" path ", dp_message_t **" messages_out ", size_t *" num_messages_out ");"
+.sp
+.BI "int dp_serialize_messages_to_json_str(const dp_message_t* " "messages" ", size_t " "num_messages" ", char** " "json_str_out" ");"
+.sp
+.BI "int dp_deserialize_messages_from_json_str(const char* " "json_str" ", dp_message_t** " "messages_out" ", size_t* " "num_messages_out" ");"
+.sp
+.BI "int dp_serialize_messages_to_file(const dp_message_t* " "messages" ", size_t " "num_messages" ", const char* " "path" ");"
+.sp
+.BI "int dp_deserialize_messages_from_file(const char* " "path" ", dp_message_t** " "messages_out" ", size_t* " "num_messages_out" ");"
 
 .SH DESCRIPTION
-These functions provide utilities to save and load conversation histories to and from
-a structured JSON format. This is useful for persisting conversations for later use.
+The \fBdp_serialize\fP() family of functions provides mechanisms to convert \fBdp_message_t\fP structures to and from a JSON representation, either in-memory as a string or directly to/from the filesystem. This is useful for saving conversation histories, logging, or transmitting message data.
 
+.SS Serialization
 .TP
 .B dp_serialize_messages_to_json_str()
-Converts an array of
-.BR dp_message_t
-structures into a pretty-printed JSON string. The caller is responsible for freeing
-the returned string in
-.I *json_str_out
-using
-.BR free (3).
-
-.TP
-.B dp_deserialize_messages_from_json_str()
-Parses a JSON string and creates a newly allocated array of
-.BR dp_message_t
-structures. The caller is responsible for freeing the returned array and all its contents
-using
-.BR dp_free_messages (3)
-and then freeing the array pointer itself with
-.BR free (3).
-
+Serializes an array of \fBdp_message_t\fP structures into a JSON formatted string. The caller is responsible for freeing the output string \fIjson_str_out\fP using \fBfree\fP(3).
 .TP
 .B dp_serialize_messages_to_file()
-Serializes an array of messages to a JSON file at the specified
-.IR path .
+Serializes an array of \fBdp_message_t\fP structures into a JSON formatted string and writes it to the file specified by \fIpath\fP.
 
+.SS Deserialization
+.TP
+.B dp_deserialize_messages_from_json_str()
+Parses a JSON formatted string and deserializes it into an array of \fBdp_message_t\fP structures. The caller is responsible for freeing the output array \fImessages_out\fP and its contents by calling \fBdp_free_messages\fP().
 .TP
 .B dp_deserialize_messages_from_file()
-Reads a JSON file from the specified
-.I path
-and deserializes it into an array of messages. As with the string version, the caller
-is responsible for freeing the allocated memory.
+Reads a JSON formatted string from the file specified by \fIpath\fP and deserializes it into an array of \fBdp_message_t\fP structures. The caller is responsible for freeing the output array \fImessages_out\fP and its contents by calling \fBdp_free_messages\fP().
 
 .SH RETURN VALUE
-All functions return 0 on success and -1 on failure (e.g., memory allocation error,
-file I/O error, JSON parse error).
+All functions return 0 on success and a negative value on failure.
+
+.SH SEE ALSO
+.BR dp_message (3dp),
+.BR dp_free_messages (3dp)
 
 .SH BUGS
-Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
-.PP
-.UR https://github.com/segin/disasterparty/issues
-.UE
+No known bugs.
 
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
-.br
-Gemini (Conceptualization and initial C code generation)
-
-.SH SEE ALSO
-.BR dp_free_messages (3),
-.BR disasterparty (7)
