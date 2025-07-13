@@ -57,3 +57,4 @@ tests/test_openai_text_dp
 # Other
 disasterparty.pc
 src/disasterparty.c
+tests/tmp/
