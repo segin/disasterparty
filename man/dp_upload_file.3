@@ -1,0 +1,84 @@
+.TH DP_UPLOAD_FILE 3 "July 03, 2025" "Disaster Party" "Disaster Party API Documentation"
+.SH NAME
+dp_upload_file \- upload a file to the LLM provider
+.SH SYNOPSIS
+.nf
+#include <disasterparty.h>
+
+int dp_upload_file(dp_context_t *context, const char *file_path, const char *mime_type, dp_file_t **file_out);
+.fi
+.SH DESCRIPTION
+Uploads a local file to the LLM provider's file service. Currently, this function is only supported for the Google Gemini provider. The \fIfile_path\fP must be an absolute path to the file. The \fImime_type\fP should accurately reflect the file's content (e.g., "image/png", "text/plain", "application/pdf"). On success, \fI*file_out\fP will be populated with a \fBdp_file_t\fP structure containing information about the uploaded file, including its \fIuri\fP, which can then be used in \fBdp_message_add_file_reference_part\fP(3).
+.SH PARAMETERS
+.TP
+\fIcontext\fP
+The initialized client context. Must be for \fBDP_PROVIDER_GOOGLE_GEMINI\fP.
+.TP
+\fIfile_path\fP
+The absolute path to the file to upload.
+.TP
+\fImime_type\fP
+The MIME type of the file.
+.TP
+\fIfile_out\fP
+A pointer to a \fBdp_file_t*\fP that will be allocated and populated with the uploaded file's information. This must be freed by the caller using \fBdp_free_file\fP(3).
+.SH RETURN VALUE
+Returns \fB0\fP on success, \fB-1\fP on failure. The \fI*file_out\fP will be \fBNULL\fP on failure.
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+@PACKAGE_BUGREPORT@
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+Gemini (Conceptualization and initial C code generation)
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    // Create a dummy file for upload
+    char temp_filename[] = "/tmp/test_upload_XXXXXX";
+    int fd = mkstemp(temp_filename);
+    if (fd == -1) {
+        perror("mkstemp");
+        dp_destroy_context(context);
+        return 1;
+    }
+    write(fd, "This is a test file.", strlen("This is a test file."));
+    close(fd);
+
+    dp_file_t* uploaded_file = NULL;
+    int ret = dp_upload_file(context, temp_filename, "text/plain", &uploaded_file);
+
+    if (ret == 0 && uploaded_file) {
+        printf("File uploaded successfully! URI: %s\n", uploaded_file->uri);
+    } else {
+        fprintf(stderr, "File upload failed.\n");
+    }
+
+    dp_free_file(uploaded_file);
+    dp_destroy_context(context);
+    unlink(temp_filename); // Clean up dummy file
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_free_file (3),
+.BR dp_message_add_file_reference_part (3)

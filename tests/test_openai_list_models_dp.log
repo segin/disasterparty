@@ -1,0 +1,94 @@
+Disaster Party Library Version: 0.5.0
+Testing OpenAI List Models:
+Using OpenAI API Key: ***
+Using OpenAI Base URL: https://api.openai.com/v1
+Disaster Party Context Initialized.
+
+--- OpenAI Available Models (HTTP 200) ---
+Found 83 models:
+  - ID: gpt-4-0613
+  - ID: gpt-4
+  - ID: gpt-3.5-turbo
+  - ID: o4-mini-deep-research-2025-06-26
+  - ID: o3-pro-2025-06-10
+  - ID: o4-mini-deep-research
+  - ID: o3-deep-research
+  - ID: o3-deep-research-2025-06-26
+  - ID: davinci-002
+  - ID: babbage-002
+  - ID: gpt-3.5-turbo-instruct
+  - ID: gpt-3.5-turbo-instruct-0914
+  - ID: dall-e-3
+  - ID: dall-e-2
+  - ID: gpt-4-1106-preview
+  - ID: gpt-3.5-turbo-1106
+  - ID: tts-1-hd
+  - ID: tts-1-1106
+  - ID: tts-1-hd-1106
+  - ID: text-embedding-3-small
+  - ID: text-embedding-3-large
+  - ID: gpt-4-0125-preview
+  - ID: gpt-4-turbo-preview
+  - ID: gpt-3.5-turbo-0125
+  - ID: gpt-4-turbo
+  - ID: gpt-4-turbo-2024-04-09
+  - ID: gpt-4o
+  - ID: gpt-4o-2024-05-13
+  - ID: gpt-4o-mini-2024-07-18
+  - ID: gpt-4o-mini
+  - ID: gpt-4o-2024-08-06
+  - ID: chatgpt-4o-latest
+  - ID: o1-preview-2024-09-12
+  - ID: o1-preview
+  - ID: o1-mini-2024-09-12
+  - ID: o1-mini
+  - ID: gpt-4o-realtime-preview-2024-10-01
+  - ID: gpt-4o-audio-preview-2024-10-01
+  - ID: gpt-4o-audio-preview
+  - ID: gpt-4o-realtime-preview
+  - ID: omni-moderation-latest
+  - ID: omni-moderation-2024-09-26
+  - ID: gpt-4o-realtime-preview-2024-12-17
+  - ID: gpt-4o-audio-preview-2024-12-17
+  - ID: gpt-4o-mini-realtime-preview-2024-12-17
+  - ID: gpt-4o-mini-audio-preview-2024-12-17
+  - ID: o1-2024-12-17
+  - ID: o1
+  - ID: gpt-4o-mini-realtime-preview
+  - ID: gpt-4o-mini-audio-preview
+  - ID: o3-mini
+  - ID: o3-mini-2025-01-31
+  - ID: gpt-4o-2024-11-20
+  - ID: gpt-4.5-preview
+  - ID: gpt-4.5-preview-2025-02-27
+  - ID: gpt-4o-search-preview-2025-03-11
+  - ID: gpt-4o-search-preview
+  - ID: gpt-4o-mini-search-preview-2025-03-11
+  - ID: gpt-4o-mini-search-preview
+  - ID: gpt-4o-transcribe
+  - ID: gpt-4o-mini-transcribe
+  - ID: o1-pro-2025-03-19
+  - ID: o1-pro
+  - ID: gpt-4o-mini-tts
+  - ID: o3-2025-04-16
+  - ID: o4-mini-2025-04-16
+  - ID: o3
+  - ID: o4-mini
+  - ID: gpt-4.1-2025-04-14
+  - ID: gpt-4.1
+  - ID: gpt-4.1-mini-2025-04-14
+  - ID: gpt-4.1-mini
+  - ID: gpt-4.1-nano-2025-04-14
+  - ID: gpt-4.1-nano
+  - ID: gpt-image-1
+  - ID: codex-mini-latest
+  - ID: o3-pro
+  - ID: gpt-4o-realtime-preview-2025-06-03
+  - ID: gpt-4o-audio-preview-2025-06-03
+  - ID: gpt-3.5-turbo-16k
+  - ID: tts-1
+  - ID: whisper-1
+  - ID: text-embedding-ada-002
+-------------------------------------------
+OpenAI list models test (Disaster Party) finished.
+PASS test_openai_list_models_dp (exit status: 0)

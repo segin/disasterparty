@@ -1,0 +1,16 @@
+Disaster Party Library Version: 0.5.0
+Testing Anthropic Generic Streaming:
+Using Anthropic API Key: ***
+Disaster Party Context Initialized.
+Sending streaming request to model: claude-3-haiku-20240307
+Prompt: Tell me about MAGIC GIANT.
+---
+Streaming Response:
+MAGIC GIANT is an American indie folk band based in Los Angeles, California. The band was formed in 2013 and consists of members Austin Bisnow, Zambricki Li, and Zang. They are known for their energetic live performances and blend of folk, rock, and electronic music. MAGIC GIANT has released several EPs and albums, including their 2017 debut full-length record "In the Wind." The band has built a dedicated fanbase through their catchy melodies and socially conscious lyrics.
+[STREAM END - Anthropic with Disaster Party]
+
+---
+Anthropic Streaming completed. HTTP Status: 200
+Finish Reason: completed
+Anthropic generic streaming test (Disaster Party) finished.
+PASS test_anthropic_streaming_dp (exit status: 0)

@@ -1,0 +1,7 @@
+Disaster Party Library Version: 0.5.0
+Testing Advanced Parameter Submission (OpenAI):
+Disaster Party Context Initialized.
+Sending request with advanced parameters...
+PASS: API call with advanced parameters was successful.
+Response: Space is a vast, mysterious expanse beyond Earth's atmosphere that contains countless stars, planets, and other celestial bodies.
+PASS test_parameters_dp (exit status: 0)

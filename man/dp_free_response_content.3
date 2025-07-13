@@ -1,0 +1,68 @@
+." Man page for dp_free_response_content from libdisasterparty
+.TH DP_FREE_RESPONSE_CONTENT 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_free_response_content \- free content of a Disaster Party response structure
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_free_response_content(dp_response_t *" response ");"
+
+.SH DESCRIPTION
+The
+.B dp_free_response_content()
+function deallocates the dynamically allocated memory within a
+.BR dp_response_t
+structure. This should be called on any
+.BR dp_response_t
+structure that was passed to a completion function to prevent memory leaks.
+Passing a NULL pointer is a safe no-op.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    // Simulate a dp_response_t structure that would be returned by a completion function
+    dp_response_t response = {0};
+    response.num_parts = 1;
+    response.parts = (dp_response_part_t*)malloc(sizeof(dp_response_part_t));
+    if (!response.parts) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    response.parts[0].type = DP_CONTENT_PART_TEXT;
+    response.parts[0].text = strdup("This is a sample response text.");
+    response.error_message = strdup("No error.");
+    response.finish_reason = strdup("stop");
+
+    printf("Response content created. Now freeing it.\n");
+    dp_free_response_content(&response);
+    printf("Response content freed.\n");
+
+    // Note: The response struct itself (not its contents) is on the stack
+    // and does not need to be freed with free().
+
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_perform_completion (3),
+.BR dp_response (3),
+.BR disasterparty (7)

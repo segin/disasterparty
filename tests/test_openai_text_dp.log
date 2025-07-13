@@ -1,0 +1,19 @@
+Disaster Party Library Version: 0.5.0
+Using OpenAI API Key: ***
+Using OpenAI Base URL: https://api.openai.com/v1
+Disaster Party Context Initialized.
+Sending request to model: gpt-4.1-nano
+Prompt: Tell me about MAGIC GIANT.
+
+--- OpenAI Text Completion Response (HTTP 200) ---
+Magic Giant is an American indie folk-pop band known for their energetic performances and feel-good music. The group was formed in Los Angeles and originally gained recognition with their debut singles and dynamic live shows. Their sound blends folk, pop, and indie rock elements, often featuring upbeat melodies, harmonies, and heartfelt lyrics.
+
+Some of their popular songs include "Set On Fire," "Cough Syrup," and "Window." Magic Giant has also been noted for their engaging storytelling and positive messages, making them a favorite among fans of uplifting alternative music.
+
+The band consists of members Zac Barnett (vocals, guitar), J. Vito Boursaw (bass), and Austin McBroom (drums). Over the years, they have toured extensively, performing at festivals and venues across the United States.
+
+If you're interested in indie folk-pop with an energetic vibe and uplifting themes, Magic Giant is definitely worth a listen!
+Finish Reason: stop
+-------------------------------------------
+OpenAI text test (Disaster Party) finished.
+PASS test_openai_text_dp (exit status: 0)

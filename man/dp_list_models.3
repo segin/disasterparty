@@ -1,0 +1,87 @@
+." Man page for dp_list_models from libdisasterparty
+.TH DP_LIST_MODELS 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_list_models \- list available models from the LLM provider
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_list_models(dp_context_t *" context ", dp_model_list_t **" model_list_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_list_models()
+function retrieves a list of available models from the LLM provider configured
+in the given
+.BR dp_context_t .
+If the function is successful, it allocates a
+.BR dp_model_list_t
+structure and stores a pointer to it in
+.IR *model_list_out .
+The caller is responsible for freeing this structure using
+.BR dp_free_model_list (3).
+For Gemini models, this function strips the "models/" prefix from the returned model IDs.
+
+.SH RETURN VALUE
+Returns 0 on success. Returns -1 on critical errors. The
+.I (*model_list_out)
+structure will contain error details on failure.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    dp_model_list_t* model_list = NULL;
+    int ret = dp_list_models(context, &model_list);
+
+    if (ret == 0 && model_list && model_list->count > 0) {
+        printf("Available Models:\n");
+        for (size_t i = 0; i < model_list->count; ++i) {
+            printf("- ID: %s, Display Name: %s\n",
+                   model_list->models[i].model_id,
+                   model_list->models[i].display_name ? model_list->models[i].display_name : "N/A");
+        }
+    } else {
+        fprintf(stderr, "Failed to list models: %s\n",
+                model_list && model_list->error_message ? model_list->error_message : "(unknown error)");
+    }
+
+    dp_free_model_list(model_list);
+    dp_destroy_context(context);
+
+    return ret == 0 ? 0 : 1;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_free_model_list (3),
+.BR dp_model_list (3),
+.BR disasterparty (7)

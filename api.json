@@ -1,7 +1,7 @@
 {
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "headerFile": "disasterparty.h",
   "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
   "dependencies": [
@@ -65,12 +65,6 @@
           "description": "Reference to an uploaded file."
         }
       ]
-    },,
-        {
-          "name": "DP_CONTENT_PART_FILE_REFERENCE",
-          "description": "Reference to an uploaded file."
-        }
-      ]
     },
     {
       "name": "dp_content_part_t",
@@ -110,14 +104,21 @@
           ]
         },
         {
-          "name": "file_uri",
-          "type": "char*",
-          "description": "URI of the uploaded file (if type is DP_CONTENT_PART_FILE_REFERENCE)."
-        },
-        {
-          "name": "file_uri",
-          "type": "char*",
-          "description": "URI of the uploaded file (if type is DP_CONTENT_PART_FILE_REFERENCE)."
+          "name": "file_reference",
+          "type": "struct { char* file_id; char* mime_type; }",
+          "description": "File reference data (if type is DP_CONTENT_PART_FILE_REFERENCE).",
+          "subfields": [
+            {
+              "name": "file_id",
+              "type": "char*",
+              "description": "ID of the uploaded file."
+            },
+            {
+              "name": "mime_type",
+              "type": "char*",
+              "description": "MIME type of the file (e.g., \"image/png\")."
+            }
+          ]
         }
       ]
     },
@@ -182,6 +183,26 @@
           "name": "stream",
           "type": "bool",
           "description": "True for streaming response, false for single blocking response."
+        },
+        {
+          "name": "top_p",
+          "type": "double",
+          "description": "Nucleus sampling parameter."
+        },
+        {
+          "name": "top_k",
+          "type": "int",
+          "description": "Top-k sampling parameter."
+        },
+        {
+          "name": "stop_sequences",
+          "type": "const char**",
+          "description": "Array of stop sequences."
+        },
+        {
+          "name": "num_stop_sequences",
+          "type": "size_t",
+          "description": "Number of stop sequences."
         }
       ]
     },
@@ -272,80 +293,6 @@
       ]
     },
     {
-      "name": "dp_file_t",
-      "type": "struct",
-      "description": "Holds information about an uploaded file.",
-      "fields": [
-        {
-          "name": "file_id",
-          "type": "char*",
-          "description": "Unique identifier for the file."
-        },
-        {
-          "name": "display_name",
-          "type": "char*",
-          "description": "User-provided display name for the file."
-        },
-        {
-          "name": "mime_type",
-          "type": "char*",
-          "description": "MIME type of the file."
-        },
-        {
-          "name": "size_bytes",
-          "type": "long",
-          "description": "Size of the file in bytes."
-        },
-        {
-          "name": "create_time",
-          "type": "char*",
-          "description": "Timestamp when the file was created."
-        },
-        {
-          "name": "uri",
-          "type": "char*",
-          "description": "URI of the file, used for referencing in messages."
-        }
-      ]
-    },
-    {
-      "name": "dp_file_t",
-      "type": "struct",
-      "description": "Holds information about an uploaded file.",
-      "fields": [
-        {
-          "name": "file_id",
-          "type": "char*",
-          "description": "Unique identifier for the file."
-        },
-        {
-          "name": "display_name",
-          "type": "char*",
-          "description": "User-provided display name for the file."
-        },
-        {
-          "name": "mime_type",
-          "type": "char*",
-          "description": "MIME type of the file."
-        },
-        {
-          "name": "size_bytes",
-          "type": "long",
-          "description": "Size of the file in bytes."
-        },
-        {
-          "name": "create_time",
-          "type": "char*",
-          "description": "Timestamp when the file was created."
-        },
-        {
-          "name": "uri",
-          "type": "char*",
-          "description": "URI of the file, used for referencing in messages."
-        }
-      ]
-    },
-    {
       "name": "dp_model_list_t",
       "type": "struct",
       "description": "Holds a list of available models and status from the listing operation.",
@@ -386,6 +333,19 @@
         { "name": "DP_ANTHROPIC_EVENT_MESSAGE_DELTA" },
         { "name": "DP_ANTHROPIC_EVENT_MESSAGE_STOP" },
         { "name": "DP_ANTHROPIC_EVENT_ERROR" }
+      ]
+    },
+    {
+      "name": "dp_error_code_t",
+      "type": "enum",
+      "description": "Enumeration for error codes.",
+      "values": [
+        { "name": "DP_SUCCESS", "description": "Success." },
+        { "name": "DP_ERROR_GENERAL", "description": "General error." },
+        { "name": "DP_ERROR_NETWORK", "description": "Network error." },
+        { "name": "DP_ERROR_INVALID_ARGUMENT", "description": "Invalid argument." },
+        { "name": "DP_ERROR_PROVIDER_FAILURE", "description": "Provider failure." },
+        { "name": "DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED", "description": "Token counting not supported." }
       ]
     },
     {
@@ -622,6 +582,29 @@
       ]
     },
     {
+      "name": "dp_count_tokens",
+      "description": "Counts the number of tokens in a request.",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "request_config",
+          "type": "const dp_request_config_t*",
+          "description": "Configuration for the request."
+        },
+        {
+          "name": "token_count_out",
+          "type": "size_t*",
+          "description": "Output for the token count."
+        }
+      ]
+    },
+    {
       "name": "dp_free_model_list",
       "description": "Frees the memory allocated for a dp_model_list_t structure and its contents.",
       "returnType": "void",
@@ -659,103 +642,6 @@
           "name": "num_messages",
           "type": "size_t",
           "description": "Number of messages in the array."
-        }
-      ]
-    },
-    {
-      "name": "dp_upload_file",
-      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context (must be for DP_PROVIDER_GOOGLE_GEMINI)."
-        },
-        {
-          "name": "file_path",
-          "type": "const char*",
-          "description": "Absolute path to the file to upload."
-        },
-        {
-          "name": "mime_type",
-          "type": "const char*",
-          "description": "MIME type of the file (e.g., \"image/png\", \"text/plain\")."
-        },
-        {
-          "name": "file_out",
-          "type": "dp_file_t**",
-          "description": "Output for the allocated dp_file_t structure."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_file",
-      "description": "Frees the memory allocated for a dp_file_t structure.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "file",
-          "type": "dp_file_t*",
-          "description": "The file structure to be freed."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_messages",
-      "description": "Frees the content of an array of dp_message_t, including their parts.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "messages",
-          "type": "dp_message_t*",
-          "description": "Array of messages."
-        },
-        {
-          "name": "num_messages",
-          "type": "size_t",
-          "description": "Number of messages in the array."
-        }
-      ]
-    },
-    {
-      "name": "dp_upload_file",
-      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context (must be for DP_PROVIDER_GOOGLE_GEMINI)."
-        },
-        {
-          "name": "file_path",
-          "type": "const char*",
-          "description": "Absolute path to the file to upload."
-        },
-        {
-          "name": "mime_type",
-          "type": "const char*",
-          "description": "MIME type of the file (e.g., \"image/png\", \"text/plain\")."
-        },
-        {
-          "name": "file_out",
-          "type": "dp_file_t**",
-          "description": "Output for the allocated dp_file_t structure."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_file",
-      "description": "Frees the memory allocated for a dp_file_t structure.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "file",
-          "type": "dp_file_t*",
-          "description": "The file structure to be freed."
         }
       ]
     },
@@ -830,9 +716,14 @@
           "description": "The message to modify."
         },
         {
-          "name": "file_uri",
+          "name": "file_id",
           "type": "const char*",
-          "description": "The URI of the uploaded file."
+          "description": "The ID of the uploaded file."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "The MIME type of the file."
         }
       ]
     },

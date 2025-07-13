@@ -1,0 +1,3 @@
+Successfully counted tokens.
+Token count: 14
+PASS test_anthropic_token_counting_dp (exit status: 0)

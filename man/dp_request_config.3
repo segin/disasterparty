@@ -1,0 +1,137 @@
+." Man page for dp_request_config_t struct from libdisasterparty
+.TH DP_REQUEST_CONFIG 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_request_config_t \- structure for configuring an LLM API request
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    const char* model;
+    dp_message_t* messages;
+    size_t num_messages;
+    const char* system_prompt; 
+    double temperature;       
+    int max_tokens;           
+    bool stream;              
+    double top_p;
+    int top_k;
+    const char** stop_sequences;
+    size_t num_stop_sequences;
+} dp_request_config_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_request_config_t
+structure holds all the parameters needed to define a request to an LLM provider.
+It is passed to functions like
+.BR dp_perform_completion (3).
+
+.SH MEMBERS
+.TP
+.B const char* model
+The ID of the model to use for this request (e.g., "gpt-4.1-nano", "gemini-1.5-pro-latest").
+.TP
+.B dp_message_t* messages
+A pointer to an array of
+.BR dp_message_t
+structures that form the conversation history. See
+.BR dp_message (3).
+.TP
+.B size_t num_messages
+The number of messages in the
+.I messages
+array.
+.TP
+.B const char* system_prompt
+An optional system prompt to influence the model's behavior. For Gemini, this is sent as a `system_instruction`. For OpenAI and Anthropic, it is sent as a system message or prompt.
+.TP
+.B double temperature
+Controls randomness. Lower values make the model more deterministic.
+.TP
+.B int max_tokens
+The maximum number of tokens to generate in the response.
+.TP
+.B bool stream
+If `true`, the request will be made in streaming mode.
+.TP
+.B double top_p
+Nucleus sampling parameter. The model considers only tokens with `top_p` probability mass. (Supported by OpenAI, Gemini, Anthropic).
+.TP
+.B int top_k
+The model considers only the `top_k` most likely tokens. (Supported by Gemini, Anthropic).
+.TP
+.B const char** stop_sequences
+An array of strings that, if generated, will cause the model to stop generation.
+.TP
+.B size_t num_stop_sequences
+The number of strings in the
+.I stop_sequences
+array.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    dp_message_t messages[2];
+    messages[0].role = DP_ROLE_USER;
+    dp_message_add_text_part(&messages[0], "What is the capital of France?");
+
+    messages[1].role = DP_ROLE_ASSISTANT;
+    dp_message_add_text_part(&messages[1], "Paris.");
+
+    dp_request_config_t config = {
+        .model = "gemini-2.5-flash",
+        .messages = messages,
+        .num_messages = 2,
+        .system_prompt = "You are a helpful AI assistant.",
+        .temperature = 0.5,
+        .max_tokens = 20,
+        .stream = false,
+        .top_p = 0.9,
+        .top_k = 40
+    };
+
+    // Example of using stop sequences
+    const char* stop_seqs[] = { "\n\n", "STOP" };
+    config.stop_sequences = stop_seqs;
+    config.num_stop_sequences = 2;
+
+    printf("Model: %s\n", config.model);
+    printf("System Prompt: %s\n", config.system_prompt);
+    printf("Temperature: %.1f\n", config.temperature);
+    printf("Max Tokens: %d\n", config.max_tokens);
+    printf("Stream: %s\n", config.stream ? "true" : "false");
+    printf("Top P: %.1f\n", config.top_p);
+    printf("Top K: %d\n", config.top_k);
+    printf("Stop Sequences: %s, %s\n", config.stop_sequences[0], config.stop_sequences[1]);
+
+    // In a real application, you would then call dp_perform_completion or dp_perform_streaming_completion
+    // with this config.
+
+    dp_free_messages(messages, 2);
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_perform_completion (3),
+.BR dp_message (3),
+.BR disasterparty (7)

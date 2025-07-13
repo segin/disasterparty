@@ -1,0 +1,20 @@
+Disaster Party Library Version: 0.5.0
+Using OpenAI API Key: ***
+Using OpenAI Base URL: https://api.openai.com/v1
+Disaster Party Context Initialized for Streaming Test.
+Sending streaming request to model: gpt-4.1-nano
+Prompt: Tell me about MAGIC GIANT.
+---
+Streaming Response:
+Magic Giant is an American alternative indie band known for their energetic sound that blends indie rock, folk, and pop elements. The band was formed in Los Angeles and gained recognition for their catchy melodies, heartfelt lyrics, and dynamic live performances. Their music often features a mix of acoustic instruments, electronic textures, and vibrant vocals, creating an uplifting and engaging listening experience.
+
+Some of their popular songs include "Set on Fire," "Glass Heart," and "In the Wind." Magic Giant has released several EPs and albums, building a dedicated fanbase through their touring and energetic presence. They are also known for their positive messaging and community-oriented approach, often encouraging themes of hope, resilience, and connection.
+
+If you're interested in indie music with a lively and uplifting vibe, Magic Giant is definitely worth exploring!
+[STREAM END - OpenAI with Disaster Party]
+
+---
+Streaming completed. HTTP Status: 200
+Finish Reason: stop
+OpenAI streaming test (Disaster Party) finished.
+PASS test_openai_streaming_dp (exit status: 0)

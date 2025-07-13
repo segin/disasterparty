@@ -1,5 +1,5 @@
 # Disaster Party LLM Client Library - Full Documentation
-**Version: 0.4.0**
+**Version: 0.5.0**
 
 ## 1. Overview (disasterparty.7)
 

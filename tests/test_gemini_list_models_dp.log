@@ -1,0 +1,210 @@
+Disaster Party Library Version: 0.5.0
+Testing Gemini List Models:
+Using Gemini API Key: ***
+Disaster Party Context Initialized.
+
+--- Gemini Available Models (HTTP 200) ---
+Found 50 models:
+  Model 1:
+    ID:           embedding-gecko-001
+    Display Name: Embedding Gecko
+    Version:      001
+  Model 2:
+    ID:           gemini-1.0-pro-vision-latest
+    Display Name: Gemini 1.0 Pro Vision
+    Version:      001
+  Model 3:
+    ID:           gemini-pro-vision
+    Display Name: Gemini 1.0 Pro Vision
+    Version:      001
+  Model 4:
+    ID:           gemini-1.5-pro-latest
+    Display Name: Gemini 1.5 Pro Latest
+    Version:      001
+  Model 5:
+    ID:           gemini-1.5-pro-002
+    Display Name: Gemini 1.5 Pro 002
+    Version:      002
+  Model 6:
+    ID:           gemini-1.5-pro
+    Display Name: Gemini 1.5 Pro
+    Version:      001
+  Model 7:
+    ID:           gemini-1.5-flash-latest
+    Display Name: Gemini 1.5 Flash Latest
+    Version:      001
+  Model 8:
+    ID:           gemini-1.5-flash
+    Display Name: Gemini 1.5 Flash
+    Version:      001
+  Model 9:
+    ID:           gemini-1.5-flash-002
+    Display Name: Gemini 1.5 Flash 002
+    Version:      002
+  Model 10:
+    ID:           gemini-1.5-flash-8b
+    Display Name: Gemini 1.5 Flash-8B
+    Version:      001
+  Model 11:
+    ID:           gemini-1.5-flash-8b-001
+    Display Name: Gemini 1.5 Flash-8B 001
+    Version:      001
+  Model 12:
+    ID:           gemini-1.5-flash-8b-latest
+    Display Name: Gemini 1.5 Flash-8B Latest
+    Version:      001
+  Model 13:
+    ID:           gemini-2.5-pro-preview-03-25
+    Display Name: Gemini 2.5 Pro Preview 03-25
+    Version:      2.5-preview-03-25
+  Model 14:
+    ID:           gemini-2.5-flash-preview-04-17
+    Display Name: Gemini 2.5 Flash Preview 04-17
+    Version:      2.5-preview-04-17
+  Model 15:
+    ID:           gemini-2.5-flash-preview-05-20
+    Display Name: Gemini 2.5 Flash Preview 05-20
+    Version:      2.5-preview-05-20
+  Model 16:
+    ID:           gemini-2.5-flash
+    Display Name: Gemini 2.5 Flash
+    Version:      001
+  Model 17:
+    ID:           gemini-2.5-flash-preview-04-17-thinking
+    Display Name: Gemini 2.5 Flash Preview 04-17 for cursor testing
+    Version:      2.5-preview-04-17
+  Model 18:
+    ID:           gemini-2.5-flash-lite-preview-06-17
+    Display Name: Gemini 2.5 Flash-Lite Preview 06-17
+    Version:      2.5-preview-06-17
+  Model 19:
+    ID:           gemini-2.5-pro-preview-05-06
+    Display Name: Gemini 2.5 Pro Preview 05-06
+    Version:      2.5-preview-05-06
+  Model 20:
+    ID:           gemini-2.5-pro-preview-06-05
+    Display Name: Gemini 2.5 Pro Preview
+    Version:      2.5-preview-06-05
+  Model 21:
+    ID:           gemini-2.5-pro
+    Display Name: Gemini 2.5 Pro
+    Version:      2.5
+  Model 22:
+    ID:           gemini-2.0-flash-exp
+    Display Name: Gemini 2.0 Flash Experimental
+    Version:      2.0
+  Model 23:
+    ID:           gemini-2.0-flash
+    Display Name: Gemini 2.0 Flash
+    Version:      2.0
+  Model 24:
+    ID:           gemini-2.0-flash-001
+    Display Name: Gemini 2.0 Flash 001
+    Version:      2.0
+  Model 25:
+    ID:           gemini-2.0-flash-exp-image-generation
+    Display Name: Gemini 2.0 Flash (Image Generation) Experimental
+    Version:      2.0
+  Model 26:
+    ID:           gemini-2.0-flash-lite-001
+    Display Name: Gemini 2.0 Flash-Lite 001
+    Version:      2.0
+  Model 27:
+    ID:           gemini-2.0-flash-lite
+    Display Name: Gemini 2.0 Flash-Lite
+    Version:      2.0
+  Model 28:
+    ID:           gemini-2.0-flash-preview-image-generation
+    Display Name: Gemini 2.0 Flash Preview Image Generation
+    Version:      2.0
+  Model 29:
+    ID:           gemini-2.0-flash-lite-preview-02-05
+    Display Name: Gemini 2.0 Flash-Lite Preview 02-05
+    Version:      preview-02-05
+  Model 30:
+    ID:           gemini-2.0-flash-lite-preview
+    Display Name: Gemini 2.0 Flash-Lite Preview
+    Version:      preview-02-05
+  Model 31:
+    ID:           gemini-2.0-pro-exp
+    Display Name: Gemini 2.0 Pro Experimental
+    Version:      2.5-exp-03-25
+  Model 32:
+    ID:           gemini-2.0-pro-exp-02-05
+    Display Name: Gemini 2.0 Pro Experimental 02-05
+    Version:      2.5-exp-03-25
+  Model 33:
+    ID:           gemini-exp-1206
+    Display Name: Gemini Experimental 1206
+    Version:      2.5-exp-03-25
+  Model 34:
+    ID:           gemini-2.0-flash-thinking-exp-01-21
+    Display Name: Gemini 2.5 Flash Preview 04-17
+    Version:      2.5-preview-04-17
+  Model 35:
+    ID:           gemini-2.0-flash-thinking-exp
+    Display Name: Gemini 2.5 Flash Preview 04-17
+    Version:      2.5-preview-04-17
+  Model 36:
+    ID:           gemini-2.0-flash-thinking-exp-1219
+    Display Name: Gemini 2.5 Flash Preview 04-17
+    Version:      2.5-preview-04-17
+  Model 37:
+    ID:           gemini-2.5-flash-preview-tts
+    Display Name: Gemini 2.5 Flash Preview TTS
+    Version:      gemini-2.5-flash-exp-tts-2025-05-19
+  Model 38:
+    ID:           gemini-2.5-pro-preview-tts
+    Display Name: Gemini 2.5 Pro Preview TTS
+    Version:      gemini-2.5-pro-preview-tts-2025-05-19
+  Model 39:
+    ID:           learnlm-2.0-flash-experimental
+    Display Name: LearnLM 2.0 Flash Experimental
+    Version:      2.0
+  Model 40:
+    ID:           gemma-3-1b-it
+    Display Name: Gemma 3 1B
+    Version:      001
+  Model 41:
+    ID:           gemma-3-4b-it
+    Display Name: Gemma 3 4B
+    Version:      001
+  Model 42:
+    ID:           gemma-3-12b-it
+    Display Name: Gemma 3 12B
+    Version:      001
+  Model 43:
+    ID:           gemma-3-27b-it
+    Display Name: Gemma 3 27B
+    Version:      001
+  Model 44:
+    ID:           gemma-3n-e4b-it
+    Display Name: Gemma 3n E4B
+    Version:      001
+  Model 45:
+    ID:           gemma-3n-e2b-it
+    Display Name: Gemma 3n E2B
+    Version:      001
+  Model 46:
+    ID:           embedding-001
+    Display Name: Embedding 001
+    Version:      001
+  Model 47:
+    ID:           text-embedding-004
+    Display Name: Text Embedding 004
+    Version:      004
+  Model 48:
+    ID:           gemini-embedding-exp-03-07
+    Display Name: Gemini Embedding Experimental 03-07
+    Version:      exp-03-07
+  Model 49:
+    ID:           gemini-embedding-exp
+    Display Name: Gemini Embedding Experimental
+    Version:      exp-03-07
+  Model 50:
+    ID:           aqa
+    Display Name: Model that performs Attributed Question Answering.
+    Version:      001
+-------------------------------------------
+Gemini list models test (Disaster Party) finished.
+PASS test_gemini_list_models_dp (exit status: 0)

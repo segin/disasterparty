@@ -1,0 +1,52 @@
+Disaster Party Library Version: 0.5.0
+Using Gemini API Key: ***
+Disaster Party Context Initialized for Streaming Test.
+Sending streaming request to Gemini model: gemini-2.0-flash
+Prompt: Tell me about MAGIC GIANT.
+---
+Streaming Response (Gemini via SSE with Disaster Party):
+MAGIC GIANT is a Los Angeles-based indie pop band known for their upbeat, catchy tunes and energetic live performances. Here's a breakdown of what makes them unique:
+
+**Key Characteristics:**
+
+*   **Sound:** Their music is generally described as indie pop with elements of folk, rock, and even a touch of electronic. They're known for:
+    *   **Bright, Upbeat Melodies:** Their songs are often very catchy and optimistic.
+    *   **Harmonies:** They frequently use layered vocal harmonies, adding depth and texture to their sound.
+    *   **Diverse Instrumentation:** They incorporate a variety of instruments, including guitars, keyboards, drums, and often horns (trumpet, saxophone).
+    *   **Feel-Good Vibes:** Their music tends to be uplifting and positive.
+
+*   **Members:** The band typically consists of:
+    *   Austin Bisnow (vocals)
+    *   Zang (guitar, vocals)
+    *   Zambricki Li (bass, vocals)
+    *   Brian Zaghi (drums)
+
+*   **Popular Songs:** Some of their well-known songs include:
+    *   "Set on Fire"
+    *   "Window Pane"
+    *   "Hideaway"
+    *   "Nervous"
+    *   "Let It Burn"
+    *   "Disaster Party"
+
+*   **Albums:** They have released several albums, including:
+    *   *In the Wind*
+    *   *Underneath the Pine*
+    *   *Disaster Party*
+    *   *American Spirit*
+
+*   **Live Performances:** They are known for their high-energy live shows. The band members are animated and engaging, and they often incorporate audience participation into their performances.
+
+*   **Overall Impression:** MAGIC GIANT is a band that aims to create music that makes people feel good. Their catchy melodies, positive lyrics, and energetic performances have earned them a dedicated following. They are a popular choice for festivals and concerts looking for a fun and upbeat act.
+
+**In summary, if you like indie pop with a positive vibe and catchy tunes, MAGIC GIANT is definitely worth checking out.**
+
+To get a better sense of their music, I recommend listening to some of their popular songs on music streaming platforms like Spotify, Apple Music, or YouTube.
+
+[STREAM END - Gemini (SSE) with Disaster Party]
+
+---
+Gemini Streaming completed. HTTP Status: 200
+Finish Reason: STOP
+Gemini streaming test (Disaster Party) finished.
+PASS test_gemini_streaming_dp (exit status: 0)

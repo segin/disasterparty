@@ -1,0 +1,96 @@
+.\" Man page for dp_response_t struct from libdisasterparty
+.TH DP_RESPONSE 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_response_t \- structure for holding an LLM API response
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    dp_response_part_t* parts;
+    size_t num_parts;
+    char* error_message;
+    long http_status_code;
+    char* finish_reason;
+} dp_response_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_response_t
+structure holds the result of an API call made by a completion function.
+It contains either the successful response data or error information. Its
+contents must be freed with
+.BR dp_free_response_content (3).
+
+.SH MEMBERS
+.TP
+.B dp_response_part_t* parts
+For non-streaming responses, this will be an array of response parts. Currently, only a single text part is supported. `parts[0].text` holds the response content.
+.TP
+.B size_t num_parts
+The number of parts in the
+.I parts
+array.
+.TP
+.B char* error_message
+If an error occurs during the request (either a cURL error or an API error), this member will point to a dynamically allocated string describing the error. It will be `NULL` on success.
+.TP
+.B long http_status_code
+The HTTP status code returned by the server (e.g., 200 for OK, 401 for Unauthorized).
+.TP
+.B char* finish_reason
+A string indicating why the model stopped generating tokens (e.g., "stop", "max_tokens").
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    // This is a simplified example. In a real scenario, dp_response_t
+    // would be populated by a call to dp_perform_completion or similar.
+    dp_response_t response = {0};
+    response.http_status_code = 200;
+    response.num_parts = 1;
+    response.parts = (dp_response_part_t*)malloc(sizeof(dp_response_part_t));
+    if (response.parts) {
+        response.parts[0].type = DP_CONTENT_PART_TEXT;
+        response.parts[0].text = strdup("This is a sample response.");
+    }
+    response.finish_reason = strdup("stop");
+
+    if (response.http_status_code >= 200 && response.http_status_code < 300) {
+        printf("HTTP Status: %ld\n", response.http_status_code);
+        printf("Finish Reason: %s\n", response.finish_reason);
+        if (response.num_parts > 0 && response.parts[0].text) {
+            printf("Response Text: %s\n", response.parts[0].text);
+        }
+    } else {
+        fprintf(stderr, "Error: HTTP Status %ld, Message: %s\n",
+                response.http_status_code, response.error_message ? response.error_message : "(none)");
+    }
+
+    dp_free_response_content(&response);
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_free_response_content (3),
+.BR dp_perform_completion (3),
+.BR disasterparty (7)

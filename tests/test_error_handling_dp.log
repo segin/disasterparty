@@ -1,0 +1,27 @@
+
+--- Running Test: OpenAI Bad API Key ---
+PASS: Successfully caught expected HTTP 401.
+      API Error Message: HTTP error 401: Incorrect API key provided: invalid-***************ting. You can find your API key a...
+
+--- Running Test: Gemini Bad API Key ---
+PASS: Successfully caught expected HTTP 400.
+      API Error Message: HTTP error 400: API key not valid. Please pass a valid API key....
+
+--- Running Test: Anthropic Bad API Key ---
+PASS: Successfully caught expected HTTP 401.
+      API Error Message: HTTP error 401: invalid x-api-key...
+
+--- Running Test: OpenAI Bad Model Name ---
+PASS: Successfully caught expected HTTP 404.
+      API Error Message: HTTP error 404: The model `model-does-not-exist` does not exist or you do not have access to it....
+
+--- Running Test: Gemini Bad Model Name ---
+PASS: Successfully caught expected HTTP 404.
+      API Error Message: HTTP error 404: models/model-does-not-exist is not found for API version v1beta, or is not supported...
+
+--- Running Test: Anthropic Bad Model Name ---
+PASS: Successfully caught expected HTTP 404.
+      API Error Message: HTTP error 404: model: model-does-not-exist...
+
+All 6 error handling tests passed!
+PASS test_error_handling_dp (exit status: 0)

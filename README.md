@@ -1,6 +1,6 @@
 # Disaster Party LLM Client Library
 
-Version: 0.4.0
+Version: 0.5.0
 
 A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, with a focus on creating delightful chaos. Supports text and multimodal inputs, file uploads and references, and both regular and streaming responses.
 

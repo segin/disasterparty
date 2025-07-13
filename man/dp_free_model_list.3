@@ -1,0 +1,73 @@
+." Man page for dp_free_model_list from libdisasterparty
+.TH DP_FREE_MODEL_LIST 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_free_model_list \- free a Disaster Party model list structure
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_free_model_list(dp_model_list_t *" model_list ");"
+
+.SH DESCRIPTION
+The
+.B dp_free_model_list()
+function deallocates all memory associated with a
+.BR dp_model_list_t
+structure that was previously allocated by
+.BR dp_list_models (3).
+This includes freeing all strings and the array of models within the structure.
+Passing a NULL pointer is a safe no-op.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    // Simulate a dp_model_list_t structure that would be returned by dp_list_models
+    dp_model_list_t* model_list = (dp_model_list_t*)malloc(sizeof(dp_model_list_t));
+    if (!model_list) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    model_list->count = 1;
+    model_list->models = (dp_model_info_t*)malloc(sizeof(dp_model_info_t));
+    if (!model_list->models) {
+        free(model_list);
+        fprintf(stderr, "Memory allocation failed.\n");
+        return 1;
+    }
+    model_list->models[0].model_id = strdup("gemini-pro");
+    model_list->models[0].display_name = strdup("Gemini Pro");
+    model_list->models[0].version = strdup("1.0");
+    model_list->models[0].description = strdup("A powerful model.");
+    model_list->models[0].input_token_limit = 32768;
+    model_list->models[0].output_token_limit = 2048;
+    model_list->error_message = NULL;
+    model_list->http_status_code = 200;
+
+    printf("Model list created. Now freeing it.\n");
+dp_free_model_list(model_list);
+    printf("Model list freed.\n");
+
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_list_models (3),
+.BR disasterparty (7)

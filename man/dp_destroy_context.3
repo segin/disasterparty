@@ -1,0 +1,63 @@
+." Man page for dp_destroy_context from libdisasterparty
+.TH DP_DESTROY_CONTEXT 3 "July 03, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_destroy_context \- destroy a Disaster Party LLM client context
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_destroy_context(dp_context_t *" context ");"
+
+.SH DESCRIPTION
+The
+.B dp_destroy_context()
+function deallocates a
+.BR dp_context_t
+previously created by
+.BR dp_init_context (3).
+It frees all resources associated with the context. Passing a NULL pointer to
+this function is a safe no-op.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    printf("Context initialized successfully!\n");
+
+    dp_destroy_context(context);
+    printf("Context destroyed.\n");
+
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR disasterparty (7)

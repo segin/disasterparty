@@ -1,0 +1,2 @@
+PASS: dp_count_tokens correctly returned DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED for the OpenAI provider.
+PASS test_openai_token_counting_dp (exit status: 0)

@@ -1,0 +1,14 @@
+Disaster Party Library Version: 0.5.0
+Using OpenAI API Key: ***
+Using OpenAI Base URL: https://api.openai.com/v1
+Disaster Party Context Initialized (Multimodal).
+Sending multimodal request to model: gpt-4o
+Text prompt: What is in this image? Describe it in one sentence.
+Image URL: https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/640px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg
+
+--- OpenAI Multimodal Completion Response (HTTP 200) ---
+The image shows a wooden boardwalk path cutting through a lush green field under a blue sky with scattered clouds.
+Finish Reason: stop
+---------------------------------------------------
+OpenAI multimodal test (Disaster Party) finished.
+PASS test_openai_multimodal_dp (exit status: 0)

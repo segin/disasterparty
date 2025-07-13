@@ -1,3 +1,7 @@
+# Version 0.5.0 (2025-07-12)
+
+*   Added an error code for when token counting is not supported.
+
 # Version 0.4.0 (2025-07-03)
 * **ABI BREAKING CHANGE**: The `dp_content_part_t` struct has been modified with the addition of a `file_uri` member. The `dp_content_part_type_t` enum has also been updated with `DP_CONTENT_PART_FILE_REFERENCE`. Recompilation of applications will be required.
 * Added support for file uploads and file references in messages (Gemini only).
