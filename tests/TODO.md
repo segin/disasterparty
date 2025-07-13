@@ -2,7 +2,7 @@
 This file contains a list of suggested test cases to improve the robustness and coverage of the `disasterparty` library.
 
 - [x] Test `dp_init_context` with an invalid `dp_provider_type_t` enum value.
-- [ ] Test `dp_perform_completion` against a mock server that returns a non-JSON error response (e.g., an HTML error page).
+- [x] Test `dp_perform_completion` against a mock server that returns a non-JSON error response (e.g., an HTML error page).
 - [ ] Test `dp_perform_streaming_completion` where the stream from a mock server terminates abruptly mid-JSON object.
 - [ ] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Gemini provider.
 - [ ] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Anthropic provider.

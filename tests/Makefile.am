@@ -27,9 +27,11 @@ check_PROGRAMS = \
     test_openai_token_counting_dp \
     test_user_agent_dp \
     test_unsupported_file_uploads_dp \
-    test_invalid_provider_dp
+    test_invalid_provider_dp \
+    test_non_json_error_dp
 
 # Sources for each test program
+test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
 test_invalid_provider_dp_SOURCES = test_invalid_provider_dp.c
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
 test_openai_multimodal_dp_SOURCES = test_openai_multimodal_dp.c
