@@ -10,7 +10,7 @@ This file contains a list of suggested test cases to improve the robustness and 
 - [x] Test `dp_upload_file` with a zero-byte file to ensure it is handled gracefully.
 - [ ] Test `dp_upload_file` with a very large file (e.g., > 100MB) to check for timeouts or provider size limits.
 - [x] Test `dp_serialize_messages_to_file` and `dp_deserialize_messages_from_file` with a conversation history containing all supported `dp_content_part_type_t` variants (text, image URL, base64 image, file reference).
-- [ ] Test `dp_deserialize_messages_from_file` with a malformed or corrupt JSON file to ensure it fails without crashing.
+- [x] Test `dp_deserialize_messages_from_file` with a malformed or corrupt JSON file to ensure it fails without crashing.
 - [ ] Test API rate limiting (HTTP 429 response) handling for `dp_perform_completion`.
 - [ ] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
 - [ ] Test API authentication failure (HTTP 401 response) for all major functions (`dp_perform_completion`, `dp_list_models`, `dp_upload_file`, `dp_count_tokens`).
