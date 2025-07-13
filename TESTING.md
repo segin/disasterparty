@@ -1,6 +1,76 @@
 # Testing Disaster Party
 
-This document outlines how to use the mock server for testing the Disaster Party library.
+This document outlines how to test the Disaster Party LLM client library, including running the main test suite and utilizing the mock server for specific scenarios.
+
+## Running the Test Suite
+
+The test suite can be run with `make check`. The tests make live API calls and require certain environment variables to be set. Tests for a specific provider or feature will be skipped if their required variables are not found.
+
+To run the full test suite, the following environment variables are needed:
+
+### API Keys
+*   **`OPENAI_API_KEY`**: Your API key for OpenAI or any OpenAI-compatible service.
+*   **`GEMINI_API_KEY`**: Your API key for Google's Gemini API.
+*   **`ANTHROPIC_API_KEY`**: Your API key for Anthropic's Claude API.
+
+### Image Paths (for Multimodal Tests)
+*   **`GEMINI_TEST_IMAGE_PATH`**: A valid path to a JPEG or PNG image for Gemini multimodal tests.
+*   **`ANTHROPIC_TEST_IMAGE_PATH`**: A valid path to a JPEG or PNG image for Anthropic multimodal tests.
+*   **`TEST_IMAGE_PATH_1`**: Path to the first image for the generic inline context test.
+*   **`TEST_IMAGE_PATH_2`**: Path to the second image for the generic inline context test.
+
+### Optional Variables
+*   **`OPENAI_API_BASE_URL`**: To test against a custom OpenAI-compatible endpoint instead of the default `https://api.openai.com/v1`.
+
+### Example
+```sh
+export OPENAI_API_KEY="sk-..."
+export GEMINI_API_KEY="..."
+export ANTHROPIC_API_KEY="..."
+export GEMINI_TEST_IMAGE_PATH="tests/assets/sample.png"
+export ANTHROPIC_TEST_IMAGE_PATH="tests/assets/sample.png"
+export TEST_IMAGE_PATH_1="tests/assets/sample.png"
+export TEST_IMAGE_PATH_2="tests/assets/sample.pdf"
+
+make check
+```
+
+### Full List of Unit Tests
+The test suite currently includes the following test programs:
+
+*   `test_openai_text_dp`
+*   `test_openai_multimodal_dp`
+*   `test_openai_streaming_dp`
+*   `test_openai_list_models_dp`
+*   `test_openai_streaming_multimodal_dp`
+*   `test_gemini_text_dp`
+*   `test_gemini_multimodal_dp`
+*   `test_gemini_streaming_dp`
+*   `test_gemini_list_models_dp`
+*   `test_gemini_streaming_multimodal_dp`
+*   `test_gemini_file_completion_dp`
+*   `test_gemini_file_attachment_dp`
+*   `test_anthropic_text_dp`
+*   `test_anthropic_multimodal_dp`
+*   `test_anthropic_streaming_dp`
+*   `test_anthropic_streaming_detailed_dp`
+*   `test_anthropic_list_models_dp`
+*   `test_anthropic_streaming_multimodal_dp`
+*   `test_anthropic_all_event_types_dp`
+*   `test_serialization_dp`
+*   `test_inline_multimodal_dp`
+*   `test_error_handling_dp`
+*   `test_parameters_dp`
+*   `test_anthropic_streaming_multimodal_detailed_dp`
+*   `test_multiprovider_multithread_dp`
+*   `test_abrupt_stream_dp`
+*   `test_non_json_error_dp`
+*   `test_list_models_empty_dp`
+*   `test_anthropic_token_counting_dp`
+*   `test_gemini_token_counting_dp`
+*   `test_unsupported_file_uploads_dp`
+*   `test_user_agent_dp`
+*   `test_invalid_provider_dp`
 
 ## Mock Server
 
@@ -43,4 +113,3 @@ if (!mock_server_url) {
 }
 ```
 
-```
