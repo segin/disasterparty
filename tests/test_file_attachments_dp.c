@@ -7,21 +7,17 @@
 int main() {
     printf("Running File Attachment Test...\n");
 
-    // Create a dummy file for testing
-    const char* filename = "test_file.txt";
-    FILE* fp = fopen(filename, "w");
-    if (!fp) {
-        perror("fopen");
-        return EXIT_FAILURE;
+    const char* pdf_path = getenv("TEST_PDF_PATH");
+    if (!pdf_path) {
+        printf("SKIP: TEST_PDF_PATH environment variable not set. Please set it to the path of a PDF file.\n");
+        return 77;
     }
-    fprintf(fp, "This is a test file.");
-    fclose(fp);
 
     dp_message_t message = {0};
     message.role = DP_ROLE_USER;
 
     // Add a file reference part to the message
-    if (!dp_message_add_file_reference_part(&message, "file-1234", "text/plain")) {
+    if (!dp_message_add_file_reference_part(&message, "file-1234", "application/pdf")) {
         fprintf(stderr, "Failed to add file reference part to message.\n");
         return EXIT_FAILURE;
     }
@@ -42,11 +38,10 @@ int main() {
     assert(message.num_parts == 1);
     assert(message.parts[0].type == DP_CONTENT_PART_FILE_REFERENCE);
     assert(strcmp(message.parts[0].file_reference.file_id, "file-1234") == 0);
-    assert(strcmp(message.parts[0].file_reference.mime_type, "text/plain") == 0);
+    assert(strcmp(message.parts[0].file_reference.mime_type, "application/pdf") == 0);
 
     dp_free_messages(&message, 1);
     free(json_str);
-    remove(filename);
 
     printf("PASS: File attachment test completed successfully.\n");
     return EXIT_SUCCESS;

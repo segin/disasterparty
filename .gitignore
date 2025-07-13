@@ -1,3 +1,31 @@
+# Build artifacts
+*.o
+*.lo
+*.la
+*.log
+*.trs
+.deps/
+.libs/
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+compile
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+missing
+stamp-h1
+
+# Test binaries
 tests/test_*_dp
 tests/test_inline_multimodal_dp
 tests/test_gemini_streaming_multimodal_dp
@@ -10,3 +38,22 @@ tests/test_unsupported_file_uploads_dp
 tests/test_user_agent_dp
 tests/test_file_attachments_dp
 tests/test_error_handling_dp
+tests/test_anthropic_list_models_dp
+tests/test_anthropic_multimodal_dp
+tests/test_anthropic_streaming_detailed_dp
+tests/test_anthropic_streaming_dp
+tests/test_anthropic_streaming_multimodal_detailed_dp
+tests/test_anthropic_streaming_multimodal_dp
+tests/test_anthropic_text_dp
+tests/test_anthropic_token_counting_dp
+tests/test_gemini_list_models_dp
+tests/test_gemini_streaming_dp
+tests/test_gemini_text_dp
+tests/test_openai_list_models_dp
+tests/test_openai_multimodal_dp
+tests/test_openai_streaming_dp
+tests/test_openai_text_dp
+
+# Other
+disasterparty.pc
+src/disasterparty.c

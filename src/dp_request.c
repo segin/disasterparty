@@ -121,16 +121,10 @@ char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_request_conf
                     cJSON_AddStringToObject(part_obj, "type", "text");
                     cJSON_AddStringToObject(part_obj, "text", temp_text);
                 } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
-                    cJSON_AddStringToObject(part_obj, "type", "tool_result");
-                    cJSON_AddStringToObject(part_obj, "tool_use_id", part->file_reference.file_id);
-                    cJSON *content_array = cJSON_CreateArray();
-                    if (!content_array) { cJSON_Delete(part_obj); cJSON_Delete(root); return NULL; }
-                    cJSON *text_obj = cJSON_CreateObject();
-                    if (!text_obj) { cJSON_Delete(content_array); cJSON_Delete(part_obj); cJSON_Delete(root); return NULL; }
-                    cJSON_AddStringToObject(text_obj, "type", "text");
-                    cJSON_AddStringToObject(text_obj, "text", "File attached.");
-                    cJSON_AddItemToArray(content_array, text_obj);
-                    cJSON_AddItemToObject(part_obj, "content", content_array);
+                    char temp_text[512];
+                    snprintf(temp_text, sizeof(temp_text), "File referenced by ID: %s (Anthropic does not support file references in this manner)", part->file_reference.file_id);
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", temp_text);
                 } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
                     cJSON_AddStringToObject(part_obj, "type", "tool_result");
                     cJSON_AddStringToObject(part_obj, "tool_use_id", part->file_reference.file_id);
