@@ -36,9 +36,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    const char* image_path = getenv("TEST_IMAGE_PATH");
+    const char* image_path = getenv("DP_TEST_IMAGE");
     if (!image_path) {
-        printf("SKIP: TEST_IMAGE_PATH environment variable not set. Please set it to the path of an image file.\n");
+        printf("SKIP: DP_TEST_IMAGE environment variable not set. Please set it to the path of an image file.\n");
         return 77;
     }
 

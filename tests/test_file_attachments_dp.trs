@@ -1,4 +1,4 @@
-:test-result: PASS
-:global-test-result: PASS
+:test-result: SKIP
+:global-test-result: SKIP
 :recheck: no
-:copy-in-global-log: no
+:copy-in-global-log: yes

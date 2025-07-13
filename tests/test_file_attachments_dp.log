@@ -1,12 +1,3 @@
 Running File Attachment Test...
-Successfully built message with file attachment.
-Serialized JSON: [{
-		"role":	"user",
-		"parts":	[{
-				"type":	"file_reference",
-				"file_id":	"file-1234",
-				"mime_type":	"text/plain"
-			}]
-	}]
-PASS: File attachment test completed successfully.
-PASS test_file_attachments_dp (exit status: 0)
+SKIP: DP_TEST_PDF environment variable not set. Please set it to the path of a PDF file.
+SKIP test_file_attachments_dp (exit status: 77)

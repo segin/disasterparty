@@ -7,9 +7,9 @@
 int main() {
     printf("Running File Attachment Test...\n");
 
-    const char* pdf_path = getenv("TEST_PDF_PATH");
+    const char* pdf_path = getenv("DP_TEST_PDF");
     if (!pdf_path) {
-        printf("SKIP: TEST_PDF_PATH environment variable not set. Please set it to the path of a PDF file.\n");
+        printf("SKIP: DP_TEST_PDF environment variable not set. Please set it to the path of a PDF file.\n");
         return 77;
     }
 

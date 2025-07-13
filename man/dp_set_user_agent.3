@@ -1,0 +1,55 @@
+." Man page for dp_set_user_agent from libdisasterparty
+.TH DP_SET_USER_AGENT 3 "July 14, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
+.SH NAME
+dp_set_user_agent \- set a custom user-agent for the Disaster Party context
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_set_user_agent(dp_context_t *" context ", const char *" user_agent ");"
+
+.SH DESCRIPTION
+The
+.B dp_set_user_agent()
+function sets a custom user-agent string for all subsequent requests made with
+the given context. The user-agent will be set to the provided string.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "dummy_key", NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    printf("Default User-Agent: %s\n", dp_get_user_agent(context));
+
+    dp_set_user_agent(context, "my_app/1.2.3");
+    printf("Custom User-Agent: %s\n", dp_get_user_agent(context));
+
+    dp_destroy_context(context);
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_get_user_agent (3),
+.BR dp_init_context (3),
+.BR disasterparty (7)

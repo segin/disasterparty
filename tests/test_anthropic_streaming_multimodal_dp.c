@@ -36,10 +36,10 @@ int main(int argc, char* argv[]) {
     if (argc > 1) { 
         image_path = argv[1]; 
     } else { 
-        image_path = getenv("ANTHROPIC_TEST_IMAGE_PATH");
+        image_path = getenv("DP_TEST_IMAGE");
     }
     if (!image_path) {
-        printf("SKIP: Image path not provided. Use %s [path] or set ANTHROPIC_TEST_IMAGE_PATH\n", argv[0]);
+        printf("SKIP: Image path not provided. Use %s [path] or set DP_TEST_IMAGE\n", argv[0]);
         return 77;
     }
     

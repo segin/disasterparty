@@ -1,0 +1,87 @@
+.TH dp_file 3dp "July 14, 2025" "Disaster Party" "Disaster Party Manual"
+
+.SH NAME
+dp_file_t \- structure for holding file information
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+} dp_file_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_file_t
+structure holds the result of an API call made by a file upload function.
+It contains the successful response data. Its
+contents must be freed with
+.BR dp_free_file (3).
+
+.SH MEMBERS
+.TP
+.B char* file_id
+The unique identifier for the file.
+.TP
+.B char* display_name
+The user-friendly name for the file.
+.TP
+.B char* mime_type
+The MIME type of the file.
+.TP
+.B long size_bytes
+The size of the file in bytes.
+.TP
+.B char* create_time
+The time the file was created.
+.TP
+.B char* uri
+The URI of the file.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    // This is a simplified example. In a real scenario, dp_file_t
+    // would be populated by a call to dp_upload_file or similar.
+    dp_file_t* file = calloc(1, sizeof(dp_file_t));
+    if (file) {
+        file->file_id = strdup("files/example-id");
+        file->display_name = strdup("example.txt");
+        file->mime_type = strdup("text/plain");
+        file->uri = strdup("https://example.com/files/example-id");
+    }
+
+    printf("Freeing file structure.\n");
+    dp_free_file(file);
+    printf("File structure freed.\n");
+
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_free_file (3),
+.BR dp_upload_file (3),
+.BR disasterparty (7)

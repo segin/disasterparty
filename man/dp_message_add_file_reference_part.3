@@ -1,0 +1,38 @@
+.\" Man page for dp_message_add_file_reference_part from libdisasterparty
+.TH DP_MESSAGE_ADD_FILE_REFERENCE_PART 3 "July 13, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+.SH NAME
+dp_message_add_file_reference_part \- add a file reference part to a message
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "bool dp_message_add_file_reference_part(dp_message_t *" message ", const char *" file_id ", const char *" mime_type ");"
+.SH DESCRIPTION
+The
+.B dp_message_add_file_reference_part()
+function adds a new content part referencing an already uploaded file to a
+.BR dp_message_t
+structure. The
+.I file_id
+is obtained from a successful call to
+.BR dp_upload_file (3).
+The
+.I mime_type
+should match the MIME type of the uploaded file.
+.SH RETURN VALUE
+Returns
+.B true
+on success and
+.B false
+on failure (e.g., memory allocation error).
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+.SH SEE ALSO
+.BR dp_upload_file (3),
+.BR disasterparty (7)
