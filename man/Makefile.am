@@ -24,12 +24,18 @@ man3_MANS = \
 	dp_response.3 \
 	dp_serialize_messages_to_file.3 \
 	dp_serialize_messages_to_json_str.3 \
+	dp_count_tokens.3 \
+	dp_error_code_t.3 \
 	dp_upload_file.3 \
-	dp_free_file.3
+	dp_free_file.3 \
+	dp_set_user_agent.3 \
+	dp_get_user_agent.3
 
 # List all man pages to be installed in section 7
 man7_MANS = \
 	disasterparty.7
+
+
 
 # Source files (.3dp and .7dp templates) that need to be included in the distribution tarball.
 EXTRA_DIST = $(man3_MANS:.3=.3dp) $(man7_MANS:.7=.7dp)

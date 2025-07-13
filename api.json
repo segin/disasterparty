@@ -431,6 +431,43 @@
       ],
       "returnType": "int",
       "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
+    },
+    {
+      "name": "dp_file_t",
+      "type": "struct",
+      "description": "Holds information about an uploaded file.",
+      "fields": [
+        {
+          "name": "file_id",
+          "type": "char*",
+          "description": "Unique identifier for the file."
+        },
+        {
+          "name": "display_name",
+          "type": "char*",
+          "description": "User-provided display name for the file."
+        },
+        {
+          "name": "mime_type",
+          "type": "char*",
+          "description": "MIME type of the file."
+        },
+        {
+          "name": "size_bytes",
+          "type": "long",
+          "description": "Size of the file in bytes."
+        },
+        {
+          "name": "create_time",
+          "type": "char*",
+          "description": "Timestamp when the file was created."
+        },
+        {
+          "name": "uri",
+          "type": "char*",
+          "description": "URI of the file, used for referencing in messages."
+        }
+      ]
     }
   ],
   "functions": [
@@ -471,6 +508,40 @@
           "name": "context",
           "type": "dp_context_t*",
           "description": "The context to destroy."
+        }
+      ]
+    },
+    {
+      "name": "dp_set_user_agent",
+      "description": "Sets a custom user-agent string for the Disaster Party context.",
+      "returnType": "void",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "The context to modify."
+        },
+        {
+          "name": "app_name",
+          "type": "const char*",
+          "description": "The name of the application."
+        },
+        {
+          "name": "app_version",
+          "type": "const char*",
+          "description": "The version of the application."
+        }
+      ]
+    },
+    {
+      "name": "dp_get_user_agent",
+      "description": "Gets the user-agent string from the Disaster Party context.",
+      "returnType": "const char*",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "The context to get the user-agent from."
         }
       ]
     },
@@ -601,6 +672,46 @@
           "name": "token_count_out",
           "type": "size_t*",
           "description": "Output for the token count."
+        }
+      ]
+    },
+    {
+      "name": "dp_upload_file",
+      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "file_path",
+          "type": "const char*",
+          "description": "The path to the file to upload."
+        },
+        {
+          "name": "mime_type",
+          "type": "const char*",
+          "description": "The MIME type of the file."
+        },
+        {
+          "name": "file_out",
+          "type": "dp_file_t**",
+          "description": "A pointer to a dp_file_t pointer to be populated with the uploaded file's information."
+        }
+      ]
+    },
+    {
+      "name": "dp_free_file",
+      "description": "Frees a dp_file_t structure.",
+      "returnType": "void",
+      "parameters": [
+        {
+          "name": "file",
+          "type": "dp_file_t*",
+          "description": "The file to free."
         }
       ]
     },

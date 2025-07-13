@@ -109,6 +109,15 @@ typedef struct {
     long http_status_code;      
 } dp_model_list_t;
 
+typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+} dp_file_t;
+
 typedef enum {
     DP_ANTHROPIC_EVENT_UNKNOWN,
     DP_ANTHROPIC_EVENT_MESSAGE_START,
@@ -152,6 +161,10 @@ dp_context_t* dp_init_context(dp_provider_type_t provider,
 
 void dp_destroy_context(dp_context_t* context);
 
+void dp_set_user_agent(dp_context_t* context, const char* user_agent);
+
+const char* dp_get_user_agent(dp_context_t* context);
+
 int dp_perform_completion(dp_context_t* context,
                           const dp_request_config_t* request_config,
                           dp_response_t* response);
@@ -190,6 +203,9 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
 int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out);
 int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
 int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
+
+int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out);
+void dp_free_file(dp_file_t* file);
 
 #endif // DISASTERPARTY_H
 

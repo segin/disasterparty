@@ -1,54 +1,61 @@
-.TH DP_FREE_FILE 3 "July 03, 2025" "Disaster Party" "Disaster Party API Documentation"
+. Man page for dp_free_file from libdisasterparty
+.TH DP_FREE_FILE 3 "July 12, 2025" "libdisasterparty 0.5.0" "Disaster Party Manual"
+
 .SH NAME
 dp_free_file \- free a Disaster Party file structure
-.SH SYNOPSIS
-.nf
-#include <disasterparty.h>
 
-void dp_free_file(dp_file_t *file);
-.fi
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_free_file(dp_file_t *" file ");"
+
 .SH DESCRIPTION
-Deallocates all memory associated with a \fBdp_file_t\fP structure that was previously allocated by \fBdp_upload_file\fP(3). Passing \fBNULL\fP is a safe no-op.
-.SH PARAMETERS
-.TP
-\fIfile\fP
-The \fBdp_file_t\fP structure to be freed.
-.SH RETURN VALUE
-None.
+The
+.B dp_free_file()
+function deallocates a
+.BR dp_file_t
+previously created by
+.BR dp_upload_file (3).
+It frees all resources associated with the file structure. Passing a NULL pointer to
+this function is a safe no-op.
+
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
-@PACKAGE_BUGREPORT@
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
 .SH AUTHOR
 Kirn Gill II <segin2005@gmail.com>
+.br
 Gemini (Conceptualization and initial C code generation)
+
 .SH EXAMPLE
 .nf
 #include <disasterparty.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main() {
-    // Assume 'uploaded_file' was obtained from a successful dp_upload_file call
-    dp_file_t* uploaded_file = (dp_file_t*)malloc(sizeof(dp_file_t));
-    if (!uploaded_file) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        return 1;
+    // This is a simplified example. In a real scenario, dp_file_t
+    // would be populated by a call to dp_upload_file or similar.
+    dp_file_t* file = calloc(1, sizeof(dp_file_t));
+    if (file) {
+        file->file_id = strdup("files/example-id");
+        file->display_name = strdup("example.txt");
+        file->mime_type = strdup("text/plain");
+        file->uri = strdup("https://example.com/files/example-id");
     }
-    // In a real scenario, these would be populated by dp_upload_file
-    uploaded_file->file_id = strdup("files/example-id");
-    uploaded_file->display_name = strdup("example.txt");
-    uploaded_file->mime_type = strdup("text/plain");
-    uploaded_file->size_bytes = 100;
-    uploaded_file->create_time = strdup("2025-07-03T12:00:00Z");
-    uploaded_file->uri = strdup("https://example.com/files/example-id");
 
-    printf("Freeing dp_file_t structure.\n");
-    dp_free_file(uploaded_file);
-    printf("dp_file_t structure freed.\n");
+    printf("Freeing file structure.\n");
+    dp_free_file(file);
+    printf("File structure freed.\n");
 
     return 0;
 }
 .fi
 
 .SH SEE ALSO
-.BR dp_upload_file (3)
+.BR dp_upload_file (3),
+.BR disasterparty (7)

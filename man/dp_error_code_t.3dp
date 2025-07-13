@@ -1,0 +1,59 @@
+." Man page for dp_error_code_t from libdisasterparty
+.TH DP_ERROR_CODE_T 3 "July 12, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_error_code_t \- enumeration for error codes
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.nf
+typedef enum {
+    DP_SUCCESS = 0,
+    DP_ERROR_GENERAL = -1,
+    DP_ERROR_NETWORK = -2,
+    DP_ERROR_INVALID_ARGUMENT = -3,
+    DP_ERROR_PROVIDER_FAILURE = -4,
+    DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED = -5
+} dp_error_code_t;
+.fi
+
+.SH DESCRIPTION
+The
+.B dp_error_code_t
+enumeration defines a set of error codes returned by various functions in the
+Disaster Party library.
+
+.SH MEMBERS
+.TP
+.B DP_SUCCESS
+Indicates that the operation was successful.
+.TP
+.B DP_ERROR_GENERAL
+A general, unspecified error occurred.
+.TP
+.B DP_ERROR_NETWORK
+A network-related error occurred (e.g., cURL error).
+.TP
+.B DP_ERROR_INVALID_ARGUMENT
+An invalid argument was passed to a function.
+.TP
+.B DP_ERROR_PROVIDER_FAILURE
+The API provider returned an error.
+.TP
+.B DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED
+The token counting operation is not supported for the current provider.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH SEE ALSO
+.BR disasterparty (7)

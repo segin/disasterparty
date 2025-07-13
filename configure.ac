@@ -1,6 +1,6 @@
 AC_PREREQ([2.69])
 AC_INIT([Disaster Party], [0.5.0], [segin2005@gmail.com], [disasterparty], [https://github.com/segin/disasterparty])
-AC_CONFIG_SRCDIR([src/disasterparty.c])
+AC_CONFIG_SRCDIR([src/dp_request.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIRS([m4])

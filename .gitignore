@@ -32,6 +32,18 @@ stamp-h1
 *.dylib
 *.dll
 
+# Libtool directories
+.libs/
+.deps/
+
+# Log and test result files
+*.log
+*.trs
+
+# Generated man pages (keep the source .3dp and .7dp files)
+man/*.3
+man/*.7
+
 # Executables (test programs)
 # Assuming test executables are in tests/ and might not have extensions on Unix-like systems
 src/libdiasterparty.la # Libtool archive in src
