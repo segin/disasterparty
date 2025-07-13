@@ -31,6 +31,11 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
                            part->image_base64.mime_type ? part->image_base64.mime_type : "(null)",
                            part->image_base64.data ? part->image_base64.data : "(null)");
                     break;
+                case DP_CONTENT_PART_FILE_REFERENCE:
+                    printf("type=file_reference, file_id=\"%s\", mime_type=\"%s\"\n",
+                           part->file_reference.file_id ? part->file_reference.file_id : "(null)",
+                           part->file_reference.mime_type ? part->file_reference.mime_type : "(null)");
+                    break;
             }
         }
     }

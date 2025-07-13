@@ -60,7 +60,7 @@ test_unsupported_file_uploads_dp_SOURCES = test_unsupported_file_uploads_dp.c
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
 
-AM_CPPFLAGS = $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
+AM_CPPFLAGS = -Wall -Werror $(CURL_CFLAGS) $(CJSON_CFLAGS) -I$(top_srcdir)/src
 
 TESTS = $(check_PROGRAMS)
 noinst_PROGRAMS = $(check_PROGRAMS)

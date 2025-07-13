@@ -1,0 +1,56 @@
+# Disaster Party - Suggested Test Cases
+This file contains a list of suggested test cases to improve the robustness and coverage of the `disasterparty` library.
+
+- [ ] Test `dp_init_context` with an invalid `dp_provider_type_t` enum value.
+- [ ] Test `dp_perform_completion` against a mock server that returns a non-JSON error response (e.g., an HTML error page).
+- [ ] Test `dp_perform_streaming_completion` where the stream from a mock server terminates abruptly mid-JSON object.
+- [ ] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Gemini provider.
+- [ ] Test `dp_count_tokens` for a multimodal message containing multiple image parts for the Anthropic provider.
+- [ ] Test `dp_list_models` against a mock server that returns a valid JSON structure but with an empty list of models.
+- [ ] Test `dp_upload_file` with a zero-byte file to ensure it is handled gracefully.
+- [ ] Test `dp_upload_file` with a very large file (e.g., > 100MB) to check for timeouts or provider size limits.
+- [ ] Test `dp_serialize_messages_to_file` and `dp_deserialize_messages_from_file` with a conversation history containing all supported `dp_content_part_type_t` variants (text, image URL, base64 image, file reference).
+- [ ] Test `dp_deserialize_messages_from_file` with a malformed or corrupt JSON file to ensure it fails without crashing.
+- [ ] Test API rate limiting (HTTP 429 response) handling for `dp_perform_completion`.
+- [ ] Test API rate limiting (HTTP 429 response) handling for `dp_list_models`.
+- [ ] Test API authentication failure (HTTP 401 response) for all major functions (`dp_perform_completion`, `dp_list_models`, `dp_upload_file`, `dp_count_tokens`).
+- [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of the `ping` event, ensuring it does not interrupt the stream or get passed to the text callback.
+- [ ] Test `dp_perform_anthropic_streaming_completion` for correct handling of an `error` event received mid-stream.
+- [ ] Test creating a `dp_message_t` with more than 10 parts to verify the dynamic resizing of the internal parts array.
+- [ ] Test `dp_set_user_agent` with both an empty string and a very long string to check for boundary conditions.
+- [ ] Create a dedicated test program to use the same `dp_context_t` across two different threads simultaneously to check for race conditions.
+- [ ] Test `dp_perform_completion` with a model name that is valid but not compatible with the configured provider (e.g., using a Gemini model with an OpenAI context).
+- [ ] Test `dp_free_messages` on a partially constructed message array where a memory allocation for a part may have failed.
+- [ ] Test `dp_deserialize_messages_from_json_str` with a JSON string that has a valid structure but incorrect data types for values (e.g., "role" as a number instead of a string).
+- [ ] Test `dp_perform_streaming_completion` where the user callback returns a non-zero value immediately after the first token is received to ensure the stream is properly closed.
+- [ ] Test `dp_upload_file` with a file path that the current process does not have read permissions for.
+- [ ] Test `dp_perform_completion` with a request containing a stop sequence that is immediately triggered by the model's first output token.
+- [ ] Test `dp_get_version` to ensure it returns a non-NULL, valid version string that matches the `DP_VERSION` macro.
+
+---
+
+- [ ] Test `dp_perform_completion` with a `NULL` `request_config->model` string.
+- [ ] Test `dp_perform_completion` where the mock server returns a valid HTTP 200 but the JSON response is missing a required field (e.g., OpenAI response with no `choices` array).
+- [ ] Test `dp_perform_streaming_completion` where the mock server returns malformed SSE events (e.g., missing the `data:` prefix).
+- [ ] Test `dp_message_add_text_part` with a very long UTF-8 string containing multi-byte characters to check for memory handling issues.
+- [ ] Test `dp_serialize_messages_to_json_str` and `dp_deserialize_messages_from_json_str` with messages containing complex UTF-8 characters (e.g., emojis, different languages).
+- [ ] Test calling `dp_free_response_content` on the same `dp_response_t` object twice to ensure it is a safe no-op and does not crash.
+- [ ] Test calling `dp_free_model_list` on the same `dp_model_list_t` object twice.
+- [ ] Test calling `dp_free_file` on the same `dp_file_t` object twice.
+- [ ] Create a test that simulates a DNS resolution failure for an API endpoint (e.g., by mocking `curl_easy_perform` to return `CURLE_COULDNT_RESOLVE_HOST`).
+- [ ] Create a test that simulates a connection timeout (e.g., by mocking `curl_easy_perform` to return `CURLE_OPERATION_TIMEDOUT`).
+- [ ] Test `dp_perform_completion` with out-of-bounds values for `temperature`, `top_p`, and `top_k` (e.g., negative or very large values).
+- [ ] Test `dp_upload_file` with a path that points to a directory instead of a file.
+- [ ] Test `dp_upload_file` with a path to a non-existent file to ensure it returns an error.
+- [ ] Test `dp_perform_completion` with a message that has a `role` of `DP_ROLE_TOOL` to ensure it is serialized correctly for each provider.
+- [ ] Test `dp_deserialize_messages_from_file` with a completely empty file.
+- [ ] Test `dp_deserialize_messages_from_json_str` with the string `"[]"` (an empty JSON array) to ensure it produces zero messages.
+- [ ] Test `dp_deserialize_messages_from_json_str` with an invalid JSON string like `"{}"` to ensure it fails gracefully.
+- [ ] Test `dp_perform_streaming_completion` for Gemini where the server sends a `promptFeedback` block with a `BLOCK_REASON_SAFETY` mid-stream.
+- [ ] Test `dp_init_context` with a valid provider but a `NULL` or empty string for the API key.
+- [ ] Test using a `dp_context_t` pointer *after* `dp_destroy_context` has been called on it to confirm it results in a controlled error or documented undefined behavior.
+- [ ] Test `dp_perform_completion` with an extremely long system prompt (e.g., >16KB) to check for buffer overflows or API limits.
+- [ ] Test `dp_message_add_base64_image_part` with a string that is not valid base64 to see how it's handled.
+- [ ] Test `dp_perform_completion` with a `request_config` where `messages` is `NULL` and `num_messages` is 0.
+- [ ] Test `dp_perform_completion` with a `request_config` where `num_messages` is greater than 0 but `messages` is `NULL`.
+- [ ] Test `dp_perform_completion` with a request that has an empty `stop_sequences` array.
