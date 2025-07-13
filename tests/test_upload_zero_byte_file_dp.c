@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat>
 
 int main() {
     const char* mock_server_url = getenv("DP_MOCK_SERVER");
@@ -34,10 +33,6 @@ int main() {
 
     if (ret != 0) {
         printf("SUCCESS: dp_upload_file correctly failed for a zero-byte file (return code: %d).\n", ret);
-        // Depending on implementation, uploaded_file might be NULL or have an error message
-        if (uploaded_file && uploaded_file->error_message) {
-            printf("Error message: %s\n", uploaded_file->error_message);
-        }
         dp_free_file(uploaded_file);
         dp_destroy_context(context);
         remove(zero_byte_file_path);

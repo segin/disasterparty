@@ -27,7 +27,7 @@ def completions():
             yield "data: " + json.dumps({"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":None}]}) + "\n\n"
             time.sleep(0.01)
             # Send a deliberately truncated JSON object. Note the missing closing braces and quotes.
-            yield "data: {\"id\":\"chatcmpl-123\",\"object\":\"chat.completion.chunk\",\"created\":1694268190,\"model\":\"gpt-3.5-turbo-0613\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\", wo\""}
+            yield "data: {\"id\":\"truncated_chunk\", \"content\":\"partial"
         return Response(generate_abrupt_stream(), mimetype='text/event-stream')
 
     # --- Default: A valid, successful response (can be added later) ---
@@ -37,11 +37,15 @@ def completions():
 def list_models():
     scenario = None
     if 'Authorization' in request.headers:
+        print(f"Received Authorization header (models): {request.headers.get('Authorization')}")
         scenario = request.headers.get('Authorization').replace('Bearer ', '')
     elif 'x-api-key' in request.headers:
+        print(f"Received x-api-key header (models): {request.headers.get('x-api-key')}")
         scenario = request.headers.get('x-api-key')
     elif 'key' in request.args:
+        print(f"Received key arg (models): {request.args.get('key')}")
         scenario = request.args.get('key')
+    print(f"Extracted scenario (models): {scenario}")
 
     # --- Scenario: Empty Model List ---
     if scenario == 'EMPTY_LIST':
@@ -66,6 +70,12 @@ def upload_file():
             return Response(json.dumps({"error": {"message": "File is empty", "code": 400}}), status=400, mimetype='application/json')
         else:
             return Response(json.dumps({"id": "file-123", "filename": "test_file.txt", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
+    elif scenario == 'LARGE_FILE_UPLOAD':
+        # Simulate a provider size limit error
+        if request.content_length > (100 * 1024 * 1024): # > 100MB
+            return Response(json.dumps({"error": {"message": "File size exceeds limit", "code": 413}}), status=413, mimetype='application/json')
+        else:
+            return Response(json.dumps({"id": "file-456", "filename": "large_test_file.bin", "purpose": "fine-tune", "bytes": request.content_length}), status=200, mimetype='application/json')
 
     return Response(json.dumps({"error": "No test scenario triggered for files endpoint"}), status=400, mimetype='application/json')
 

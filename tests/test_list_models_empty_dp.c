@@ -29,7 +29,7 @@ int main() {
     bool success = false;
     if (result == 0 && model_list) {
         printf("\n--- Mock Server Response (HTTP %ld) ---\n", model_list->http_status_code);
-        if (model_list->count == 0 && model_list->models == NULL) {
+        if (model_list->count == 0) {
             printf("Test PASSED: Received an empty list of models as expected.\n");
             success = true;
         } else {

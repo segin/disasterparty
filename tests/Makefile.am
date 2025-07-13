@@ -32,12 +32,15 @@ check_PROGRAMS = \
     test_anthropic_multimodal_token_count_dp \
     test_non_json_error_dp \
     test_abrupt_stream_dp \
-    test_list_models_empty_dp     test_upload_zero_byte_file_dp
+    test_list_models_empty_dp \
+    test_upload_zero_byte_file_dp \
+    test_upload_large_file_dp
 
 # Sources for each test program
 test_abrupt_stream_dp_SOURCES = test_abrupt_stream_dp.c
 test_list_models_empty_dp_SOURCES = test_list_models_empty_dp.c
 test_upload_zero_byte_file_dp_SOURCES = test_upload_zero_byte_file_dp.c
+test_upload_large_file_dp_SOURCES = test_upload_large_file_dp.c
 test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
 test_anthropic_multimodal_token_count_dp_SOURCES = test_anthropic_multimodal_token_count_dp.c
 test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c
