@@ -121,6 +121,15 @@ typedef enum {
     DP_ANTHROPIC_EVENT_ERROR
 } dp_anthropic_event_type_t;
 
+typedef enum {
+    DP_SUCCESS = 0,
+    DP_ERROR_GENERAL = -1,
+    DP_ERROR_NETWORK = -2,
+    DP_ERROR_INVALID_ARGUMENT = -3,
+    DP_ERROR_PROVIDER_FAILURE = -4,
+    DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED = -5
+} dp_error_code_t;
+
 typedef struct {
     dp_anthropic_event_type_t event_type; 
     const char* raw_json_data;            

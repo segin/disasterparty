@@ -1893,6 +1893,10 @@ int dp_count_tokens(dp_context_t* context,
     }
     *token_count_out = 0;
 
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        return DP_ERROR_TOKEN_COUNTING_NOT_SUPPORTED;
+    }
+
     CURL* curl = curl_easy_init();
     if (!curl) {
         fprintf(stderr, "curl_easy_init() failed for dp_count_tokens.\n");
@@ -1904,14 +1908,12 @@ int dp_count_tokens(dp_context_t* context,
     struct curl_slist* headers = NULL;
     int return_code = -1;
     long http_status_code = 0;
+    memory_struct_t chunk_mem = { .memory = NULL, .size = 0 };
+
 
     headers = curl_slist_append(headers, "Content-Type: application/json");
 
     switch (context->provider) {
-        case DP_PROVIDER_OPENAI_COMPATIBLE:
-            fprintf(stderr, "dp_count_tokens is not supported for the OpenAI provider.\n");
-            return_code = -1;
-            goto cleanup;
         case DP_PROVIDER_GOOGLE_GEMINI:
             json_payload_str = build_gemini_count_tokens_json_payload_with_cjson(request_config);
             if (!json_payload_str) {
@@ -1938,7 +1940,7 @@ int dp_count_tokens(dp_context_t* context,
             goto cleanup;
     }
 
-    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    chunk_mem.memory = malloc(1);
     if (!chunk_mem.memory) {
         fprintf(stderr, "Memory allocation for response chunk failed in dp_count_tokens.\n");
         goto cleanup;
