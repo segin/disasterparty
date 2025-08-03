@@ -113,7 +113,7 @@
   - Test that default behavior is preserved for existing users
   - _Requirements: 2.2, 2.7_
 
-- [ ] 8. Implement max_tokens parameter compatibility
+- [x] 8. Implement max_tokens parameter compatibility
 - [x] 8.1 Add token parameter preference tracking to context
   - Extend dp_context_s struct to track preferred token parameter name
   - Add enum for token parameter types (max_tokens vs max_completion_tokens)
