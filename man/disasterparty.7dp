@@ -52,7 +52,9 @@ Using pkg-config is recommended if available:
 
 .SH GETTING STARTED
 1. Initialize a context using
-.BR dp_init_context (3),
+.BR dp_init_context (3)
+   or
+.BR dp_init_context_with_app_info (3),
    specifying the provider and your API key.
 .br
 2. Construct your request messages using
@@ -182,6 +184,7 @@ Gemini (Conceptualization and initial C code generation)
 
 .SH SEE ALSO
 .BR dp_init_context (3),
+.BR dp_init_context_with_app_info (3),
 .BR dp_perform_completion (3),
 .BR dp_perform_streaming_completion (3),
 .BR dp_list_models (3),
