@@ -25,6 +25,7 @@ man3_MANS = \
 	dp_perform_streaming_completion.3 \
 	dp_request_config.3 \
 	dp_response.3 \
+	dp_serialize.3 \
 	dp_serialize_messages_to_file.3 \
 	dp_serialize_messages_to_json_str.3 \
 	dp_upload_file.3 \
