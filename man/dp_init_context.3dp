@@ -24,6 +24,21 @@ argument specifies the LLM service to use (e.g.,
 or
 .BR DP_PROVIDER_ANTHROPIC ).
 
+The
+.I api_key
+argument must be a valid API key for the specified provider. This parameter is required
+and cannot be NULL.
+
+The
+.I api_base_url
+argument specifies the base URL for the API. If NULL, the default URL for the provider
+will be used.
+
+This function uses the default user-agent string "disasterparty/VERSION" for HTTP requests.
+For custom user-agent strings, use
+.BR dp_init_context_with_app_info (3)
+instead.
+
 The returned context must be freed using
 .BR dp_destroy_context (3)
 when it is no longer needed.
@@ -73,5 +88,6 @@ int main() {
 .fi
 
 .SH SEE ALSO
+.BR dp_init_context_with_app_info (3),
 .BR dp_destroy_context (3),
 .BR disasterparty (7)

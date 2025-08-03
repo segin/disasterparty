@@ -11,6 +11,7 @@ man3_MANS = \
 	dp_free_response_content.3 \
 	dp_get_version.3 \
 	dp_init_context.3 \
+	dp_init_context_with_app_info.3 \
 	dp_list_models.3 \
 	dp_message_add_base64_image_part.3 \
 	dp_message_add_image_url_part.3 \

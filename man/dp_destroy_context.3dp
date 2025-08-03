@@ -15,9 +15,11 @@ The
 function deallocates a
 .BR dp_context_t
 previously created by
-.BR dp_init_context (3).
-It frees all resources associated with the context. Passing a NULL pointer to
-this function is a safe no-op.
+.BR dp_init_context (3)
+or
+.BR dp_init_context_with_app_info (3).
+It frees all resources associated with the context, including the API key, base URL,
+and user-agent string. Passing a NULL pointer to this function is a safe no-op.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
@@ -60,4 +62,5 @@ int main() {
 
 .SH SEE ALSO
 .BR dp_init_context (3),
+.BR dp_init_context_with_app_info (3),
 .BR disasterparty (7)

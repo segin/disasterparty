@@ -1,0 +1,122 @@
+." Man page for dp_init_context_with_app_info from libdisasterparty
+.TH DP_INIT_CONTEXT_WITH_APP_INFO 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_init_context_with_app_info \- initialize a Disaster Party LLM client context with custom user-agent
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "dp_context_t *dp_init_context_with_app_info(dp_provider_type_t " provider ", const char *" api_key ", const char *" api_base_url ", const char *" app_name ", const char *" app_version ");"
+
+.SH DESCRIPTION
+The
+.B dp_init_context_with_app_info()
+function allocates and initializes a new context for interacting with an LLM provider
+through the Disaster Party library. This function extends
+.BR dp_init_context (3)
+by allowing applications to specify custom application information that will be included
+in the HTTP User-Agent header for all API requests.
+
+The
+.I provider
+argument specifies the LLM service to use (e.g.,
+.BR DP_PROVIDER_OPENAI_COMPATIBLE ,
+.BR DP_PROVIDER_GOOGLE_GEMINI ,
+or
+.BR DP_PROVIDER_ANTHROPIC ).
+
+The
+.I api_key
+argument must be a valid API key for the specified provider. This parameter is required
+and cannot be NULL.
+
+The
+.I api_base_url
+argument specifies the base URL for the API. If NULL, the default URL for the provider
+will be used.
+
+The
+.I app_name
+argument specifies the name of the calling application. If NULL, only the library
+identifier will be used in the user-agent string.
+
+The
+.I app_version
+argument specifies the version of the calling application. This parameter is only
+used if
+.I app_name
+is also provided.
+
+.SH USER-AGENT FORMAT
+The HTTP User-Agent header will be constructed as follows:
+.IP \(bu 2
+If both
+.I app_name
+and
+.I app_version
+are provided: "AppName/AppVersion (disasterparty/VERSION)"
+.IP \(bu 2
+If only
+.I app_name
+is provided: "AppName (disasterparty/VERSION)"
+.IP \(bu 2
+If neither is provided: "disasterparty/VERSION"
+
+.SH RETURN VALUE
+On success,
+.B dp_init_context_with_app_info()
+returns a pointer to the newly allocated
+.BR dp_context_t .
+On error (e.g., memory allocation failure, missing API key), it returns NULL.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("GEMINI_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "GEMINI_API_KEY not set.\n");
+        return 1;
+    }
+
+    // Initialize context with custom app info
+    dp_context_t* context = dp_init_context_with_app_info(
+        DP_PROVIDER_GOOGLE_GEMINI, 
+        api_key, 
+        NULL,           // Use default base URL
+        "MyApp",        // Application name
+        "1.0.0"         // Application version
+    );
+    
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    printf("Context initialized with custom user-agent!\n");
+    // User-Agent will be: "MyApp/1.0.0 (disasterparty/0.5.0)"
+
+    dp_destroy_context(context);
+    return 0;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_destroy_context (3),
+.BR disasterparty (7)
