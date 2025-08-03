@@ -53,14 +53,14 @@
   - Modify dp_destroy_context() to free user_agent field
   - _Requirements: 2.6_
 
-- [ ] 4. Complete token counting implementation
-- [ ] 4.1 Complete token counting function implementation
+- [x] 4. Complete token counting implementation
+- [x] 4.1 Complete token counting function implementation
   - Finish the existing dp_count_tokens() implementation in disasterparty.c
   - Ensure proper error handling for OpenAI provider (return error as specified)
   - Complete response parsing for Gemini and Anthropic providers
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8_
 
-- [ ] 4.2 Update token counting payload builders
+- [x] 4.2 Update token counting payload builders
   - Complete build_gemini_count_tokens_json_payload_with_cjson() function
   - Complete build_anthropic_count_tokens_json_payload_with_cjson() function
   - Ensure payloads match provider API specifications

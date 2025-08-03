@@ -203,6 +203,13 @@ static char* build_gemini_count_tokens_json_payload_with_cjson(const dp_request_
                 char temp_text[512];
                 snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
+            } else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                // Gemini supports file data via inline_data similar to images
+                cJSON *inline_data_obj = cJSON_CreateObject();
+                if (!inline_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(inline_data_obj, "mime_type", part->file_data.mime_type);
+                cJSON_AddStringToObject(inline_data_obj, "data", part->file_data.data);
+                cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -264,6 +271,15 @@ static char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_reque
                     snprintf(temp_text, sizeof(temp_text), "Image referenced by URL: %s (Anthropic prefers direct image data)", part->image_url);
                     cJSON_AddStringToObject(part_obj, "type", "text");
                     cJSON_AddStringToObject(part_obj, "text", temp_text);
+                } else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                    // Anthropic supports file data similar to images with base64 encoding
+                    cJSON_AddStringToObject(part_obj, "type", "document");
+                    cJSON *source_obj = cJSON_CreateObject();
+                    if(!source_obj) {cJSON_Delete(part_obj); cJSON_Delete(content_array_for_anthropic); cJSON_Delete(msg_obj); cJSON_Delete(root); return NULL;}
+                    cJSON_AddStringToObject(source_obj, "type", "base64");
+                    cJSON_AddStringToObject(source_obj, "media_type", part->file_data.mime_type);
+                    cJSON_AddStringToObject(source_obj, "data", part->file_data.data);
+                    cJSON_AddItemToObject(part_obj, "source", source_obj);
                 }
                 cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
             }
@@ -1948,6 +1964,7 @@ int dp_count_tokens(dp_context_t* context,
     struct curl_slist* headers = NULL;
     int return_code = -1;
     long http_status_code = 0;
+    memory_struct_t chunk_mem = { .memory = NULL, .size = 0 };
 
     headers = curl_slist_append(headers, "Content-Type: application/json");
 
@@ -1982,7 +1999,7 @@ int dp_count_tokens(dp_context_t* context,
             goto cleanup;
     }
 
-    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    chunk_mem.memory = malloc(1);
     if (!chunk_mem.memory) {
         fprintf(stderr, "Memory allocation for response chunk failed in dp_count_tokens.\n");
         goto cleanup;
