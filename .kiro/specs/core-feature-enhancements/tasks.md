@@ -28,28 +28,28 @@
   - Ensure all file attachment memory is properly freed
   - _Requirements: 1.6_
 
-- [ ] 3. Implement custom user-agent support
-- [ ] 3.1 Extend context structure for user-agent
+- [x] 3. Implement custom user-agent support
+- [x] 3.1 Extend context structure for user-agent
   - Add user_agent field to dp_context_s struct in disasterparty.c
   - _Requirements: 2.8_
 
-- [ ] 3.2 Implement new context initialization function
+- [x] 3.2 Implement new context initialization function
   - Create dp_init_context_with_app_info() function in disasterparty.c
   - Add function declaration to disasterparty.h
   - Implement user-agent string construction logic
   - _Requirements: 2.1, 2.3, 2.4_
 
-- [ ] 3.3 Update existing initialization function for compatibility
+- [x] 3.3 Update existing initialization function for compatibility
   - Modify dp_init_context() to call dp_init_context_with_app_info() with NULL app info
   - Ensure backward compatibility is maintained
   - _Requirements: 2.2, 2.7_
 
-- [ ] 3.4 Update HTTP requests to use custom user-agent
+- [x] 3.4 Update HTTP requests to use custom user-agent
   - Modify all curl_easy_setopt calls to use context->user_agent instead of DISASTERPARTY_USER_AGENT
   - Update dp_perform_completion, dp_perform_streaming_completion, dp_list_models, and dp_count_tokens functions
   - _Requirements: 2.5_
 
-- [ ] 3.5 Update context cleanup for user-agent
+- [x] 3.5 Update context cleanup for user-agent
   - Modify dp_destroy_context() to free user_agent field
   - _Requirements: 2.6_
 

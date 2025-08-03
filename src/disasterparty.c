@@ -19,6 +19,7 @@ struct dp_context_s {
     dp_provider_type_t provider;
     char* api_key;
     char* api_base_url;
+    char* user_agent;
 };
 
 typedef struct {
@@ -79,6 +80,14 @@ static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, v
 }
 
 dp_context_t* dp_init_context(dp_provider_type_t provider, const char* api_key, const char* api_base_url) {
+    return dp_init_context_with_app_info(provider, api_key, api_base_url, NULL, NULL);
+}
+
+dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider, 
+                                             const char* api_key,
+                                             const char* api_base_url,
+                                             const char* app_name,
+                                             const char* app_version) {
     if (!api_key) {
         fprintf(stderr, "API key is required for Disaster Party context.\n");
         return NULL;
@@ -110,10 +119,28 @@ dp_context_t* dp_init_context(dp_provider_type_t provider, const char* api_key, 
         }
     }
 
-    if (!context->api_key || !context->api_base_url) {
-        perror("Failed to allocate API key or base URL in Disaster Party context");
+    // Construct user-agent string
+    if (app_name && app_version) {
+        size_t user_agent_len = strlen(app_name) + strlen(app_version) + strlen(" (disasterparty/" DP_VERSION ")") + 2; // +2 for '/' and null terminator
+        context->user_agent = malloc(user_agent_len);
+        if (context->user_agent) {
+            snprintf(context->user_agent, user_agent_len, "%s/%s (disasterparty/" DP_VERSION ")", app_name, app_version);
+        }
+    } else if (app_name) {
+        size_t user_agent_len = strlen(app_name) + strlen(" (disasterparty/" DP_VERSION ")") + 1;
+        context->user_agent = malloc(user_agent_len);
+        if (context->user_agent) {
+            snprintf(context->user_agent, user_agent_len, "%s (disasterparty/" DP_VERSION ")", app_name);
+        }
+    } else {
+        context->user_agent = dp_internal_strdup("disasterparty/" DP_VERSION);
+    }
+
+    if (!context->api_key || !context->api_base_url || !context->user_agent) {
+        perror("Failed to allocate API key, base URL, or user-agent in Disaster Party context");
         free(context->api_key);
         free(context->api_base_url);
+        free(context->user_agent);
         free(context);
         return NULL;
     }
@@ -124,6 +151,7 @@ void dp_destroy_context(dp_context_t* context) {
     if (!context) return;
     free(context->api_key);
     free(context->api_base_url);
+    free(context->user_agent);
     free(context);
 }
 
@@ -1075,7 +1103,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
@@ -1231,7 +1259,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback); 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
@@ -1390,7 +1418,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, anthropic_detailed_stream_write_callback); 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
@@ -1498,7 +1526,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &(*model_list_out)->http_status_code);
@@ -1966,7 +1994,7 @@ int dp_count_tokens(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, DISASTERPARTY_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status_code);

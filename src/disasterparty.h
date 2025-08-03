@@ -142,6 +142,12 @@ dp_context_t* dp_init_context(dp_provider_type_t provider,
                               const char* api_key,
                               const char* api_base_url);
 
+dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider, 
+                                             const char* api_key,
+                                             const char* api_base_url,
+                                             const char* app_name,
+                                             const char* app_version);
+
 void dp_destroy_context(dp_context_t* context);
 
 int dp_perform_completion(dp_context_t* context,
