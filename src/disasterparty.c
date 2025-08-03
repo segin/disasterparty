@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <ctype.h> 
 
 // Default base URLs
@@ -62,6 +63,18 @@ static char* dp_internal_strdup(const char* s) {
     if (!new_s) return NULL;
     memcpy(new_s, s, len);
     return new_s;
+}
+
+// Helper function to safely use asprintf and handle allocation failures
+static int dp_safe_asprintf(char** strp, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int result = vasprintf(strp, fmt, args);
+    va_end(args);
+    if (result == -1) {
+        *strp = NULL;
+    }
+    return result;
 }
 
 static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
@@ -380,13 +393,21 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                 else if (part->type == DP_CONTENT_PART_FILE_DATA) {
                     // OpenAI doesn't have native file attachment support, so we'll use a text representation
                     cJSON_AddStringToObject(part_obj, "type", "text");
-                    char* file_text;
+                    char* file_text = NULL;
                     if (part->file_data.filename) {
-                        asprintf(&file_text, "[File: %s (%s)]\nBase64 Data: %s", 
-                                part->file_data.filename, part->file_data.mime_type, part->file_data.data);
+                        if (dp_safe_asprintf(&file_text, "[File: %s (%s)]\nBase64 Data: %s", 
+                                part->file_data.filename, part->file_data.mime_type, part->file_data.data) == -1) {
+                            cJSON_Delete(part_obj);
+                            cJSON_Delete(root);
+                            return NULL;
+                        }
                     } else {
-                        asprintf(&file_text, "[File (%s)]\nBase64 Data: %s", 
-                                part->file_data.mime_type, part->file_data.data);
+                        if (dp_safe_asprintf(&file_text, "[File (%s)]\nBase64 Data: %s", 
+                                part->file_data.mime_type, part->file_data.data) == -1) {
+                            cJSON_Delete(part_obj);
+                            cJSON_Delete(root);
+                            return NULL;
+                        }
                     }
                     if (file_text) {
                         cJSON_AddStringToObject(part_obj, "text", file_text);
@@ -871,8 +892,10 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 cJSON* err_type = cJSON_GetObjectItemCaseSensitive(error_obj, "type");
                                 cJSON* err_msg = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                                 if(cJSON_IsString(err_type) && cJSON_IsString(err_msg)){
-                                     char* temp_err;
-                                     asprintf(&temp_err, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring);
+                                     char* temp_err = NULL;
+                                     if (dp_safe_asprintf(&temp_err, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring) == -1) {
+                                         temp_err = NULL;
+                                     }
                                      if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = temp_err; else free(temp_err);
                                 }
                             }
@@ -1125,7 +1148,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
 
     if (res != CURLE_OK) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
+        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
                  curl_easy_strerror(res), response->http_status_code);
     } else {
         if (response->http_status_code >= 200 && response->http_status_code < 300) {
@@ -1147,22 +1170,22 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                     if (error_obj) { 
                         cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                         if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                             asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
+                             dp_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
                         }
                     } else { 
                          cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
                          cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message"); 
                          if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                             cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                            asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
+                            dp_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
                          }
                     }
                     cJSON_Delete(error_root);
                 }
                 if (!response->error_message && chunk_mem.memory) { 
-                    asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
+                    dp_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
                 } else if (!response->error_message) {
-                    asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
+                    dp_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
                 }
             }
         } else { 
@@ -1185,11 +1208,11 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 }
              }
             if(api_err_detail){
-                asprintf(&response->error_message, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
+                dp_safe_asprintf(&response->error_message, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
             } else if (chunk_mem.memory) {
-                asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
+                dp_safe_asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
             } else {
-                asprintf(&response->error_message, "HTTP error %ld. (no response body)", response->http_status_code);
+                dp_safe_asprintf(&response->error_message, "HTTP error %ld. (no response body)", response->http_status_code);
             }
             if(error_root) cJSON_Delete(error_root);
         }
@@ -1325,7 +1348,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     }
 
     if (res != CURLE_OK && !response->error_message) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          char* temp_err_msg = NULL;
          if (processor.buffer_size > 0) {
@@ -1335,14 +1358,14 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                 if (error_obj) {
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                        asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
+                        dp_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
                     }
                 } else {
                      cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "type");
                      cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "message");
                      if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                         cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                        asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
+                        dp_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
                      }
                 }
                 cJSON_Delete(error_json);
@@ -1351,9 +1374,9 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
          if (temp_err_msg) {
             response->error_message = temp_err_msg;
          } else if (processor.buffer_size > 0) {
-            asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
+            dp_safe_asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
          } else {
-            asprintf(&response->error_message, "HTTP error %ld (empty body)", response->http_status_code);
+            dp_safe_asprintf(&response->error_message, "HTTP error %ld (empty body)", response->http_status_code);
          }
     }
 
@@ -1361,9 +1384,10 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         if (response->error_message) {
              char* combined_error;
              if (strstr(response->error_message, processor.accumulated_error_during_stream) == NULL) {
-                asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream);
-                free(response->error_message);
-                response->error_message = combined_error;
+                if (dp_safe_asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream) != -1) {
+                    free(response->error_message);
+                    response->error_message = combined_error;
+                }
              }
         } else {
             response->error_message = processor.accumulated_error_during_stream; 
@@ -1467,7 +1491,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     }
     
     if (res != CURLE_OK && !response->error_message) {
-        asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          // ... (error message population as in generic streaming) ...
     }
@@ -1550,14 +1574,14 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     int return_code = 0;
 
     if (res != CURLE_OK) {
-        asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
+        dp_safe_asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
                  curl_easy_strerror(res), (*model_list_out)->http_status_code);
         return_code = -1;
     } else {
         if ((*model_list_out)->http_status_code >= 200 && (*model_list_out)->http_status_code < 300) {
             cJSON *root = cJSON_Parse(chunk_mem.memory);
             if (!root) {
-                asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                dp_safe_asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
                 return_code = -1;
             } else {
                 cJSON *data_array = NULL;
@@ -1626,13 +1650,13 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                         }
                     }
                 } else {
-                     asprintf(&(*model_list_out)->error_message, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                     dp_safe_asprintf(&(*model_list_out)->error_message, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
                     return_code = -1;
                 }
                 cJSON_Delete(root);
             }
         } else { 
-            asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+            dp_safe_asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
             return_code = -1;
         }
     }
