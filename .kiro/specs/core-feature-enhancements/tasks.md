@@ -112,3 +112,24 @@
   - Verify that existing code examples still work without modification
   - Test that default behavior is preserved for existing users
   - _Requirements: 2.2, 2.7_
+
+- [ ] 8. Implement max_tokens parameter compatibility
+- [x] 8.1 Add token parameter preference tracking to context
+  - Extend dp_context_s struct to track preferred token parameter name
+  - Add enum for token parameter types (max_tokens vs max_completion_tokens)
+  - Initialize with optimistic modern parameter preference
+  - _Requirements: API compatibility with various OpenAI-compatible providers_
+
+- [x] 8.2 Implement automatic fallback mechanism
+  - Modify OpenAI payload builder to try max_completion_tokens first
+  - Add error detection for unrecognized parameter errors (HTTP 400)
+  - Implement automatic retry with max_tokens on parameter rejection
+  - Cache the successful parameter type for subsequent requests
+  - Pass-through all other parameter errors
+  - _Requirements: Seamless compatibility across OpenAI-compatible APIs_
+
+- [x] 8.3 Create test for token parameter compatibility
+  - Write test to verify both parameter types work correctly
+  - Test fallback mechanism with mock error responses
+  - Ensure parameter preference is cached correctly
+  - _Requirements: Robust handling of different API implementations_

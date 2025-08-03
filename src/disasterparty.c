@@ -21,6 +21,7 @@ struct dp_context_s {
     char* api_key;
     char* api_base_url;
     char* user_agent;
+    dp_token_param_type_t token_param_preference;
 };
 
 typedef struct {
@@ -76,6 +77,8 @@ static int dp_safe_asprintf(char** strp, const char* fmt, ...) {
     }
     return result;
 }
+
+
 
 static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
@@ -148,6 +151,9 @@ dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider,
     } else {
         context->user_agent = dp_internal_strdup("disasterparty/" DP_VERSION);
     }
+
+    // Initialize token parameter preference (optimistically use modern parameter)
+    context->token_param_preference = DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS;
 
     if (!context->api_key || !context->api_base_url || !context->user_agent) {
         perror("Failed to allocate API key, base URL, or user-agent in Disaster Party context");
@@ -307,13 +313,17 @@ static char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_reque
 }
 
 
-static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config) {
+static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config, const dp_context_t* context) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
     cJSON_AddStringToObject(root, "model", request_config->model);
     if (request_config->temperature >= 0.0) cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
-    if (request_config->max_tokens > 0) cJSON_AddNumberToObject(root, "max_tokens", request_config->max_tokens);
+    if (request_config->max_tokens > 0) {
+        const char* token_param = (context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS) 
+                                  ? "max_completion_tokens" : "max_tokens";
+        cJSON_AddNumberToObject(root, token_param, request_config->max_tokens);
+    }
     if (request_config->stream) cJSON_AddTrueToObject(root, "stream");
     if (request_config->top_p > 0.0) cJSON_AddNumberToObject(root, "top_p", request_config->top_p);
     
@@ -593,6 +603,112 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
     return json_string;
 }
 
+// Helper function to detect if an error is related to unrecognized token parameters
+static bool is_token_parameter_error(const char* error_response, long http_status) {
+    if (http_status != 400 || !error_response) {
+        return false;
+    }
+    
+    // Check for common error patterns indicating unrecognized max_completion_tokens parameter
+    return (strstr(error_response, "max_completion_tokens") != NULL &&
+            (strstr(error_response, "Unrecognized request argument") != NULL ||
+             strstr(error_response, "unrecognized") != NULL ||
+             strstr(error_response, "invalid") != NULL ||
+             strstr(error_response, "unknown") != NULL));
+}
+
+// Helper function to perform OpenAI request with automatic token parameter fallback
+static CURLcode perform_openai_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                     const dp_request_config_t* request_config,
+                                                     memory_struct_t* chunk_mem,
+                                                     long* http_status_code) {
+    char* json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+    if (!json_payload_str) {
+        return CURLE_OUT_OF_MEMORY;
+    }
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    
+    // Check if we need to retry with fallback parameter
+    if (res == CURLE_OK && *http_status_code == 400 && 
+        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
+        is_token_parameter_error(chunk_mem->memory, *http_status_code)) {
+        
+        // Switch to legacy parameter and retry
+        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
+        free(json_payload_str);
+        
+        // Reset response buffer for retry
+        if (chunk_mem->memory) {
+            free(chunk_mem->memory);
+            chunk_mem->memory = NULL;
+            chunk_mem->size = 0;
+        }
+        
+        // Build new payload with legacy parameter
+        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+        if (!json_payload_str) {
+            return CURLE_OUT_OF_MEMORY;
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    }
+    
+    free(json_payload_str);
+    return res;
+}
+
+// Helper function to perform OpenAI streaming request with automatic token parameter fallback
+static CURLcode perform_openai_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                               const dp_request_config_t* request_config,
+                                                               stream_processor_t* processor,
+                                                               long* http_status_code) {
+    char* json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+    if (!json_payload_str) {
+        return CURLE_OUT_OF_MEMORY;
+    }
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    
+    // Check if we need to retry with fallback parameter
+    if (res == CURLE_OK && *http_status_code == 400 && 
+        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
+        is_token_parameter_error(processor->buffer, *http_status_code)) {
+        
+        // Switch to legacy parameter and retry
+        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
+        free(json_payload_str);
+        
+        // Reset processor buffer for retry
+        if (processor->buffer) {
+            processor->buffer[0] = '\0';
+            processor->buffer_size = 0;
+        }
+        if (processor->accumulated_error_during_stream) {
+            free(processor->accumulated_error_during_stream);
+            processor->accumulated_error_during_stream = NULL;
+        }
+        
+        // Build new payload with legacy parameter
+        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+        if (!json_payload_str) {
+            return CURLE_OUT_OF_MEMORY;
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    }
+    
+    free(json_payload_str);
+    return res;
+}
 
 static char* extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
@@ -1097,7 +1213,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
 
     char* json_payload_str = NULL;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload_str = build_openai_json_payload_with_cjson(request_config);
+        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
         json_payload_str = build_gemini_json_payload_with_cjson(request_config);
     } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
@@ -1138,14 +1254,19 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     chunk_mem.memory[0] = '\0';
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    CURLcode res;
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        res = perform_openai_request_with_fallback(curl, context, request_config, &chunk_mem, &response->http_status_code);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    }
 
     if (res != CURLE_OK) {
         dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
@@ -1260,7 +1381,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
 
     char* json_payload_str = NULL;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload_str = build_openai_json_payload_with_cjson(request_config); 
+        json_payload_str = build_openai_json_payload_with_cjson(request_config, context); 
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
         json_payload_str = build_gemini_json_payload_with_cjson(request_config);
     } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
@@ -1294,14 +1415,19 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
 
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback); 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    CURLcode res;
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        res = perform_openai_streaming_request_with_fallback(curl, context, request_config, &processor, &response->http_status_code);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    }
 
     if (!processor.stop_streaming_signal) { 
         const char* final_stream_error = processor.accumulated_error_during_stream;

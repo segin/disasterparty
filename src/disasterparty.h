@@ -44,7 +44,15 @@ typedef enum {
     DP_CONTENT_PART_IMAGE_URL,
     DP_CONTENT_PART_IMAGE_BASE64,
     DP_CONTENT_PART_FILE_DATA
-} dp_content_part_type_t; 
+} dp_content_part_type_t;
+
+/**
+ * @brief Enumeration for token parameter preference in OpenAI-compatible APIs.
+ */
+typedef enum {
+    DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS,  // Modern parameter (preferred)
+    DP_TOKEN_PARAM_MAX_TOKENS              // Legacy parameter (fallback)
+} dp_token_param_type_t; 
 
 typedef struct {
     dp_content_part_type_t type;
