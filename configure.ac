@@ -17,6 +17,9 @@ AC_PROG_SED
 AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG
 
+# Enable all warnings and treat them as errors
+CFLAGS="$CFLAGS -Wall -Werror"
+
 # Checks for libraries using pkg-config.
 PKG_CHECK_MODULES([CURL], [libcurl >= 7.20.0], [],
                   [AC_MSG_ERROR([libcurl >= 7.20.0 not found. Please install libcurl-devel or equivalent.])])

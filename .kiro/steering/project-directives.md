@@ -23,9 +23,16 @@
    - Each brand new function
    - Each brand new public structure
 
+## Build Requirements
+
+10. **Compiler flags**:
+   - The build configuration must use `-Wall -Werror` to enable all warnings and treat them as build failures
+   - No warnings are allowed to remain in the codebase
+   - All code must compile cleanly with these strict warning settings
+
 ## Testing Requirements
 
-10. **Testsuite integration**:
+11. **Testsuite integration**:
    - All new tests should be added to the testsuite
    - Tests should not be thrown away - they must be saved and committed to prevent future regressions
    - All new tests must properly integrate with the GNU autotools testsuite
@@ -33,11 +40,11 @@
 
 ## Release Process
 
-11. **When cutting releases**:
-    - **10a.** Ensure version consistency across:
+12. **When cutting releases**:
+    - **12a.** Ensure version consistency across:
       - `configure.ac`
       - `disasterparty.h` and/or `dp_internal.h`
       - `README.md`
       - `docs/PROJECT.md`
       - All manual pages
-    - **10b.** Ensure every manual page's date is the current date
+    - **12b.** Ensure every manual page's date is the current date
