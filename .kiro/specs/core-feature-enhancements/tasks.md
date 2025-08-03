@@ -100,14 +100,14 @@
   - Update existing man pages that reference affected structures
   - _Requirements: 1.1, 2.1_
 
-- [ ] 7. Integration and validation
-- [ ] 7.1 Build system integration
+- [x] 7. Integration and validation
+- [x] 7.1 Build system integration
   - Update Makefile.am to include new test programs
   - Ensure all new code compiles without warnings
   - Verify SOVER increment is properly applied
   - _Requirements: 1.7, 1.8, 2.8_
 
-- [ ] 7.2 Backward compatibility validation
+- [x] 7.2 Backward compatibility validation
   - Compile and run existing test suite to ensure no regressions
   - Verify that existing code examples still work without modification
   - Test that default behavior is preserved for existing users
