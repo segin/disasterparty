@@ -333,6 +333,26 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                     }
                     cJSON_AddItemToObject(part_obj, "image_url", img_url_obj);
                 }
+                else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                    // OpenAI doesn't have native file attachment support, so we'll use a text representation
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    char* file_text;
+                    if (part->file_data.filename) {
+                        asprintf(&file_text, "[File: %s (%s)]\nBase64 Data: %s", 
+                                part->file_data.filename, part->file_data.mime_type, part->file_data.data);
+                    } else {
+                        asprintf(&file_text, "[File (%s)]\nBase64 Data: %s", 
+                                part->file_data.mime_type, part->file_data.data);
+                    }
+                    if (file_text) {
+                        cJSON_AddStringToObject(part_obj, "text", file_text);
+                        free(file_text);
+                    } else {
+                        cJSON_Delete(part_obj);
+                        cJSON_Delete(root);
+                        return NULL;
+                    }
+                }
                 cJSON_AddItemToArray(content_array, part_obj);
             }
         }
@@ -392,6 +412,13 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
                 char temp_text[512];
                 snprintf(temp_text, sizeof(temp_text), "Image at URL: %s", part->image_url);
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
+            } else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                // Gemini supports file data via inline_data similar to images
+                cJSON *inline_data_obj = cJSON_CreateObject();
+                if (!inline_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(inline_data_obj, "mime_type", part->file_data.mime_type);
+                cJSON_AddStringToObject(inline_data_obj, "data", part->file_data.data);
+                cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -476,6 +503,15 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
                 snprintf(temp_text, sizeof(temp_text), "Image referenced by URL: %s (Anthropic prefers direct image data)", part->image_url);
                 cJSON_AddStringToObject(part_obj, "type", "text");
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
+            } else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                // Anthropic supports file data similar to images with base64 encoding
+                cJSON_AddStringToObject(part_obj, "type", "document");
+                cJSON *source_obj = cJSON_CreateObject();
+                if(!source_obj) {cJSON_Delete(part_obj); cJSON_Delete(content_array_for_anthropic); cJSON_Delete(msg_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(source_obj, "type", "base64");
+                cJSON_AddStringToObject(source_obj, "media_type", part->file_data.mime_type);
+                cJSON_AddStringToObject(source_obj, "data", part->file_data.data);
+                cJSON_AddItemToObject(part_obj, "source", source_obj);
             }
             cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
         }
@@ -1285,7 +1321,6 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                 free(response->error_message);
                 response->error_message = combined_error;
              }
-             free(processor.accumulated_error_during_stream);
         } else {
             response->error_message = processor.accumulated_error_during_stream; 
         }
@@ -1396,7 +1431,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
         if (response->error_message) { /* combine */ } else { response->error_message = processor.accumulated_error_during_stream; }
     }
 
-
+    if (processor.accumulated_error_during_stream) { free(processor.accumulated_error_during_stream); }
     free(json_payload_str);
     free(processor.buffer);
     curl_slist_free_all(headers);
@@ -1610,6 +1645,10 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
                 if (part->type == DP_CONTENT_PART_IMAGE_BASE64) {
                     free(part->image_base64.mime_type);
                     free(part->image_base64.data);
+                } else if (part->type == DP_CONTENT_PART_FILE_DATA) {
+                    free(part->file_data.mime_type);
+                    free(part->file_data.data);
+                    free(part->file_data.filename);
                 }
             }
             free(messages[i].parts);
@@ -1621,7 +1660,8 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
 
 static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
                                    const char* text_content, const char* image_url_content,
-                                   const char* mime_type_content, const char* base64_data_content) {
+                                   const char* mime_type_content, const char* base64_data_content,
+                                   const char* filename_content) {
     if (!message) return false;
     dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
     if (!new_parts_array) return false;
@@ -1646,6 +1686,16 @@ static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_
             free(new_part->image_base64.mime_type); new_part->image_base64.mime_type = NULL;
             free(new_part->image_base64.data); new_part->image_base64.data = NULL;
         }
+    } else if (type == DP_CONTENT_PART_FILE_DATA && mime_type_content && base64_data_content) {
+        new_part->file_data.mime_type = dp_internal_strdup(mime_type_content);
+        new_part->file_data.data = dp_internal_strdup(base64_data_content);
+        new_part->file_data.filename = filename_content ? dp_internal_strdup(filename_content) : NULL;
+        success = (new_part->file_data.mime_type != NULL && new_part->file_data.data != NULL);
+        if (!success) {
+            free(new_part->file_data.mime_type); new_part->file_data.mime_type = NULL;
+            free(new_part->file_data.data); new_part->file_data.data = NULL;
+            free(new_part->file_data.filename); new_part->file_data.filename = NULL;
+        }
     }
     if (success) message->num_parts++;
     else fprintf(stderr, "Failed to allocate memory for Disaster Party message content part.\n");
@@ -1653,13 +1703,16 @@ static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_
 }
 
 bool dp_message_add_text_part(dp_message_t* message, const char* text) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL);
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL, NULL);
 }
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL);
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL, NULL);
 }
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data);
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data, NULL);
+}
+bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type, const char* base64_data, const char* filename) {
+    return dp_message_add_part_internal(message, DP_CONTENT_PART_FILE_DATA, NULL, NULL, mime_type, base64_data, filename);
 }
 
 // ---- START SERIALIZATION FUNCTIONS ----
@@ -1705,6 +1758,14 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
                     cJSON_AddStringToObject(part_obj, "type", "image_base64");
                     cJSON_AddStringToObject(part_obj, "mime_type", part->image_base64.mime_type);
                     cJSON_AddStringToObject(part_obj, "data", part->image_base64.data);
+                    break;
+                case DP_CONTENT_PART_FILE_DATA:
+                    cJSON_AddStringToObject(part_obj, "type", "file_data");
+                    cJSON_AddStringToObject(part_obj, "mime_type", part->file_data.mime_type);
+                    cJSON_AddStringToObject(part_obj, "data", part->file_data.data);
+                    if (part->file_data.filename) {
+                        cJSON_AddStringToObject(part_obj, "filename", part->file_data.filename);
+                    }
                     break;
             }
             cJSON_AddItemToArray(parts_array, part_obj);
@@ -1763,6 +1824,14 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
                         cJSON* data_item = cJSON_GetObjectItemCaseSensitive(part_obj, "data");
                         if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
                             dp_message_add_base64_image_part(current_msg, mime_item->valuestring, data_item->valuestring);
+                        }
+                    } else if (strcmp(type_item->valuestring, "file_data") == 0) {
+                        cJSON* mime_item = cJSON_GetObjectItemCaseSensitive(part_obj, "mime_type");
+                        cJSON* data_item = cJSON_GetObjectItemCaseSensitive(part_obj, "data");
+                        cJSON* filename_item = cJSON_GetObjectItemCaseSensitive(part_obj, "filename");
+                        if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
+                            const char* filename = (cJSON_IsString(filename_item)) ? filename_item->valuestring : NULL;
+                            dp_message_add_file_data_part(current_msg, mime_item->valuestring, data_item->valuestring, filename);
                         }
                     }
                 }

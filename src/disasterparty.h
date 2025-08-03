@@ -11,9 +11,9 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.4.0"
+#define DP_VERSION "0.5.0"
 #define DP_VERSION_MAJOR 0
-#define DP_VERSION_MINOR 4 
+#define DP_VERSION_MINOR 5 
 #define DP_VERSION_PATCH 0 
 
 
@@ -42,7 +42,8 @@ typedef enum {
 typedef enum {
     DP_CONTENT_PART_TEXT, 
     DP_CONTENT_PART_IMAGE_URL,
-    DP_CONTENT_PART_IMAGE_BASE64
+    DP_CONTENT_PART_IMAGE_BASE64,
+    DP_CONTENT_PART_FILE_DATA
 } dp_content_part_type_t; 
 
 typedef struct {
@@ -53,6 +54,11 @@ typedef struct {
         char* mime_type;
         char* data; 
     } image_base64;
+    struct {
+        char* mime_type;
+        char* data;
+        char* filename;
+    } file_data;
 } dp_content_part_t; 
 
 typedef struct {
@@ -168,6 +174,7 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages);
 bool dp_message_add_text_part(dp_message_t* message, const char* text);
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url);
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
+bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type, const char* base64_data, const char* filename);
 
 const char* dp_get_version(void);
 
