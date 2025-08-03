@@ -1,63 +1,24 @@
 #define _GNU_SOURCE 
-#include "disasterparty.h" 
-#include <curl/curl.h>
-#include <cjson/cJSON.h> 
+#include "disasterparty.h"
+#include "dp_private.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h> 
 
-// Default base URLs
+// Default base URLs - moved to dp_constants.c
 const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const char* DEFAULT_ANTHROPIC_API_BASE_URL = "https://api.anthropic.com/v1"; 
-const char* DISASTERPARTY_USER_AGENT = "disasterparty/" DP_VERSION; 
-
-
-// Internal context structure
-struct dp_context_s {
-    dp_provider_type_t provider;
-    char* api_key;
-    char* api_base_url;
-    char* user_agent;
-    dp_token_param_type_t token_param_preference;
-};
-
-typedef struct {
-    char* memory;
-    size_t size;
-} memory_struct_t;
-
-typedef struct {
-    dp_stream_callback_t user_callback; 
-    void* user_data;
-    char* buffer;
-    size_t buffer_size;
-    size_t buffer_capacity;
-    dp_provider_type_t provider;
-    char* finish_reason_capture;
-    bool stop_streaming_signal;
-    char* accumulated_error_during_stream;
-} stream_processor_t;
-
-typedef struct {
-    dp_anthropic_stream_callback_t anthropic_user_callback; 
-    void* user_data;
-    char* buffer;
-    size_t buffer_size;
-    size_t buffer_capacity;
-    char* finish_reason_capture; 
-    bool stop_streaming_signal;
-    char* accumulated_error_during_stream;
-} anthropic_stream_processor_t;
+const char* DISASTERPARTY_USER_AGENT = "disasterparty/" DP_VERSION;
 
 
 const char* dp_get_version(void) {
     return DP_VERSION;
 }
 
-static char* dp_internal_strdup(const char* s) {
+char* dpinternal_strdup(const char* s) {
     if (!s) return NULL;
     size_t len = strlen(s) + 1;
     char* new_s = malloc(len);
@@ -67,7 +28,7 @@ static char* dp_internal_strdup(const char* s) {
 }
 
 // Helper function to safely use asprintf and handle allocation failures
-static int dp_safe_asprintf(char** strp, const char* fmt, ...) {
+int dpinternal_safe_asprintf(char** strp, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int result = vasprintf(strp, fmt, args);
@@ -80,12 +41,12 @@ static int dp_safe_asprintf(char** strp, const char* fmt, ...) {
 
 
 
-static size_t write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
+size_t dpinternal_write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     memory_struct_t* mem = (memory_struct_t*)userp;
     char* ptr = realloc(mem->memory, mem->size + realsize + 1);
     if (!ptr) {
-        fprintf(stderr, "write_memory_callback: not enough memory (realloc returned NULL)\n");
+        fprintf(stderr, "dpinternal_write_memory_callback: not enough memory (realloc returned NULL)\n");
         return 0;
     }
     mem->memory = ptr;
@@ -114,20 +75,20 @@ dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider,
         return NULL;
     }
     context->provider = provider;
-    context->api_key = dp_internal_strdup(api_key);
+    context->api_key = dpinternal_strdup(api_key);
 
     if (api_base_url) {
-        context->api_base_url = dp_internal_strdup(api_base_url);
+        context->api_base_url = dpinternal_strdup(api_base_url);
     } else {
         switch (provider) {
             case DP_PROVIDER_OPENAI_COMPATIBLE:
-                context->api_base_url = dp_internal_strdup(DEFAULT_OPENAI_API_BASE_URL);
+                context->api_base_url = dpinternal_strdup(DEFAULT_OPENAI_API_BASE_URL);
                 break;
             case DP_PROVIDER_GOOGLE_GEMINI:
-                context->api_base_url = dp_internal_strdup(DEFAULT_GEMINI_API_BASE_URL);
+                context->api_base_url = dpinternal_strdup(DEFAULT_GEMINI_API_BASE_URL);
                 break;
             case DP_PROVIDER_ANTHROPIC:
-                context->api_base_url = dp_internal_strdup(DEFAULT_ANTHROPIC_API_BASE_URL);
+                context->api_base_url = dpinternal_strdup(DEFAULT_ANTHROPIC_API_BASE_URL);
                 break;
             default:
                 context->api_base_url = NULL; 
@@ -149,7 +110,7 @@ dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider,
             snprintf(context->user_agent, user_agent_len, "%s (disasterparty/" DP_VERSION ")", app_name);
         }
     } else {
-        context->user_agent = dp_internal_strdup("disasterparty/" DP_VERSION);
+        context->user_agent = dpinternal_strdup("disasterparty/" DP_VERSION);
     }
 
     // Initialize token parameter preference (optimistically use modern parameter)
@@ -174,7 +135,7 @@ void dp_destroy_context(dp_context_t* context) {
     free(context);
 }
 
-static char* build_gemini_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
+char* dpinternal_build_gemini_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
@@ -240,7 +201,7 @@ static char* build_gemini_count_tokens_json_payload_with_cjson(const dp_request_
     return json_string; 
 }
 
-static char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
+char* dpinternal_build_anthropic_count_tokens_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
@@ -313,7 +274,7 @@ static char* build_anthropic_count_tokens_json_payload_with_cjson(const dp_reque
 }
 
 
-static char* build_openai_json_payload_with_cjson(const dp_request_config_t* request_config, const dp_context_t* context) {
+char* dpinternal_build_openai_json_payload_with_cjson(const dp_request_config_t* request_config, const dp_context_t* context) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
@@ -405,14 +366,14 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
                     cJSON_AddStringToObject(part_obj, "type", "text");
                     char* file_text = NULL;
                     if (part->file_data.filename) {
-                        if (dp_safe_asprintf(&file_text, "[File: %s (%s)]\nBase64 Data: %s", 
+                        if (dpinternal_safe_asprintf(&file_text, "[File: %s (%s)]\nBase64 Data: %s", 
                                 part->file_data.filename, part->file_data.mime_type, part->file_data.data) == -1) {
                             cJSON_Delete(part_obj);
                             cJSON_Delete(root);
                             return NULL;
                         }
                     } else {
-                        if (dp_safe_asprintf(&file_text, "[File (%s)]\nBase64 Data: %s", 
+                        if (dpinternal_safe_asprintf(&file_text, "[File (%s)]\nBase64 Data: %s", 
                                 part->file_data.mime_type, part->file_data.data) == -1) {
                             cJSON_Delete(part_obj);
                             cJSON_Delete(root);
@@ -439,7 +400,7 @@ static char* build_openai_json_payload_with_cjson(const dp_request_config_t* req
     return json_string; 
 }
 
-static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* request_config) {
+char* dpinternal_build_gemini_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
@@ -517,7 +478,7 @@ static char* build_gemini_json_payload_with_cjson(const dp_request_config_t* req
     return json_string; 
 }
 
-static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* request_config) {
+char* dpinternal_build_anthropic_json_payload_with_cjson(const dp_request_config_t* request_config) {
     cJSON *root = cJSON_CreateObject();
     if (!root) return NULL;
 
@@ -604,7 +565,7 @@ static char* build_anthropic_json_payload_with_cjson(const dp_request_config_t* 
 }
 
 // Helper function to detect if an error is related to unrecognized token parameters
-static bool is_token_parameter_error(const char* error_response, long http_status) {
+bool dpinternal_is_token_parameter_error(const char* error_response, long http_status) {
     if (http_status != 400 || !error_response) {
         return false;
     }
@@ -618,11 +579,11 @@ static bool is_token_parameter_error(const char* error_response, long http_statu
 }
 
 // Helper function to perform OpenAI request with automatic token parameter fallback
-static CURLcode perform_openai_request_with_fallback(CURL* curl, dp_context_t* context, 
-                                                     const dp_request_config_t* request_config,
-                                                     memory_struct_t* chunk_mem,
-                                                     long* http_status_code) {
-    char* json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+CURLcode dpinternal_perform_openai_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                const dp_request_config_t* request_config,
+                                                                memory_struct_t* chunk_mem,
+                                                                long* http_status_code) {
+    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
     if (!json_payload_str) {
         return CURLE_OUT_OF_MEMORY;
     }
@@ -634,7 +595,7 @@ static CURLcode perform_openai_request_with_fallback(CURL* curl, dp_context_t* c
     // Check if we need to retry with fallback parameter
     if (res == CURLE_OK && *http_status_code == 400 && 
         context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
-        is_token_parameter_error(chunk_mem->memory, *http_status_code)) {
+        dpinternal_is_token_parameter_error(chunk_mem->memory, *http_status_code)) {
         
         // Switch to legacy parameter and retry
         context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
@@ -648,7 +609,7 @@ static CURLcode perform_openai_request_with_fallback(CURL* curl, dp_context_t* c
         }
         
         // Build new payload with legacy parameter
-        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
         if (!json_payload_str) {
             return CURLE_OUT_OF_MEMORY;
         }
@@ -663,11 +624,11 @@ static CURLcode perform_openai_request_with_fallback(CURL* curl, dp_context_t* c
 }
 
 // Helper function to perform OpenAI streaming request with automatic token parameter fallback
-static CURLcode perform_openai_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
-                                                               const dp_request_config_t* request_config,
-                                                               stream_processor_t* processor,
-                                                               long* http_status_code) {
-    char* json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+CURLcode dpinternal_perform_openai_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                      const dp_request_config_t* request_config,
+                                                                      stream_processor_t* processor,
+                                                                      long* http_status_code) {
+    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
     if (!json_payload_str) {
         return CURLE_OUT_OF_MEMORY;
     }
@@ -679,7 +640,7 @@ static CURLcode perform_openai_streaming_request_with_fallback(CURL* curl, dp_co
     // Check if we need to retry with fallback parameter
     if (res == CURLE_OK && *http_status_code == 400 && 
         context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
-        is_token_parameter_error(processor->buffer, *http_status_code)) {
+        dpinternal_is_token_parameter_error(processor->buffer, *http_status_code)) {
         
         // Switch to legacy parameter and retry
         context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
@@ -696,7 +657,7 @@ static CURLcode perform_openai_streaming_request_with_fallback(CURL* curl, dp_co
         }
         
         // Build new payload with legacy parameter
-        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
         if (!json_payload_str) {
             return CURLE_OUT_OF_MEMORY;
         }
@@ -710,7 +671,7 @@ static CURLcode perform_openai_streaming_request_with_fallback(CURL* curl, dp_co
     return res;
 }
 
-static char* extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
+char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
     if (!json_response_str) return NULL;
 
@@ -731,13 +692,13 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                 if (message) {
                     cJSON *content = cJSON_GetObjectItemCaseSensitive(message, "content");
                     if (cJSON_IsString(content) && content->valuestring) {
-                        extracted_text = dp_internal_strdup(content->valuestring);
+                        extracted_text = dpinternal_strdup(content->valuestring);
                     }
                 }
                 if (finish_reason_out) {
                     cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_choice, "finish_reason");
                     if (cJSON_IsString(reason_item) && reason_item->valuestring) {
-                        *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                        *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
                     }
                 }
             }
@@ -755,7 +716,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                         cJSON_ArrayForEach(part_item, parts_array) {
                             cJSON *text_item = cJSON_GetObjectItemCaseSensitive(part_item, "text");
                             if (cJSON_IsString(text_item) && text_item->valuestring) {
-                                extracted_text = dp_internal_strdup(text_item->valuestring);
+                                extracted_text = dpinternal_strdup(text_item->valuestring);
                                 break; 
                             }
                         }
@@ -764,7 +725,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
                 if (finish_reason_out) { 
                      cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_candidate, "finishReason"); 
                      if (cJSON_IsString(reason_item) && reason_item->valuestring) {
-                         *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                         *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
                      }
                 }
             }
@@ -774,7 +735,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
             if (prompt_feedback) {
                 cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
                 if (cJSON_IsString(reason_item) && reason_item->valuestring) {
-                    *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                    *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
                 }
             }
         }
@@ -785,14 +746,14 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
             if(content_block && cJSON_IsObject(content_block)) {
                 cJSON* text_item = cJSON_GetObjectItemCaseSensitive(content_block, "text");
                 if(cJSON_IsString(text_item) && text_item->valuestring) {
-                    extracted_text = dp_internal_strdup(text_item->valuestring);
+                    extracted_text = dpinternal_strdup(text_item->valuestring);
                 }
             }
         }
         if(finish_reason_out) {
             cJSON* reason_item = cJSON_GetObjectItemCaseSensitive(root, "stop_reason");
             if(cJSON_IsString(reason_item) && reason_item->valuestring) {
-                *finish_reason_out = dp_internal_strdup(reason_item->valuestring);
+                *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
             }
         }
     }
@@ -801,7 +762,7 @@ static char* extract_text_from_full_response_with_cjson(const char* json_respons
     return extracted_text;
 }
 
-static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
+size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
 
@@ -817,7 +778,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         if (!new_buf) {
             const char* err_msg = "Stream buffer memory re-allocation failed";
             processor->user_callback(NULL, processor->user_data, true, err_msg);
-            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup(err_msg);
             return 0;
         }
         processor->buffer = new_buf;
@@ -856,7 +817,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
         if (!event_data_segment) { 
             const char* err_msg = "Event segment memory allocation failed";
              processor->user_callback(NULL, processor->user_data, true, err_msg);
-            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup(err_msg);
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup(err_msg);
             processor->stop_streaming_signal = true; 
             break; 
         }
@@ -882,13 +843,13 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
             
             if (processor->provider == DP_PROVIDER_ANTHROPIC && strncmp(line, "event: ", 7) == 0) {
                 free(sse_event_type_str); 
-                sse_event_type_str = dp_internal_strdup(line + 7);
+                sse_event_type_str = dpinternal_strdup(line + 7);
             } else if (strncmp(line, "data: ", 6) == 0) {
                 char* json_str = line + 6;
 
                 if (processor->provider == DP_PROVIDER_OPENAI_COMPATIBLE && strcmp(json_str, "[DONE]") == 0) {
                     is_final_for_this_event = true;
-                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup("done_marker");
+                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dpinternal_strdup("done_marker");
                     break; 
                 }
 
@@ -903,13 +864,13 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 if (delta) {
                                     cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
                                     if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
-                                        extracted_token_str = dp_internal_strdup(content->valuestring);
+                                        extracted_token_str = dpinternal_strdup(content->valuestring);
                                     }
                                 }
                                 if (!processor->finish_reason_capture) {
                                     cJSON *reason = cJSON_GetObjectItemCaseSensitive(choice, "finish_reason");
                                     if (cJSON_IsString(reason) && reason->valuestring) {
-                                        processor->finish_reason_capture = dp_internal_strdup(reason->valuestring);
+                                        processor->finish_reason_capture = dpinternal_strdup(reason->valuestring);
                                         is_final_for_this_event = true;
                                     }
                                 }
@@ -932,7 +893,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                                 if (cJSON_IsString(text) && text->valuestring) {
                                                     if (strlen(text->valuestring) > 0) {
                                                         if (!current_event_accumulated_text) { 
-                                                            current_event_accumulated_text = dp_internal_strdup(text->valuestring);
+                                                            current_event_accumulated_text = dpinternal_strdup(text->valuestring);
                                                         } else { 
                                                             char* old_text = current_event_accumulated_text;
                                                             size_t new_len = strlen(old_text) + strlen(text->valuestring);
@@ -957,7 +918,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 }
                                 cJSON *reason_cand = cJSON_GetObjectItemCaseSensitive(candidate, "finishReason");
                                 if (cJSON_IsString(reason_cand) && reason_cand->valuestring) {
-                                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_cand->valuestring);
+                                    if (!processor->finish_reason_capture) processor->finish_reason_capture = dpinternal_strdup(reason_cand->valuestring);
                                     is_final_for_this_event = true;
                                 }
                             }
@@ -966,7 +927,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                         if (prompt_feedback) {
                             cJSON *reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
                             if (cJSON_IsString(reason_pf) && reason_pf->valuestring) {
-                                if (!processor->finish_reason_capture) processor->finish_reason_capture = dp_internal_strdup(reason_pf->valuestring);
+                                if (!processor->finish_reason_capture) processor->finish_reason_capture = dpinternal_strdup(reason_pf->valuestring);
                                 is_final_for_this_event = true;
                             }
                         }
@@ -978,7 +939,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 if (cJSON_IsString(type) && strcmp(type->valuestring, "text_delta") == 0) {
                                     cJSON *text = cJSON_GetObjectItemCaseSensitive(delta, "text");
                                     if (cJSON_IsString(text) && text->valuestring && strlen(text->valuestring) > 0) {
-                                         extracted_token_str = dp_internal_strdup(text->valuestring);
+                                         extracted_token_str = dpinternal_strdup(text->valuestring);
                                     }
                                 }
                             }
@@ -988,14 +949,14 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 if(usage){
                                     cJSON* stop_reason_item = cJSON_GetObjectItemCaseSensitive(usage, "stop_reason");
                                     if(cJSON_IsString(stop_reason_item) && stop_reason_item->valuestring){
-                                         processor->finish_reason_capture = dp_internal_strdup(stop_reason_item->valuestring);
+                                         processor->finish_reason_capture = dpinternal_strdup(stop_reason_item->valuestring);
                                     }
                                 } else { 
                                     cJSON* delta = cJSON_GetObjectItemCaseSensitive(json_chunk, "delta");
                                     if(delta) {
                                         cJSON* stop_reason_item = cJSON_GetObjectItemCaseSensitive(delta, "stop_reason");
                                         if(cJSON_IsString(stop_reason_item) && stop_reason_item->valuestring){
-                                             processor->finish_reason_capture = dp_internal_strdup(stop_reason_item->valuestring);
+                                             processor->finish_reason_capture = dpinternal_strdup(stop_reason_item->valuestring);
                                         }
                                     }
                                 }
@@ -1009,7 +970,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
                                 cJSON* err_msg = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                                 if(cJSON_IsString(err_type) && cJSON_IsString(err_msg)){
                                      char* temp_err = NULL;
-                                     if (dp_safe_asprintf(&temp_err, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring) == -1) {
+                                     if (dpinternal_safe_asprintf(&temp_err, "Anthropic Stream Error (%s): %s", err_type->valuestring, err_msg->valuestring) == -1) {
                                          temp_err = NULL;
                                      }
                                      if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = temp_err; else free(temp_err);
@@ -1051,7 +1012,7 @@ static size_t streaming_write_callback(void* contents, size_t size, size_t nmemb
 }
 
 
-static size_t anthropic_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
+size_t dpinternal_anthropic_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     anthropic_stream_processor_t* processor = (anthropic_stream_processor_t*)userp;
 
@@ -1065,7 +1026,7 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
         if (!new_buf) {
             dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":{\"type\":\"internal_error\",\"message\":\"Stream buffer memory re-allocation failed\"}}" };
             processor->anthropic_user_callback(&event, processor->user_data, "Stream buffer memory re-allocation failed");
-            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup("Stream buffer memory re-allocation failed");
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup("Stream buffer memory re-allocation failed");
             return 0; 
         }
         processor->buffer = new_buf;
@@ -1104,7 +1065,7 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
         if (!event_data_segment) {
             dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":{\"type\":\"internal_error\",\"message\":\"Event segment memory allocation failed\"}}" };
             processor->anthropic_user_callback(&event, processor->user_data, "Event segment memory allocation failed");
-            if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dp_internal_strdup("Event segment memory allocation failed");
+            if(!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup("Event segment memory allocation failed");
             processor->stop_streaming_signal = true; break; 
         }
         strncpy(event_data_segment, current_event_start, event_len);
@@ -1129,10 +1090,10 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
 
             if (strncmp(line, "event: ", 7) == 0) {
                 free(temp_event_type_str); 
-                temp_event_type_str = dp_internal_strdup(line + 7);
+                temp_event_type_str = dpinternal_strdup(line + 7);
             } else if (strncmp(line, "data: ", 6) == 0) {
                 free(temp_json_data_str); 
-                temp_json_data_str = dp_internal_strdup(line + 6);
+                temp_json_data_str = dpinternal_strdup(line + 6);
             }
             if (next_line) line = next_line + 1 ; else break;
         }
@@ -1156,15 +1117,15 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
                 cJSON* data_json = cJSON_Parse(current_api_event.raw_json_data);
                 if(data_json) {
                     if (current_api_event.event_type == DP_ANTHROPIC_EVENT_MESSAGE_STOP) {
-                        processor->finish_reason_capture = dp_internal_strdup("message_stop_event");
+                        processor->finish_reason_capture = dpinternal_strdup("message_stop_event");
                     } else { // DP_ANTHROPIC_EVENT_ERROR
                         cJSON* error_obj = cJSON_GetObjectItemCaseSensitive(data_json, "error");
                         if(error_obj) {
                             cJSON* type_item = cJSON_GetObjectItemCaseSensitive(error_obj, "type");
                             if(cJSON_IsString(type_item)) {
-                                processor->finish_reason_capture = dp_internal_strdup(type_item->valuestring);
+                                processor->finish_reason_capture = dpinternal_strdup(type_item->valuestring);
                             } else {
-                                processor->finish_reason_capture = dp_internal_strdup("error_event");
+                                processor->finish_reason_capture = dpinternal_strdup("error_event");
                             }
                         }
                     }
@@ -1196,32 +1157,32 @@ static size_t anthropic_detailed_stream_write_callback(void* contents, size_t si
 
 int dp_perform_completion(dp_context_t* context, const dp_request_config_t* request_config, dp_response_t* response) {
     if (!context || !request_config || !response) {
-        if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_completion.");
+        if (response) response->error_message = dpinternal_strdup("Invalid arguments to dp_perform_completion.");
         return -1;
     }
     if (request_config->stream) {
-        if (response) response->error_message = dp_internal_strdup("dp_perform_completion called with stream=true. Use streaming functions instead.");
+        if (response) response->error_message = dpinternal_strdup("dp_perform_completion called with stream=true. Use streaming functions instead.");
         return -1;
     }
     memset(response, 0, sizeof(dp_response_t));
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = dp_internal_strdup("curl_easy_init() failed for Disaster Party completion.");
+        response->error_message = dpinternal_strdup("curl_easy_init() failed for Disaster Party completion.");
         return -1;
     }
 
     char* json_payload_str = NULL;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload_str = build_openai_json_payload_with_cjson(request_config, context);
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        json_payload_str = build_gemini_json_payload_with_cjson(request_config);
+        json_payload_str = dpinternal_build_gemini_json_payload_with_cjson(request_config);
     } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
-        json_payload_str = build_anthropic_json_payload_with_cjson(request_config);
+        json_payload_str = dpinternal_build_anthropic_json_payload_with_cjson(request_config);
     }
     
     if (!json_payload_str) {
-        response->error_message = dp_internal_strdup("Failed to build JSON payload for Disaster Party.");
+        response->error_message = dpinternal_strdup("Failed to build JSON payload for Disaster Party.");
         curl_easy_cleanup(curl);
         return -1;
     }
@@ -1248,20 +1209,20 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
 
     memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
     if (!chunk_mem.memory) { 
-        response->error_message = dp_internal_strdup("Memory allocation for response chunk failed.");
+        response->error_message = dpinternal_strdup("Memory allocation for response chunk failed.");
         free(json_payload_str); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; 
     }
     chunk_mem.memory[0] = '\0';
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        res = perform_openai_request_with_fallback(curl, context, request_config, &chunk_mem, &response->http_status_code);
+        res = dpinternal_perform_openai_request_with_fallback(curl, context, request_config, &chunk_mem, &response->http_status_code);
     } else {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
         res = curl_easy_perform(curl);
@@ -1269,11 +1230,11 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     }
 
     if (res != CURLE_OK) {
-        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
+        dpinternal_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s (HTTP status: %ld)",
                  curl_easy_strerror(res), response->http_status_code);
     } else {
         if (response->http_status_code >= 200 && response->http_status_code < 300) {
-            char* extracted_text = extract_text_from_full_response_with_cjson(chunk_mem.memory, context->provider, &response->finish_reason);
+            char* extracted_text = dpinternal_extract_text_from_full_response_with_cjson(chunk_mem.memory, context->provider, &response->finish_reason);
             if (extracted_text) {
                 response->parts = calloc(1, sizeof(dp_response_part_t));
                 if (response->parts) {
@@ -1282,7 +1243,7 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                     response->parts[0].text = extracted_text; 
                 } else {
                     free(extracted_text); 
-                    response->error_message = dp_internal_strdup("Failed to allocate memory for response part structure.");
+                    response->error_message = dpinternal_strdup("Failed to allocate memory for response part structure.");
                 }
             } else { 
                 cJSON* error_root = cJSON_Parse(chunk_mem.memory);
@@ -1291,22 +1252,22 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                     if (error_obj) { 
                         cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                         if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                             dp_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
+                             dpinternal_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item->valuestring);
                         }
                     } else { 
                          cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "type");
                          cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_root, "message"); 
                          if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                             cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                            dp_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
+                            dpinternal_safe_asprintf(&response->error_message, "API error (HTTP %ld): %s", response->http_status_code, msg_item_anthropic->valuestring);
                          }
                     }
                     cJSON_Delete(error_root);
                 }
                 if (!response->error_message && chunk_mem.memory) { 
-                    dp_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
+                    dpinternal_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Body: %.200s...", response->http_status_code, chunk_mem.memory);
                 } else if (!response->error_message) {
-                    dp_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
+                    dpinternal_safe_asprintf(&response->error_message, "Failed to parse successful response or extract text (HTTP %ld). Empty response body.", response->http_status_code);
                 }
             }
         } else { 
@@ -1329,11 +1290,11 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                 }
              }
             if(api_err_detail){
-                dp_safe_asprintf(&response->error_message, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
+                dpinternal_safe_asprintf(&response->error_message, "HTTP error %ld: %s", response->http_status_code, api_err_detail);
             } else if (chunk_mem.memory) {
-                dp_safe_asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
+                dpinternal_safe_asprintf(&response->error_message, "HTTP error %ld. Body: %.500s", response->http_status_code, chunk_mem.memory);
             } else {
-                dp_safe_asprintf(&response->error_message, "HTTP error %ld. (no response body)", response->http_status_code);
+                dpinternal_safe_asprintf(&response->error_message, "HTTP error %ld. (no response body)", response->http_status_code);
             }
             if(error_root) cJSON_Delete(error_root);
         }
@@ -1350,12 +1311,12 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
 int dp_perform_streaming_completion(dp_context_t* context, const dp_request_config_t* request_config,
                                     dp_stream_callback_t callback, void* user_data, dp_response_t* response) {
     if (!context || !request_config || !callback || !response) {
-        if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_streaming_completion.");
+        if (response) response->error_message = dpinternal_strdup("Invalid arguments to dp_perform_streaming_completion.");
         return -1;
     }
     
     if (context->provider != DP_PROVIDER_GOOGLE_GEMINI && !request_config->stream) {
-         if (response) response->error_message = dp_internal_strdup("dp_perform_streaming_completion requires stream=true in config for OpenAI and Anthropic.");
+         if (response) response->error_message = dpinternal_strdup("dp_perform_streaming_completion requires stream=true in config for OpenAI and Anthropic.");
         return -1;
     }
 
@@ -1363,7 +1324,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = dp_internal_strdup("curl_easy_init() failed for Disaster Party streaming.");
+        response->error_message = dpinternal_strdup("curl_easy_init() failed for Disaster Party streaming.");
         return -1;
     }
 
@@ -1374,22 +1335,22 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     processor.buffer_capacity = 8192; 
     processor.buffer = malloc(processor.buffer_capacity);
     if (!processor.buffer) { 
-        response->error_message = dp_internal_strdup("Stream processor buffer alloc failed.");
+        response->error_message = dpinternal_strdup("Stream processor buffer alloc failed.");
         curl_easy_cleanup(curl); return -1; 
     }
     processor.buffer[0] = '\0';
 
     char* json_payload_str = NULL;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        json_payload_str = build_openai_json_payload_with_cjson(request_config, context); 
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context); 
     } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        json_payload_str = build_gemini_json_payload_with_cjson(request_config);
+        json_payload_str = dpinternal_build_gemini_json_payload_with_cjson(request_config);
     } else if (context->provider == DP_PROVIDER_ANTHROPIC) {
-        json_payload_str = build_anthropic_json_payload_with_cjson(request_config);
+        json_payload_str = dpinternal_build_anthropic_json_payload_with_cjson(request_config);
     }
 
      if (!json_payload_str) { 
-        response->error_message = dp_internal_strdup("Payload build failed for streaming.");
+        response->error_message = dpinternal_strdup("Payload build failed for streaming.");
         free(processor.buffer); curl_easy_cleanup(curl); return -1; 
     }
 
@@ -1416,13 +1377,13 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, streaming_write_callback); 
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_streaming_write_callback); 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
     CURLcode res;
     if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        res = perform_openai_streaming_request_with_fallback(curl, context, request_config, &processor, &response->http_status_code);
+        res = dpinternal_perform_openai_streaming_request_with_fallback(curl, context, request_config, &processor, &response->http_status_code);
     } else {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
         res = curl_easy_perform(curl);
@@ -1442,7 +1403,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
                         final_stream_error = msg_item->valuestring; 
                         if (response->error_message == NULL) { 
-                           response->error_message = dp_internal_strdup(final_stream_error);
+                           response->error_message = dpinternal_strdup(final_stream_error);
                         }
                     }
                 } else { 
@@ -1452,7 +1413,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                         cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
                         final_stream_error = msg_item_anthropic->valuestring;
                         if (response->error_message == NULL) { 
-                           response->error_message = dp_internal_strdup(final_stream_error);
+                           response->error_message = dpinternal_strdup(final_stream_error);
                         }
                      }
                 }
@@ -1470,11 +1431,11 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     if (processor.finish_reason_capture) {
         response->finish_reason = processor.finish_reason_capture; 
     } else if (res == CURLE_OK && response->http_status_code >= 200 && response->http_status_code < 300 && !processor.accumulated_error_during_stream && !response->finish_reason) {
-        response->finish_reason = dp_internal_strdup("completed");
+        response->finish_reason = dpinternal_strdup("completed");
     }
 
     if (res != CURLE_OK && !response->error_message) {
-        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        dpinternal_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          char* temp_err_msg = NULL;
          if (processor.buffer_size > 0) {
@@ -1484,14 +1445,14 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
                 if (error_obj) {
                     cJSON* msg_item = cJSON_GetObjectItemCaseSensitive(error_obj, "message");
                     if (cJSON_IsString(msg_item) && msg_item->valuestring) {
-                        dp_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
+                        dpinternal_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item->valuestring);
                     }
                 } else {
                      cJSON* type_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "type");
                      cJSON* msg_item_anthropic = cJSON_GetObjectItemCaseSensitive(error_json, "message");
                      if(cJSON_IsString(type_item_anthropic) && strcmp(type_item_anthropic->valuestring, "error") == 0 &&
                         cJSON_IsString(msg_item_anthropic) && msg_item_anthropic->valuestring) {
-                        dp_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
+                        dpinternal_safe_asprintf(&temp_err_msg, "HTTP error %ld: %s", response->http_status_code, msg_item_anthropic->valuestring);
                      }
                 }
                 cJSON_Delete(error_json);
@@ -1500,9 +1461,9 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
          if (temp_err_msg) {
             response->error_message = temp_err_msg;
          } else if (processor.buffer_size > 0) {
-            dp_safe_asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
+            dpinternal_safe_asprintf(&response->error_message, "HTTP error %ld. Body hint: %.200s", response->http_status_code, processor.buffer);
          } else {
-            dp_safe_asprintf(&response->error_message, "HTTP error %ld (empty body)", response->http_status_code);
+            dpinternal_safe_asprintf(&response->error_message, "HTTP error %ld (empty body)", response->http_status_code);
          }
     }
 
@@ -1510,7 +1471,7 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
         if (response->error_message) {
              char* combined_error;
              if (strstr(response->error_message, processor.accumulated_error_during_stream) == NULL) {
-                if (dp_safe_asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream) != -1) {
+                if (dpinternal_safe_asprintf(&combined_error, "%s; Stream processing error: %s", response->error_message, processor.accumulated_error_during_stream) != -1) {
                     free(response->error_message);
                     response->error_message = combined_error;
                 }
@@ -1533,15 +1494,15 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               void* user_data,
                                               dp_response_t* response) {
     if (!context || !request_config || !anthropic_callback || !response) {
-        if (response) response->error_message = dp_internal_strdup("Invalid arguments to dp_perform_anthropic_streaming_completion.");
+        if (response) response->error_message = dpinternal_strdup("Invalid arguments to dp_perform_anthropic_streaming_completion.");
         return -1;
     }
     if (context->provider != DP_PROVIDER_ANTHROPIC) {
-        if (response) response->error_message = dp_internal_strdup("dp_perform_anthropic_streaming_completion called with non-Anthropic provider.");
+        if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion called with non-Anthropic provider.");
         return -1;
     }
     if (!request_config->stream) {
-         if (response) response->error_message = dp_internal_strdup("dp_perform_anthropic_streaming_completion requires stream=true in config.");
+         if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion requires stream=true in config.");
         return -1;
     }
 
@@ -1549,7 +1510,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = dp_internal_strdup("curl_easy_init() failed for Anthropic streaming.");
+        response->error_message = dpinternal_strdup("curl_easy_init() failed for Anthropic streaming.");
         return -1;
     }
 
@@ -1559,14 +1520,14 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     processor.buffer_capacity = 8192; 
     processor.buffer = malloc(processor.buffer_capacity);
     if (!processor.buffer) { 
-        response->error_message = dp_internal_strdup("Anthropic stream processor buffer alloc failed.");
+        response->error_message = dpinternal_strdup("Anthropic stream processor buffer alloc failed.");
         curl_easy_cleanup(curl); return -1; 
     }
     processor.buffer[0] = '\0';
 
-    char* json_payload_str = build_anthropic_json_payload_with_cjson(request_config);
+    char* json_payload_str = dpinternal_build_anthropic_json_payload_with_cjson(request_config);
     if (!json_payload_str) { 
-        response->error_message = dp_internal_strdup("Payload build failed for Anthropic streaming.");
+        response->error_message = dpinternal_strdup("Payload build failed for Anthropic streaming.");
         free(processor.buffer); curl_easy_cleanup(curl); return -1; 
     }
 
@@ -1582,7 +1543,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, anthropic_detailed_stream_write_callback); 
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_anthropic_detailed_stream_write_callback); 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
@@ -1613,11 +1574,11 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     if (processor.finish_reason_capture) {
         response->finish_reason = processor.finish_reason_capture; 
     } else if (res == CURLE_OK && response->http_status_code >= 200 && response->http_status_code < 300 && !processor.accumulated_error_during_stream && !response->finish_reason) {
-        response->finish_reason = dp_internal_strdup("completed");
+        response->finish_reason = dpinternal_strdup("completed");
     }
     
     if (res != CURLE_OK && !response->error_message) {
-        dp_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        dpinternal_safe_asprintf(&response->error_message, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
     } else if ((response->http_status_code < 200 || response->http_status_code >= 300) && !response->error_message) {
          // ... (error message population as in generic streaming) ...
     }
@@ -1653,7 +1614,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        (*model_list_out)->error_message = dp_internal_strdup("curl_easy_init() failed for list_models.");
+        (*model_list_out)->error_message = dpinternal_strdup("curl_easy_init() failed for list_models.");
         return -1;
     }
 
@@ -1661,7 +1622,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     struct curl_slist* headers = NULL;
     memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
     if (!chunk_mem.memory) {
-        (*model_list_out)->error_message = dp_internal_strdup("Memory allocation for list_models response chunk failed.");
+        (*model_list_out)->error_message = dpinternal_strdup("Memory allocation for list_models response chunk failed.");
         curl_easy_cleanup(curl);
         return -1;
     }
@@ -1681,7 +1642,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
         headers = curl_slist_append(headers, api_key_header);
         headers = curl_slist_append(headers, "anthropic-version: 2023-06-01");
     } else {
-        (*model_list_out)->error_message = dp_internal_strdup("Unsupported provider for list_models.");
+        (*model_list_out)->error_message = dpinternal_strdup("Unsupported provider for list_models.");
         free(chunk_mem.memory);
         curl_easy_cleanup(curl);
         return -1;
@@ -1690,7 +1651,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L); 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
@@ -1700,14 +1661,14 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     int return_code = 0;
 
     if (res != CURLE_OK) {
-        dp_safe_asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
+        dpinternal_safe_asprintf(&(*model_list_out)->error_message, "curl_easy_perform() failed for list_models: %s (HTTP status: %ld)",
                  curl_easy_strerror(res), (*model_list_out)->http_status_code);
         return_code = -1;
     } else {
         if ((*model_list_out)->http_status_code >= 200 && (*model_list_out)->http_status_code < 300) {
             cJSON *root = cJSON_Parse(chunk_mem.memory);
             if (!root) {
-                dp_safe_asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                dpinternal_safe_asprintf(&(*model_list_out)->error_message, "Failed to parse JSON response for list_models. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
                 return_code = -1;
             } else {
                 cJSON *data_array = NULL;
@@ -1721,7 +1682,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                     int array_size = cJSON_GetArraySize(data_array);
                     (*model_list_out)->models = calloc(array_size, sizeof(dp_model_info_t));
                     if (!(*model_list_out)->models) {
-                        (*model_list_out)->error_message = dp_internal_strdup("Failed to allocate memory for model info array.");
+                        (*model_list_out)->error_message = dpinternal_strdup("Failed to allocate memory for model info array.");
                         return_code = -1;
                     } else {
                         (*model_list_out)->count = array_size;
@@ -1742,7 +1703,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                                 if (context->provider == DP_PROVIDER_GOOGLE_GEMINI && strncmp(model_name_str, "models/", 7) == 0) {
                                     model_name_str += 7; 
                                 }
-                                info->model_id = dp_internal_strdup(model_name_str);
+                                info->model_id = dpinternal_strdup(model_name_str);
                             }
 
                             cJSON *display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "displayName"); 
@@ -1750,17 +1711,17 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                                 display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "display_name");
                             }
                             if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
-                                info->display_name = dp_internal_strdup(display_name_item->valuestring);
+                                info->display_name = dpinternal_strdup(display_name_item->valuestring);
                             }
                             
                             cJSON *version_item = cJSON_GetObjectItemCaseSensitive(model_json, "version"); 
                             if (cJSON_IsString(version_item) && version_item->valuestring) {
-                                info->version = dp_internal_strdup(version_item->valuestring);
+                                info->version = dpinternal_strdup(version_item->valuestring);
                             }
 
                             cJSON *description_item = cJSON_GetObjectItemCaseSensitive(model_json, "description"); 
                             if (cJSON_IsString(description_item) && description_item->valuestring) {
-                                info->description = dp_internal_strdup(description_item->valuestring);
+                                info->description = dpinternal_strdup(description_item->valuestring);
                             }
                             
                             cJSON *input_limit_item = cJSON_GetObjectItemCaseSensitive(model_json, "inputTokenLimit"); 
@@ -1776,13 +1737,13 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                         }
                     }
                 } else {
-                     dp_safe_asprintf(&(*model_list_out)->error_message, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
+                     dpinternal_safe_asprintf(&(*model_list_out)->error_message, "Expected an array for model listing response. Body: %.200s...", chunk_mem.memory ? chunk_mem.memory : "(empty)");
                     return_code = -1;
                 }
                 cJSON_Delete(root);
             }
         } else { 
-            dp_safe_asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
+            dpinternal_safe_asprintf(&(*model_list_out)->error_message, "list_models HTTP error %ld. Body: %.500s", (*model_list_out)->http_status_code, chunk_mem.memory ? chunk_mem.memory : "(no response body)");
             return_code = -1;
         }
     }
@@ -1792,7 +1753,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
     curl_easy_cleanup(curl);
 
     if (return_code == -1 && (*model_list_out)->models == NULL && (*model_list_out)->error_message == NULL) {
-         (*model_list_out)->error_message = dp_internal_strdup("Unknown error in dp_list_models before HTTP response processing.");
+         (*model_list_out)->error_message = dpinternal_strdup("Unknown error in dp_list_models before HTTP response processing.");
     }
     
     return return_code;
@@ -1852,7 +1813,7 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
     }
 }
 
-static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
+bool dpinternal_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
                                    const char* text_content, const char* image_url_content,
                                    const char* mime_type_content, const char* base64_data_content,
                                    const char* filename_content) {
@@ -1867,23 +1828,23 @@ static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_
     bool success = false;
 
     if (type == DP_CONTENT_PART_TEXT && text_content) {
-        new_part->text = dp_internal_strdup(text_content);
+        new_part->text = dpinternal_strdup(text_content);
         success = (new_part->text != NULL);
     } else if (type == DP_CONTENT_PART_IMAGE_URL && image_url_content) {
-        new_part->image_url = dp_internal_strdup(image_url_content);
+        new_part->image_url = dpinternal_strdup(image_url_content);
         success = (new_part->image_url != NULL);
     } else if (type == DP_CONTENT_PART_IMAGE_BASE64 && mime_type_content && base64_data_content) {
-        new_part->image_base64.mime_type = dp_internal_strdup(mime_type_content);
-        new_part->image_base64.data = dp_internal_strdup(base64_data_content);
+        new_part->image_base64.mime_type = dpinternal_strdup(mime_type_content);
+        new_part->image_base64.data = dpinternal_strdup(base64_data_content);
         success = (new_part->image_base64.mime_type != NULL && new_part->image_base64.data != NULL);
         if (!success) {
             free(new_part->image_base64.mime_type); new_part->image_base64.mime_type = NULL;
             free(new_part->image_base64.data); new_part->image_base64.data = NULL;
         }
     } else if (type == DP_CONTENT_PART_FILE_DATA && mime_type_content && base64_data_content) {
-        new_part->file_data.mime_type = dp_internal_strdup(mime_type_content);
-        new_part->file_data.data = dp_internal_strdup(base64_data_content);
-        new_part->file_data.filename = filename_content ? dp_internal_strdup(filename_content) : NULL;
+        new_part->file_data.mime_type = dpinternal_strdup(mime_type_content);
+        new_part->file_data.data = dpinternal_strdup(base64_data_content);
+        new_part->file_data.filename = filename_content ? dpinternal_strdup(filename_content) : NULL;
         success = (new_part->file_data.mime_type != NULL && new_part->file_data.data != NULL);
         if (!success) {
             free(new_part->file_data.mime_type); new_part->file_data.mime_type = NULL;
@@ -1897,16 +1858,16 @@ static bool dp_message_add_part_internal(dp_message_t* message, dp_content_part_
 }
 
 bool dp_message_add_text_part(dp_message_t* message, const char* text) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL, NULL);
+    return dpinternal_message_add_part_internal(message, DP_CONTENT_PART_TEXT, text, NULL, NULL, NULL, NULL);
 }
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL, NULL);
+    return dpinternal_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_URL, NULL, image_url, NULL, NULL, NULL);
 }
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data, NULL);
+    return dpinternal_message_add_part_internal(message, DP_CONTENT_PART_IMAGE_BASE64, NULL, NULL, mime_type, base64_data, NULL);
 }
 bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type, const char* base64_data, const char* filename) {
-    return dp_message_add_part_internal(message, DP_CONTENT_PART_FILE_DATA, NULL, NULL, mime_type, base64_data, filename);
+    return dpinternal_message_add_part_internal(message, DP_CONTENT_PART_FILE_DATA, NULL, NULL, mime_type, base64_data, filename);
 }
 
 // ---- START SERIALIZATION FUNCTIONS ----
@@ -2124,7 +2085,7 @@ int dp_count_tokens(dp_context_t* context,
             return_code = -1;
             goto cleanup;
         case DP_PROVIDER_GOOGLE_GEMINI:
-            json_payload_str = build_gemini_count_tokens_json_payload_with_cjson(request_config);
+            json_payload_str = dpinternal_build_gemini_count_tokens_json_payload_with_cjson(request_config);
             if (!json_payload_str) {
                 fprintf(stderr, "Failed to build JSON payload for dp_count_tokens (Gemini).\n");
                 goto cleanup;
@@ -2133,7 +2094,7 @@ int dp_count_tokens(dp_context_t* context,
                      context->api_base_url, request_config->model, context->api_key);
             break;
         case DP_PROVIDER_ANTHROPIC:
-            json_payload_str = build_anthropic_count_tokens_json_payload_with_cjson(request_config);
+            json_payload_str = dpinternal_build_anthropic_count_tokens_json_payload_with_cjson(request_config);
             if (!json_payload_str) {
                 fprintf(stderr, "Failed to build JSON payload for dp_count_tokens (Anthropic).\n");
                 goto cleanup;
@@ -2159,7 +2120,7 @@ int dp_count_tokens(dp_context_t* context,
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_write_memory_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 

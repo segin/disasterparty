@@ -16,6 +16,7 @@
 
 7. **Public API calls** go in `disasterparty.h`
 8. **Private API calls** go in `dp_private.h`
+9. **Internal function naming**: All internal functions that are exported in the symbol table (non-static functions used across modules) must be prefixed with `dpinternal_` to avoid namespace pollution
 
 ## Documentation Requirements
 
