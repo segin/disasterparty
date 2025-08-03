@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([Disaster Party], [0.4.0], [segin2005@gmail.com], [disasterparty], [https://github.com/segin/disasterparty])
+AC_INIT([Disaster Party], [0.5.0], [segin2005@gmail.com], [disasterparty], [https://github.com/segin/disasterparty])
 AC_CONFIG_SRCDIR([src/disasterparty.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -34,7 +34,10 @@ AC_SUBST(CJSON_LIBS)
 AC_CHECK_HEADERS([stdlib.h string.h stdio.h curl/curl.h cjson/cJSON.h stdbool.h stddef.h])
 
 # Define library version for libtool
-DP_LT_VERSION="3:0:0"
+# Version format: CURRENT:REVISION:AGE
+# Increment CURRENT for ABI-breaking changes (enum/struct extensions)
+# Reset REVISION and AGE to 0 for ABI-breaking changes
+DP_LT_VERSION="4:0:0"
 AC_SUBST(DP_LT_VERSION)
 AC_SUBST(PACKAGE_VERSION)
 
@@ -52,7 +55,7 @@ AC_MSG_NOTICE([
 Disaster Party $VERSION configured successfully.
 
   Man pages will be installed in: ${mandir}/man3
-  Library version (libtool):    ${DP_LT_VERSION} (libdisasterparty.so.1.0.0)
+  Library version (libtool):    ${DP_LT_VERSION} (libdisasterparty.so.4.0.0)
   Package version:              ${PACKAGE_VERSION}
 
   Prefix:           ${prefix}

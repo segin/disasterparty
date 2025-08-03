@@ -1,3 +1,10 @@
+# Version 0.5.0 (2025-07-31)
+
+* **ABI BREAKING CHANGE**: The `dp_content_part_type_t` enum has been extended with `DP_CONTENT_PART_FILE_DATA`. The `dp_content_part_t` struct has been extended with a `file_data` member. The `dp_context_s` struct has been extended with a `user_agent` field. SOVER incremented from 3:0:0 to 4:0:0 (libdisasterparty.so.4.0.0). Recompilation of applications will be required.
+* Added support for general file attachments (PDFs, CSVs, text files, etc.) across all providers.
+* Added custom user-agent support allowing applications to identify themselves in HTTP requests.
+* Completed token counting functionality for Gemini and Anthropic providers.
+
 # Version 0.4.0 (2025-07-03)
 * **ABI BREAKING CHANGE**: The `dp_content_part_t` struct has been modified with the addition of a `file_uri` member. The `dp_content_part_type_t` enum has also been updated with `DP_CONTENT_PART_FILE_REFERENCE`. Recompilation of applications will be required.
 * Added support for file uploads and file references in messages (Gemini only).

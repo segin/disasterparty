@@ -1,6 +1,6 @@
 # Disaster Party LLM Client Library - Full Documentation
-**Current Version:** 0.3.0
-**Date:** 2025-06-14
+**Current Version:** 0.5.0
+**Date:** 2025-07-03
 **Primary Author:** Kirn Gill II <segin2005@gmail.com>
 **Conceptualization & Initial Code Generation:** Gemini
 
@@ -10,15 +10,16 @@ The **Disaster Party** library provides a robust, portable C interface for inter
 
 The library is designed to be relatively simple to integrate and use, leveraging **libcurl**(3) for HTTP(S) communication and **cJSON**(3) for robust JSON parsing and generation.
 
-### Core Features (as of v0.3.0)
+### Core Features (as of v0.5.0)
 
 * **Multi-Provider Support:** A unified interface for interacting with OpenAI, Google Gemini, and Anthropic.
-* **Multimodal Inputs:** Support for sending interleaved text and image data (via URL for OpenAI, and base64 for Gemini/Anthropic) in a single prompt.
+* **Multimodal Inputs:** Support for sending interleaved text and image data (via URL for OpenAI, and base64 for Gemini/Anthropic) in a single prompt, including file references for Gemini.
 * **Granular Request Control:** Support for advanced generation parameters, including `temperature`, `max_tokens`, `top_p`, `top_k`, and custom `stop_sequences`.
 * **Handling of both non-streaming (full response at once) and streaming (token-by-token) completions.
 * **A dedicated, detailed streaming callback for Anthropic's event-based stream.
 * **Interface for listing available models from the supported providers.
 * **Helper functions for constructing request messages and serializing/deserializing conversations to/from JSON or files.
+* **File Uploads and References:** Support for uploading files to Gemini and referencing them in messages.
 * **Robust Build System:** A standard GNU Autotools setup (`./configure && make && make install`) that correctly handles dependencies.
 * **Comprehensive Test Suite:** A suite of integration tests that verify functionality against live APIs and can be skipped if API keys are not available.
 
