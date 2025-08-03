@@ -87,14 +87,14 @@
   - Add all tests to Makefile.am and ensure they build and run
   - _Requirements: 3.1, 3.3, 3.6, 3.7_
 
-- [ ] 6. Update documentation and man pages
-- [ ] 6.1 Update API documentation
+- [x] 6. Update documentation and man pages
+- [x] 6.1 Update API documentation
   - Update DOCUMENTATION.md with new functions and usage examples
   - Document file attachment capabilities and limitations
   - Document user-agent customization options
   - _Requirements: 1.1, 2.1, 3.1_
 
-- [ ] 6.2 Create man pages for new functions
+- [x] 6.2 Create man pages for new functions
   - Create man page for dp_message_add_file_data_part()
   - Create man page for dp_init_context_with_app_info()
   - Update existing man pages that reference affected structures

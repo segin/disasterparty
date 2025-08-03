@@ -1,0 +1,123 @@
+." Man page for dp_count_tokens from libdisasterparty
+.TH DP_COUNT_TOKENS 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_count_tokens \- count tokens in a prompt for supported LLM providers
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_count_tokens(dp_context_t *" context ", const dp_request_config_t *" request_config ", size_t *" token_count_out ");"
+
+.SH DESCRIPTION
+The
+.B dp_count_tokens()
+function counts the number of tokens in a given prompt by calling the provider's 
+token counting API endpoint. This function is useful for managing costs and ensuring 
+prompts fit within model context windows. Token counting is currently supported for 
+Google Gemini and Anthropic providers.
+
+For OpenAI-compatible providers, this function returns an error indicating the 
+operation is not supported, as these providers typically do not offer server-side 
+token counting endpoints.
+
+The
+.I request_config
+parameter should contain the messages and model information for which tokens should 
+be counted. The actual token count will be stored in the location pointed to by
+.IR token_count_out
+on success.
+
+.SH PARAMETERS
+.TP
+.I context
+The initialized client context.
+.TP
+.I request_config
+The request configuration containing the messages to count tokens for.
+.TP
+.I token_count_out
+Pointer to a size_t variable that will receive the token count on success.
+
+.SH PROVIDER SUPPORT
+.IP \(bu 2
+.B Google Gemini:
+Uses the /v1beta/models/{model}:countTokens endpoint
+.IP \(bu 2
+.B Anthropic:
+Uses the /v1/messages/count_tokens endpoint
+.IP \(bu 2
+.B OpenAI-compatible:
+Not supported, returns error
+
+.SH RETURN VALUE
+Returns 0 on success with the token count stored in
+.IR *token_count_out ,
+or -1 on failure. For OpenAI-compatible providers, this function always returns -1 
+with an appropriate error message.
+
+.SH BUGS
+Please report any bugs or issues by opening a ticket on the GitHub issue tracker:
+.PP
+.UR https://github.com/segin/disasterparty/issues
+.UE
+
+.SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+.br
+Gemini (Conceptualization and initial C code generation)
+
+.SH EXAMPLE
+.nf
+#include <disasterparty.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    const char* api_key = getenv("ANTHROPIC_API_KEY");
+    if (!api_key) {
+        fprintf(stderr, "ANTHROPIC_API_KEY not set.\n");
+        return 1;
+    }
+
+    dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, api_key, NULL);
+    if (!context) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return 1;
+    }
+
+    // Create a simple message
+    dp_message_t user_message = { .role = DP_ROLE_USER };
+    if (!dp_message_add_text_part(&user_message, "Hello, how are you?")) {
+        fprintf(stderr, "Failed to add text part.\n");
+        dp_destroy_context(context);
+        return 1;
+    }
+
+    // Configure the request
+    dp_request_config_t config = {0};
+    config.model = "claude-3-sonnet-20240229";
+    config.messages = &user_message;
+    config.num_messages = 1;
+
+    // Count tokens
+    size_t token_count;
+    int result = dp_count_tokens(context, &config, &token_count);
+    
+    if (result == 0) {
+        printf("Token count: %zu\n", token_count);
+    } else {
+        printf("Token counting failed or not supported\n");
+    }
+
+    dp_free_messages(&user_message, 1);
+    dp_destroy_context(context);
+    return result == 0 ? 0 : 1;
+}
+.fi
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_perform_completion (3),
+.BR dp_request_config (3),
+.BR disasterparty (7)

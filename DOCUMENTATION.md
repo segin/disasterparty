@@ -17,7 +17,9 @@ Key features include:
 - A dedicated, detailed streaming callback for Anthropic's event-based stream.
 - Interface for listing available models from the supported providers.
 - Helper functions for constructing request messages and serializing/deserializing conversations.
-- Support for base64 encoded file attachments with various MIME types.
+- Support for base64 encoded file attachments with various MIME types (PDFs, CSVs, text files, etc.).
+- Token counting functionality for Gemini and Anthropic providers.
+- Custom user-agent support for application identification.
 - Management of API contexts and response data.
 
 ### SYNOPSIS
@@ -31,20 +33,65 @@ gcc my_app.c $(pkg-config --cflags --libs disasterparty)
 ```
 
 ### GETTING STARTED
-1.  Initialize a context using **dp_init_context**(3), specifying the provider and your API key.
+1.  Initialize a context using **dp_init_context**(3) or **dp_init_context_with_app_info**(3), specifying the provider, API key, and optionally your application information for custom user-agent strings.
 2.  Create messages using helper functions like **dp_message_add_text_part**(3), **dp_message_add_image_url_part**(3), **dp_message_add_base64_image_part**(3), or **dp_message_add_file_data_part**(3).
 3.  Configure your request using `dp_request_config_t`, setting the model, messages, temperature, etc.
 4.  Perform the API call using either **dp_perform_completion**(3) for a blocking response or **dp_perform_streaming_completion**(3) for streaming. For Anthropic, you can use the detailed **dp_perform_anthropic_streaming_completion**(3).
 5.  To list available models, use **dp_list_models**(3).
-6.  To save/load conversations, use **dp_serialize_messages_to_file**(3) and **dp_deserialize_messages_from_file**(3).
-7.  To upload files for multimodal models (Gemini only), use **dp_upload_file**(3).
-8.  Always free allocated resources using functions like **dp_free_response_content**(3), **dp_free_model_list**(3), **dp_free_file**(3), **dp_free_messages**(3), and finally **dp_destroy_context**(3).
+6.  To count tokens in your prompts (Gemini and Anthropic only), use **dp_count_tokens**(3).
+7.  To save/load conversations, use **dp_serialize_messages_to_file**(3) and **dp_deserialize_messages_from_file**(3).
+8.  Always free allocated resources using functions like **dp_free_response_content**(3), **dp_free_model_list**(3), **dp_free_messages**(3), and finally **dp_destroy_context**(3).
 
 ### ENVIRONMENT
 The test programs and typical applications using this library expect API keys to be set in environment variables:
 -   **OPENAI_API_KEY**: For OpenAI-compatible services.
 -   **GEMINI_API_KEY**: For Google Gemini services.
 -   **ANTHROPIC_API_KEY**: For Anthropic Claude services.
+
+### USER-AGENT CUSTOMIZATION
+The library supports custom user-agent strings to help identify your application in HTTP requests and API logs. This is particularly useful for:
+-   **API Usage Tracking**: Providers can identify requests from your specific application
+-   **Debugging**: Easier to trace requests in logs when troubleshooting
+-   **Rate Limiting**: Some providers may apply different rate limits based on user-agent
+-   **Analytics**: Track usage patterns for your application
+
+**Default Behavior**: When using **dp_init_context**(3), the user-agent defaults to "disasterparty/VERSION".
+
+**Custom User-Agent**: Use **dp_init_context_with_app_info**(3) to specify your application name and version. The resulting user-agent will be formatted as "AppName/AppVersion (disasterparty/VERSION)".
+
+**Best Practices**:
+-   Use descriptive application names without spaces
+-   Follow semantic versioning for application versions
+-   Keep user-agent strings concise and informative
+
+### FILE ATTACHMENT CAPABILITIES
+The library supports attaching various file types to messages using base64 encoding. This enables AI models to process documents, analyze data files, and work with multimedia content.
+
+**Supported Workflows**:
+-   **Direct Attachment**: Use **dp_message_add_file_data_part**(3) to attach base64-encoded file data directly to messages
+-   **Multiple Files**: Attach multiple files to a single message by calling the function multiple times
+-   **Mixed Content**: Combine file attachments with text and image content in the same message
+
+**File Processing Requirements**:
+-   Files must be base64 encoded before attachment
+-   MIME type must be specified accurately
+-   Optional filename can provide context to the AI model
+
+**Provider-Specific Limitations**:
+-   **Google Gemini**: Supports most file types, may use Files API for large files
+-   **Anthropic**: Good support for text and document files, size limitations apply
+-   **OpenAI-compatible**: Limited support, varies by model and endpoint
+
+**File Size Considerations**:
+-   Large files may exceed API payload limits
+-   Base64 encoding increases file size by approximately 33%
+-   Consider file compression for large documents when possible
+-   Some providers have specific size limits per file or per request
+
+**Security Notes**:
+-   Only attach files you trust and have permission to share
+-   Be aware that file content will be sent to third-party AI providers
+-   Consider data privacy implications when attaching sensitive documents
 
 ### FILES
 -   `<disasterparty.h>`: The main header file.
@@ -59,7 +106,7 @@ Kirn Gill II <segin2005@gmail.com>
 Gemini (Conceptualization and initial C code generation)
 
 ### SEE ALSO
-**dp_init_context**(3), **dp_perform_completion**(3), **dp_list_models**(3), **curl**(1), **cJSON**(3)
+**dp_init_context**(3), **dp_init_context_with_app_info**(3), **dp_perform_completion**(3), **dp_list_models**(3), **dp_count_tokens**(3), **dp_message_add_file_data_part**(3), **curl**(1), **cJSON**(3)
 
 ---
 ## 2. API Functions (section 3)
@@ -98,6 +145,53 @@ Allocates and initializes a new context for interacting with an LLM provider. Th
 
 **RETURN VALUE**
 Returns a pointer to the new `dp_context_t` on success, or `NULL` on error.
+
+---
+### dp_init_context_with_app_info
+**NAME**
+dp_init_context_with_app_info - initialize a Disaster Party LLM client context with custom application information
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+dp_context_t *dp_init_context_with_app_info(dp_provider_type_t provider, const char *api_key, const char *api_base_url, const char *app_name, const char *app_version);
+```
+
+**DESCRIPTION**
+Allocates and initializes a new context for interacting with an LLM provider, with support for custom user-agent strings. This function allows applications to identify themselves in HTTP requests by providing application name and version information. The user-agent string will be constructed in the format "AppName/AppVersion (disasterparty/DP_VERSION)" when both app_name and app_version are provided, or "disasterparty/DP_VERSION" when app_name is NULL. The returned context must be freed using **dp_destroy_context**(3).
+
+**PARAMETERS**
+-   `provider`: The LLM provider (`DP_PROVIDER_OPENAI_COMPATIBLE`, `DP_PROVIDER_GOOGLE_GEMINI`, or `DP_PROVIDER_ANTHROPIC`).
+-   `api_key`: The mandatory authentication key.
+-   `api_base_url`: Optional. Overrides the default base URL if provided.
+-   `app_name`: Optional. The name of your application (can be NULL).
+-   `app_version`: Optional. The version of your application (can be NULL).
+
+**RETURN VALUE**
+Returns a pointer to the new `dp_context_t` on success, or `NULL` on error.
+
+**EXAMPLE**
+```c
+// Initialize with custom app info
+dp_context_t *ctx = dp_init_context_with_app_info(
+    DP_PROVIDER_ANTHROPIC, 
+    "your-api-key", 
+    NULL, 
+    "MyApp", 
+    "1.0.0"
+);
+// User-agent will be: "MyApp/1.0.0 (disasterparty/0.5.0)"
+
+// Initialize without app info (equivalent to dp_init_context)
+dp_context_t *ctx2 = dp_init_context_with_app_info(
+    DP_PROVIDER_ANTHROPIC, 
+    "your-api-key", 
+    NULL, 
+    NULL, 
+    NULL
+);
+// User-agent will be: "disasterparty/0.5.0"
+```
 
 ---
 ### dp_destroy_context
@@ -190,6 +284,49 @@ Retrieves a list of available models from the configured provider. The caller is
 Returns `0` on success and `-1` on failure. The `*model_list_out` struct will contain the list or error details.
 
 ---
+### dp_count_tokens
+**NAME**
+dp_count_tokens - count tokens in a prompt for supported LLM providers
+
+**SYNOPSIS**
+```c
+#include <disasterparty.h>
+int dp_count_tokens(dp_context_t *context, const dp_request_config_t *request_config, size_t *token_count_out);
+```
+
+**DESCRIPTION**
+Counts the number of tokens in a given prompt by calling the provider's token counting API endpoint. This function is useful for managing costs and ensuring prompts fit within model context windows. Token counting is currently supported for Google Gemini and Anthropic providers. For OpenAI-compatible providers, this function returns an error indicating the operation is not supported.
+
+**PARAMETERS**
+-   `context`: The initialized client context.
+-   `request_config`: The request configuration containing the messages to count tokens for.
+-   `token_count_out`: Pointer to a `size_t` variable that will receive the token count on success.
+
+**RETURN VALUE**
+Returns `0` on success with the token count stored in `*token_count_out`, or `-1` on failure. For OpenAI-compatible providers, this function always returns `-1` with an appropriate error message.
+
+**PROVIDER SUPPORT**
+-   **Google Gemini**: Uses the `/v1beta/models/{model}:countTokens` endpoint
+-   **Anthropic**: Uses the `/v1/messages/count_tokens` endpoint
+-   **OpenAI-compatible**: Not supported, returns error
+
+**EXAMPLE**
+```c
+dp_request_config_t config = {0};
+config.model = "claude-3-sonnet-20240229";
+config.messages = messages;
+config.num_messages = 1;
+
+size_t token_count;
+int result = dp_count_tokens(context, &config, &token_count);
+if (result == 0) {
+    printf("Token count: %zu\n", token_count);
+} else {
+    printf("Token counting failed or not supported\n");
+}
+```
+
+---
 ### dp_free_model_list
 **NAME**
 dp_free_model_list - free a Disaster Party model list structure
@@ -274,53 +411,48 @@ bool dp_message_add_file_data_part(dp_message_t *message, const char *mime_type,
 ```
 
 **DESCRIPTION**
-Adds a new content part containing base64 encoded file data to a `dp_message_t` structure. This function allows attaching arbitrary file data directly to messages without requiring file upload. The `mime_type` specifies the file format (e.g., "text/plain", "application/pdf", "image/png"). The `filename` parameter is optional and can be `NULL`.
+Adds a new content part containing base64 encoded file data to a `dp_message_t` structure. This function enables attaching various file types including PDFs, CSVs, text files, and other document formats directly to messages. The file data must be base64 encoded before calling this function. The `filename` parameter is optional and provides context to the AI model about the file.
 
 **PARAMETERS**
 -   `message`: The message to modify.
--   `mime_type`: The MIME type of the file (e.g., "text/plain", "application/pdf").
+-   `mime_type`: The MIME type of the file (e.g., "text/plain", "application/pdf", "text/csv", "application/json").
 -   `base64_data`: The base64 encoded file data string.
 -   `filename`: Optional filename for the file (can be `NULL`).
 
-**RETURN VALUE**
-Returns `true` on success, `false` on failure (e.g., memory allocation error).
+**SUPPORTED FILE TYPES**
+-   **Text files**: "text/plain", "text/csv", "text/markdown"
+-   **Documents**: "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+-   **Data files**: "application/json", "application/xml", "text/xml"
+-   **Images**: "image/png", "image/jpeg", "image/gif", "image/webp"
+-   **Archives**: "application/zip" (limited support)
 
----
-### dp_upload_file
-**NAME**
-dp_upload_file - upload a file to the LLM provider
+**PROVIDER-SPECIFIC BEHAVIOR**
+-   **Google Gemini**: Uses inline base64 data for smaller files, may use Files API for larger files
+-   **Anthropic**: Supports inline base64 data with size limitations
+-   **OpenAI-compatible**: Limited support depending on model capabilities
 
-**SYNOPSIS**
-```c
-#include <disasterparty.h>
-int dp_upload_file(dp_context_t *context, const char *file_path, const char *mime_type, dp_file_t **file_out);
-```
-
-**DESCRIPTION**
-Uploads a local file to the LLM provider's file service. Currently, this function is only supported for the Google Gemini provider. The `file_path` must be an absolute path to the file. The `mime_type` should accurately reflect the file's content (e.g., "image/png", "text/plain", "application/pdf"). On success, `*file_out` will be populated with a `dp_file_t` structure containing information about the uploaded file, including its `uri`, which can then be used in `dp_message_add_file_reference_part`.
-
-**PARAMETERS**
--   `context`: The initialized client context. Must be for `DP_PROVIDER_GOOGLE_GEMINI`.
--   `file_path`: The absolute path to the file to upload.
--   `mime_type`: The MIME type of the file.
--   `file_out`: A pointer to a `dp_file_t*` that will be allocated and populated with the uploaded file's information. This must be freed by the caller using **dp_free_file**(3).
+**FILE SIZE LIMITATIONS**
+File size limits vary by provider and are subject to their API restrictions. Large files may be rejected or require alternative upload methods.
 
 **RETURN VALUE**
-Returns `0` on success, `-1` on failure. The `*file_out` will be `NULL` on failure.
+Returns `true` on success, `false` on failure (e.g., memory allocation error, invalid parameters).
 
----
-### dp_free_file
-**NAME**
-dp_free_file - free a Disaster Party file structure
-
-**SYNOPSIS**
+**EXAMPLE**
 ```c
-#include <disasterparty.h>
-void dp_free_file(dp_file_t *file);
-```
+// Read and encode a PDF file
+FILE *file = fopen("document.pdf", "rb");
+// ... read file content and base64 encode it ...
 
-**DESCRIPTION**
-Deallocates all memory associated with a `dp_file_t` structure that was previously allocated by **dp_upload_file**(3). Passing `NULL` is a safe no-op.
+bool success = dp_message_add_file_data_part(
+    &message, 
+    "application/pdf", 
+    base64_encoded_data, 
+    "document.pdf"
+);
+if (!success) {
+    fprintf(stderr, "Failed to add file attachment\n");
+}
+```
 
 ---
 ### Conversation Serialization Helpers

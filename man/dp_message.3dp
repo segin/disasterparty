@@ -1,5 +1,5 @@
 .\" Man page for dp_message_t and related structs from libdisasterparty
-.TH DP_MESSAGE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_t, dp_content_part_t \- structures for representing conversational messages
@@ -22,6 +22,11 @@ typedef struct {
         char* mime_type;
         char* data;
     } image_base64;
+    struct {
+        char* mime_type;
+        char* data;
+        char* filename;
+    } file_data;
     char* file_uri;
 } dp_content_part_t;
 .fi
@@ -51,7 +56,7 @@ array.
 .SH MEMBERS of dp_content_part_t
 .TP
 .B dp_content_part_type_t type
-The type of this content part, which can be `DP_CONTENT_PART_TEXT`, `DP_CONTENT_PART_IMAGE_URL`, `DP_CONTENT_PART_IMAGE_BASE64`, or `DP_CONTENT_PART_FILE_REFERENCE`.
+The type of this content part, which can be `DP_CONTENT_PART_TEXT`, `DP_CONTENT_PART_IMAGE_URL`, `DP_CONTENT_PART_IMAGE_BASE64`, `DP_CONTENT_PART_FILE_DATA`, or `DP_CONTENT_PART_FILE_REFERENCE`.
 .TP
 .B char* text
 If the part is text, this points to the text content.
@@ -61,6 +66,9 @@ If the part is an image URL, this points to the URL.
 .TP
 .B image_base64
 A nested struct containing the `mime_type` (e.g., "image/jpeg") and the base64-encoded `data` if the part is a base64 image.
+.TP
+.B file_data
+A nested struct containing the `mime_type` (e.g., "application/pdf"), the base64-encoded `data`, and optional `filename` if the part is file data.
 .TP
 .B char* file_uri
 If the part is a file reference, this points to the URI of the uploaded file.
@@ -80,6 +88,7 @@ Gemini (Conceptualization and initial C code generation)
 .BR dp_message_add_text_part (3),
 .BR dp_message_add_image_url_part (3),
 .BR dp_message_add_base64_image_part (3),
+.BR dp_message_add_file_data_part (3),
 .BR dp_message_add_file_reference_part (3),
 .BR dp_free_messages (3),
 .BR disasterparty (7)

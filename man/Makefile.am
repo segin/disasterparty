@@ -3,6 +3,7 @@
 # List all man pages to be installed in section 3
 man3_MANS = \
 	dp_anthropic_stream_event.3 \
+	dp_count_tokens.3 \
 	dp_destroy_context.3 \
 	dp_deserialize_messages_from_file.3 \
 	dp_deserialize_messages_from_json_str.3 \
@@ -14,6 +15,7 @@ man3_MANS = \
 	dp_init_context_with_app_info.3 \
 	dp_list_models.3 \
 	dp_message_add_base64_image_part.3 \
+	dp_message_add_file_data_part.3 \
 	dp_message_add_image_url_part.3 \
 	dp_message_add_text_part.3 \
 	dp_message.3 \
