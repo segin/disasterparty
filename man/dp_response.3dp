@@ -1,5 +1,5 @@
 .\" Man page for dp_response_t struct from libdisasterparty
-.TH DP_RESPONSE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_RESPONSE 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_response_t \- structure for holding an LLM API response

@@ -1,5 +1,5 @@
 ." Man page for dp_message_add_file_data_part from libdisasterparty
-.TH DP_MESSAGE_ADD_FILE_DATA_PART 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_FILE_DATA_PART 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_file_data_part \- add a base64 encoded file data content part to a message

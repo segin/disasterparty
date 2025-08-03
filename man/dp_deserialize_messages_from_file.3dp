@@ -1,5 +1,5 @@
 ." Man page for dp_deserialize_messages_from_file from libdisasterparty
-.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_DESERIALIZE_MESSAGES_FROM_FILE 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_deserialize_messages_from_file \- deserialize an array of messages from a file

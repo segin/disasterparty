@@ -1,5 +1,5 @@
 ." Man page for dp_anthropic_stream_event_t struct from libdisasterparty
-.TH DP_ANTHROPIC_STREAM_EVENT 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_ANTHROPIC_STREAM_EVENT 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_anthropic_stream_event_t \- structure for a detailed Anthropic API stream event

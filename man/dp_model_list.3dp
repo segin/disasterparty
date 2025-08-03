@@ -1,5 +1,5 @@
 ." Man page for dp_model_list_t and dp_model_info_t structs from libdisasterparty
-.TH DP_MODEL_LIST 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MODEL_LIST 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_model_list_t, dp_model_info_t \- structures for holding model information

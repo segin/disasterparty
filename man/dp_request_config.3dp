@@ -1,5 +1,5 @@
 ." Man page for dp_request_config_t struct from libdisasterparty
-.TH DP_REQUEST_CONFIG 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_REQUEST_CONFIG 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_request_config_t \- structure for configuring an LLM API request

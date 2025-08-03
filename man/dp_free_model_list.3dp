@@ -1,5 +1,5 @@
 ." Man page for dp_free_model_list from libdisasterparty
-.TH DP_FREE_MODEL_LIST 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_FREE_MODEL_LIST 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_model_list \- free a Disaster Party model list structure

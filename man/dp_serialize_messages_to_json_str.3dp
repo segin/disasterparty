@@ -1,5 +1,5 @@
 ." Man page for dp_serialize_messages_to_json_str from libdisasterparty
-.TH DP_SERIALIZE_MESSAGES_TO_JSON_STR 3 "July 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_SERIALIZE_MESSAGES_TO_JSON_STR 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_serialize_messages_to_json_str \- serialize an array of messages to a JSON string

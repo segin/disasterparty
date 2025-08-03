@@ -1,5 +1,5 @@
 .\" Man page for dp_message_t and related structs from libdisasterparty
-.TH DP_MESSAGE 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_t, dp_content_part_t \- structures for representing conversational messages

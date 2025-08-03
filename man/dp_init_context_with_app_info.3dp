@@ -1,5 +1,5 @@
 ." Man page for dp_init_context_with_app_info from libdisasterparty
-.TH DP_INIT_CONTEXT_WITH_APP_INFO 3 "July 31, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_INIT_CONTEXT_WITH_APP_INFO 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_init_context_with_app_info \- initialize a Disaster Party LLM client context with custom user-agent
