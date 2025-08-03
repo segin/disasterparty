@@ -188,6 +188,26 @@
           "name": "stream",
           "type": "bool",
           "description": "True for streaming response, false for single blocking response."
+        },
+        {
+          "name": "top_p",
+          "type": "double",
+          "description": "Nucleus sampling parameter (0.0-1.0). Controls diversity by considering only tokens with cumulative probability up to top_p."
+        },
+        {
+          "name": "top_k",
+          "type": "int",
+          "description": "Top-k sampling parameter. Limits the number of highest probability tokens to consider. Primarily used by Google Gemini."
+        },
+        {
+          "name": "stop_sequences",
+          "type": "const char**",
+          "description": "Array of stop sequences that will halt generation when encountered."
+        },
+        {
+          "name": "num_stop_sequences",
+          "type": "size_t",
+          "description": "Number of stop sequences in the 'stop_sequences' array."
         }
       ]
     },
@@ -451,7 +471,7 @@
     },
     {
       "name": "dp_init_context",
-      "description": "Initializes a Disaster Party LLM client context.",
+      "description": "Initializes a Disaster Party LLM client context with default user-agent.",
       "returnType": "dp_context_t*",
       "parameters": [
         {
@@ -472,8 +492,40 @@
       ]
     },
     {
+      "name": "dp_init_context_with_app_info",
+      "description": "Initializes a Disaster Party LLM client context with custom user-agent information.",
+      "returnType": "dp_context_t*",
+      "parameters": [
+        {
+          "name": "provider",
+          "type": "dp_provider_type_t",
+          "description": "The LLM provider type."
+        },
+        {
+          "name": "api_key",
+          "type": "const char*",
+          "description": "The API key for authentication."
+        },
+        {
+          "name": "api_base_url",
+          "type": "const char*",
+          "description": "Optional base URL for the API. If NULL, defaults are used."
+        },
+        {
+          "name": "app_name",
+          "type": "const char*",
+          "description": "Optional application name for user-agent string. If NULL, only library name is used."
+        },
+        {
+          "name": "app_version",
+          "type": "const char*",
+          "description": "Optional application version for user-agent string. Only used if app_name is also provided."
+        }
+      ]
+    },
+    {
       "name": "dp_destroy_context",
-      "description": "Destroys a Disaster Party LLM client context and frees associated resources.",
+      "description": "Destroys a Disaster Party LLM client context and frees associated resources, including API key, base URL, and user-agent string.",
       "returnType": "void",
       "parameters": [
         {
@@ -587,6 +639,29 @@
           "name": "model_list_out",
           "type": "dp_model_list_t**",
           "description": "Pointer to a dp_model_list_t pointer to be populated."
+        }
+      ]
+    },
+    {
+      "name": "dp_count_tokens",
+      "description": "Counts the number of tokens in a request configuration for supported providers (Google Gemini and Anthropic).",
+      "returnType": "int",
+      "returnDescription": "0 on success, -1 on failure.",
+      "parameters": [
+        {
+          "name": "context",
+          "type": "dp_context_t*",
+          "description": "Initialized client context."
+        },
+        {
+          "name": "request_config",
+          "type": "const dp_request_config_t*",
+          "description": "Configuration for the request to count tokens for."
+        },
+        {
+          "name": "token_count_out",
+          "type": "size_t*",
+          "description": "Output pointer to store the token count."
         }
       ]
     },
