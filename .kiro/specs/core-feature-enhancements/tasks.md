@@ -66,21 +66,21 @@
   - Ensure payloads match provider API specifications
   - _Requirements: 3.2, 3.5_
 
-- [ ] 5. Create comprehensive test suite
-- [ ] 5.1 Create file attachments test
+- [x] 5. Create comprehensive test suite
+- [x] 5.1 Create file attachments test
   - Write test_file_attachments_dp.c to test various file types and sizes
   - Test error conditions like invalid files and unsupported types
   - Add test to Makefile.am and ensure it builds and runs
   - _Requirements: 1.1, 1.4, 1.5, 1.6_
 
-- [ ] 5.2 Create user-agent test
+- [x] 5.2 Create user-agent test
   - Write test_user_agent_dp.c to test user-agent string construction
   - Test both new and existing initialization functions
   - Verify backward compatibility and memory management
   - Add test to Makefile.am and ensure it builds and runs
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.6, 2.7_
 
-- [ ] 5.3 Complete token counting tests
+- [x] 5.3 Complete token counting tests
   - Create test_token_counting_dp.c for OpenAI error case testing
   - Enhance test_anthropic_token_counting_dp.c with additional edge cases
   - Create test_gemini_token_counting_dp.c for Gemini provider testing
