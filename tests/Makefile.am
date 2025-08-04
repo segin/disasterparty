@@ -26,7 +26,10 @@ check_PROGRAMS = \
     test_gemini_token_counting_dp \
     test_file_attachments_dp \
     test_user_agent_dp \
-    test_token_parameter_compatibility_dp
+    test_token_parameter_compatibility_dp \
+    test_anthropic_auth_failure_dp \
+    test_gemini_auth_failure_dp \
+    test_openai_auth_failure_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -56,6 +59,9 @@ test_gemini_token_counting_dp_SOURCES = test_gemini_token_counting_dp.c
 test_file_attachments_dp_SOURCES = test_file_attachments_dp.c
 test_user_agent_dp_SOURCES = test_user_agent_dp.c
 test_token_parameter_compatibility_dp_SOURCES = test_token_parameter_compatibility_dp.c
+test_anthropic_auth_failure_dp_SOURCES = test_anthropic_auth_failure_dp.c
+test_gemini_auth_failure_dp_SOURCES = test_gemini_auth_failure_dp.c
+test_openai_auth_failure_dp_SOURCES = test_openai_auth_failure_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
