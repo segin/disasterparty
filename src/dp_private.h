@@ -86,4 +86,9 @@ bool dpinternal_message_add_part_internal(dp_message_t* message, dp_content_part
                                          const char* mime_type_content, const char* base64_data_content,
                                          const char* filename_content);
 
+// File handling internal functions (dp_file.c)
+bool dpinternal_validate_file_data_part(const char* mime_type, const char* base64_data, const char* filename);
+char* dpinternal_encode_file_to_base64(const char* file_path);
+bool dpinternal_message_add_file_from_path(dp_message_t* message, const char* file_path, const char* mime_type_override);
+
 #endif // DP_PRIVATE_H

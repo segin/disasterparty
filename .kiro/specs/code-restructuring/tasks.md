@@ -41,19 +41,19 @@
   - Include message cleanup and validation functions
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [-] 8. Extract streaming functionality module
+- [x] 8. Extract streaming functionality module
   - Create `src/dp_stream.c` with streaming response processing and callback management
   - Move streaming callback processors and provider-specific stream handlers
   - Include stream state management and parsing logic
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 9. Extract serialization module
+- [x] 9. Extract serialization module
   - Create `src/dp_serialize.c` with conversation serialization and JSON handling
   - Move `dp_serialize_conversation()`, `dp_deserialize_conversation()` and related functions
   - Include JSON parsing utilities and format validation
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 10. Extract file handling module
+- [-] 10. Extract file handling module
   - Create `src/dp_file.c` with file attachment processing and validation
   - Move `dp_message_add_file_data_part()` and file processing utilities
   - Include MIME type detection and file encoding functions

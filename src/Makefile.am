@@ -2,7 +2,7 @@
 
 lib_LTLIBRARIES = libdisasterparty.la 
 
-libdisasterparty_la_SOURCES = disasterparty.c dp_constants.c dp_utils.c dp_context.c dp_request.c dp_message.c dp_stream.c dp_serialize.c disasterparty.h dp_private.h 
+libdisasterparty_la_SOURCES = disasterparty.c dp_constants.c dp_utils.c dp_context.c dp_request.c dp_message.c dp_stream.c dp_serialize.c dp_file.c disasterparty.h dp_private.h 
 
 libdisasterparty_la_LDFLAGS = -version-info $(DP_LT_VERSION)
 libdisasterparty_la_LIBADD = $(CURL_LIBS) $(CJSON_LIBS) 
