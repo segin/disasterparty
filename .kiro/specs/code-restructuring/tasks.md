@@ -53,13 +53,13 @@
   - Include JSON parsing utilities and format validation
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [-] 10. Extract file handling module
+- [x] 10. Extract file handling module
   - Create `src/dp_file.c` with file attachment processing and validation
   - Move `dp_message_add_file_data_part()` and file processing utilities
   - Include MIME type detection and file encoding functions
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 11. Extract model management module
+- [x] 11. Extract model management module
   - Create `src/dp_models.c` with model listing and provider-specific logic
   - Move `dp_list_models()` and provider-specific model functions
   - Include model validation and capabilities handling
@@ -71,7 +71,7 @@
   - Verify that `-Wall -Werror` compilation works with the new structure
   - _Requirements: 1.5, 5.1_
 
-- [ ] 13. Validate modular build and API compatibility
+- [-] 13. Validate modular build and API compatibility
   - Compile the restructured codebase and verify no warnings or errors
   - Run existing tests to ensure public API compatibility is maintained
   - Verify that all existing functionality works with the new modular structure
