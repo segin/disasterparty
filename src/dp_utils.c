@@ -26,21 +26,7 @@ int dpinternal_safe_asprintf(char** strp, const char* fmt, ...) {
     return result;
 }
 
-// Memory callback for cURL operations
-size_t dpinternal_write_memory_callback(void* contents, size_t size, size_t nmemb, void* userp) {
-    size_t realsize = size * nmemb;
-    memory_struct_t* mem = (memory_struct_t*)userp;
-    char* ptr = realloc(mem->memory, mem->size + realsize + 1);
-    if (!ptr) {
-        fprintf(stderr, "dpinternal_write_memory_callback: not enough memory (realloc returned NULL)\n");
-        return 0;
-    }
-    mem->memory = ptr;
-    memcpy(&(mem->memory[mem->size]), contents, realsize);
-    mem->size += realsize;
-    mem->memory[mem->size] = 0;
-    return realsize;
-}
+
 
 // Token counting function
 int dp_count_tokens(dp_context_t* context,
