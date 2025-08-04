@@ -7,16 +7,7 @@
 #include <stdarg.h>
 #include <ctype.h> 
 
-// Default base URLs - moved to dp_constants.c
-const char* DEFAULT_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const char* DEFAULT_GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const char* DEFAULT_ANTHROPIC_API_BASE_URL = "https://api.anthropic.com/v1"; 
-const char* DISASTERPARTY_USER_AGENT = "disasterparty/" DP_VERSION;
 
-
-const char* dp_get_version(void) {
-    return DP_VERSION;
-}
 
 char* dpinternal_strdup(const char* s) {
     if (!s) return NULL;
