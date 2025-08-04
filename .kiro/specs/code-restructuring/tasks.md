@@ -5,19 +5,19 @@
   - Examine the modular structure and identify the exact file organization pattern
   - _Requirements: 3.1, 3.2_
 
-- [-] 2. Create private header and shared infrastructure
+- [x] 2. Create private header and shared infrastructure
   - Create `src/dp_private.h` with internal structure definitions and private function declarations
   - Move internal structures from `disasterparty.c` to the private header
   - Define shared internal types and constants needed across modules
   - _Requirements: 1.1, 1.3_
 
-- [ ] 3. Extract constants and version management
+- [x] 3. Extract constants and version management
   - Create `src/dp_constants.c` with default URLs, version info, and provider constants
   - Move `dp_get_version()` and all constant definitions from main file
   - Update build system to include the new source file
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 4. Extract utility functions module
+- [x] 4. Extract utility functions module
   - Create `src/dp_utils.c` with common utility functions and string manipulation
   - Move `dp_internal_strdup()`, `dp_safe_asprintf()`, and token counting functions
   - Include memory management helpers and other utility functions
