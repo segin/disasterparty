@@ -65,13 +65,13 @@
   - Include model validation and capabilities handling
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 12. Update build system configuration
+- [-] 12. Update build system configuration
   - Modify `src/Makefile.am` to include all new source files in the build
   - Ensure proper dependency tracking and linking for all modules
   - Verify that `-Wall -Werror` compilation works with the new structure
   - _Requirements: 1.5, 5.1_
 
-- [-] 13. Validate modular build and API compatibility
+- [x] 13. Validate modular build and API compatibility
   - Compile the restructured codebase and verify no warnings or errors
   - Run existing tests to ensure public API compatibility is maintained
   - Verify that all existing functionality works with the new modular structure
