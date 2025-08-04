@@ -29,19 +29,19 @@
   - Include API key and base URL management functions
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 6. Extract HTTP request handling module
+- [x] 6. Extract HTTP request handling module
   - Create `src/dp_request.c` with HTTP request construction and cURL integration
   - Move `write_memory_callback()` and core HTTP request processing functions
   - Include response processing and error handling for HTTP operations
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 7. Extract message management module
+- [x] 7. Extract message management module
   - Create `src/dp_message.c` with message creation, manipulation, and validation
   - Move all `dp_message_*()` family of functions and content part handling
   - Include message cleanup and validation functions
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 8. Extract streaming functionality module
+- [-] 8. Extract streaming functionality module
   - Create `src/dp_stream.c` with streaming response processing and callback management
   - Move streaming callback processors and provider-specific stream handlers
   - Include stream state management and parsing logic
