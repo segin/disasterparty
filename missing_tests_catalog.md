@@ -4,7 +4,7 @@ This document catalogs all test files that exist in the test-expansions branch b
 
 ## Summary
 
-**Total Missing Tests:** 18
+**Total Missing Tests:** 18 (3 migrated, 15 remaining)
 
 The missing tests fall into the following categories:
 - **Authentication Failure Tests:** 3 tests
@@ -42,27 +42,30 @@ The missing tests fall into the following categories:
 
 ### Streaming Error Handling Tests
 
-#### 4. `test_abrupt_stream_dp.c`
+#### 4. `test_abrupt_stream_dp.c` ✅ **MIGRATED**
 - **Purpose:** Tests handling of abruptly terminated streaming connections
 - **Coverage:** Tests `dp_perform_streaming_completion` with connection that terminates unexpectedly
 - **Mock Server:** Uses `DP_MOCK_SERVER` environment variable with special API key `ABRUPT_STREAM`
 - **Expected Behavior:** Stream handler should receive error callback and function should fail gracefully
+- **Migration Status:** Successfully adapted to main branch architecture and integrated with testsuite
 - **Requirements:** 2.1, 2.2
 
-#### 5. `test_anthropic_streaming_error_dp.c`
+#### 5. `test_anthropic_streaming_error_dp.c` ✅ **MIGRATED**
 - **Purpose:** Tests Anthropic-specific streaming error event handling mid-stream
 - **Coverage:** Tests `dp_perform_anthropic_streaming_completion` with mid-stream error events
 - **Mock Server:** Uses `DP_MOCK_SERVER` environment variable with special API key `STREAM_ERROR_ANTHROPIC`
 - **Expected Behavior:** Should receive message_start, content_block_start, first delta, then error event
 - **Dependencies:** Requires cJSON library for JSON parsing
+- **Migration Status:** Successfully adapted to main branch architecture and integrated with testsuite
 - **Requirements:** 2.1, 2.2
 
-#### 6. `test_anthropic_streaming_ping_dp.c`
+#### 6. `test_anthropic_streaming_ping_dp.c` ✅ **MIGRATED**
 - **Purpose:** Tests Anthropic-specific streaming ping event handling
 - **Coverage:** Tests `dp_perform_anthropic_streaming_completion` with ping events interspersed in stream
 - **Mock Server:** Uses `DP_MOCK_SERVER` environment variable with special API key `STREAM_PING_ANTHROPIC`
 - **Expected Behavior:** Should properly handle ping events without affecting content processing
 - **Dependencies:** Requires cJSON library for JSON parsing
+- **Migration Status:** Successfully adapted to main branch architecture and integrated with testsuite
 - **Requirements:** 2.1, 2.2
 
 ### Token Counting Tests
