@@ -37,7 +37,11 @@ check_PROGRAMS = \
     test_serialization_all_parts_dp \
     test_unsupported_file_uploads_dp \
     test_upload_large_file_dp \
-    test_upload_zero_byte_file_dp
+    test_upload_zero_byte_file_dp \
+    test_anthropic_multimodal_token_count_dp \
+    test_gemini_multimodal_token_count_dp \
+    test_rate_limit_completion_dp \
+    test_rate_limit_list_models_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -78,6 +82,10 @@ test_serialization_all_parts_dp_SOURCES = test_serialization_all_parts_dp.c
 test_unsupported_file_uploads_dp_SOURCES = test_unsupported_file_uploads_dp.c
 test_upload_large_file_dp_SOURCES = test_upload_large_file_dp.c
 test_upload_zero_byte_file_dp_SOURCES = test_upload_zero_byte_file_dp.c
+test_anthropic_multimodal_token_count_dp_SOURCES = test_anthropic_multimodal_token_count_dp.c
+test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c
+test_rate_limit_completion_dp_SOURCES = test_rate_limit_completion_dp.c
+test_rate_limit_list_models_dp_SOURCES = test_rate_limit_list_models_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
