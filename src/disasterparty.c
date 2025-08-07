@@ -62,6 +62,13 @@ char* dpinternal_build_gemini_count_tokens_json_payload_with_cjson(const dp_requ
                 cJSON_AddStringToObject(inline_data_obj, "mime_type", part->file_data.mime_type);
                 cJSON_AddStringToObject(inline_data_obj, "data", part->file_data.data);
                 cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                // Gemini supports file references via file_data
+                cJSON *file_data_obj = cJSON_CreateObject();
+                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(file_data_obj, "mime_type", part->file_reference.mime_type);
+                cJSON_AddStringToObject(file_data_obj, "file_uri", part->file_reference.file_id);
+                cJSON_AddItemToObject(part_obj, "file_data", file_data_obj);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -132,6 +139,13 @@ char* dpinternal_build_anthropic_count_tokens_json_payload_with_cjson(const dp_r
                     cJSON_AddStringToObject(source_obj, "media_type", part->file_data.mime_type);
                     cJSON_AddStringToObject(source_obj, "data", part->file_data.data);
                     cJSON_AddItemToObject(part_obj, "source", source_obj);
+                } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                    // Anthropic doesn't support file references directly, convert to text
+                    char temp_text[512];
+                    snprintf(temp_text, sizeof(temp_text), "File reference: %s (type: %s) - Anthropic requires direct file data", 
+                             part->file_reference.file_id, part->file_reference.mime_type);
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    cJSON_AddStringToObject(part_obj, "text", temp_text);
                 }
                 cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
             }
@@ -260,6 +274,24 @@ char* dpinternal_build_openai_json_payload_with_cjson(const dp_request_config_t*
                         cJSON_Delete(root);
                         return NULL;
                     }
+                } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                    // OpenAI doesn't support file references directly, convert to text
+                    cJSON_AddStringToObject(part_obj, "type", "text");
+                    char* file_ref_text = NULL;
+                    if (dpinternal_safe_asprintf(&file_ref_text, "[File Reference: %s (type: %s)] - OpenAI requires direct file data", 
+                            part->file_reference.file_id, part->file_reference.mime_type) == -1) {
+                        cJSON_Delete(part_obj);
+                        cJSON_Delete(root);
+                        return NULL;
+                    }
+                    if (file_ref_text) {
+                        cJSON_AddStringToObject(part_obj, "text", file_ref_text);
+                        free(file_ref_text);
+                    } else {
+                        cJSON_Delete(part_obj);
+                        cJSON_Delete(root);
+                        return NULL;
+                    }
                 }
                 cJSON_AddItemToArray(content_array, part_obj);
             }
@@ -327,6 +359,13 @@ char* dpinternal_build_gemini_json_payload_with_cjson(const dp_request_config_t*
                 cJSON_AddStringToObject(inline_data_obj, "mime_type", part->file_data.mime_type);
                 cJSON_AddStringToObject(inline_data_obj, "data", part->file_data.data);
                 cJSON_AddItemToObject(part_obj, "inline_data", inline_data_obj);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                // Gemini supports file references via file_data
+                cJSON *file_data_obj = cJSON_CreateObject();
+                if (!file_data_obj) {cJSON_Delete(part_obj); cJSON_Delete(root); return NULL;}
+                cJSON_AddStringToObject(file_data_obj, "mime_type", part->file_reference.mime_type);
+                cJSON_AddStringToObject(file_data_obj, "file_uri", part->file_reference.file_id);
+                cJSON_AddItemToObject(part_obj, "file_data", file_data_obj);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -420,6 +459,13 @@ char* dpinternal_build_anthropic_json_payload_with_cjson(const dp_request_config
                 cJSON_AddStringToObject(source_obj, "media_type", part->file_data.mime_type);
                 cJSON_AddStringToObject(source_obj, "data", part->file_data.data);
                 cJSON_AddItemToObject(part_obj, "source", source_obj);
+            } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
+                // Anthropic doesn't support file references directly, convert to text
+                char temp_text[512];
+                snprintf(temp_text, sizeof(temp_text), "File reference: %s (type: %s) - Anthropic requires direct file data", 
+                         part->file_reference.file_id, part->file_reference.mime_type);
+                cJSON_AddStringToObject(part_obj, "type", "text");
+                cJSON_AddStringToObject(part_obj, "text", temp_text);
             }
             cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
         }

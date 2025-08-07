@@ -60,6 +60,11 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
                         cJSON_AddStringToObject(part_obj, "filename", part->file_data.filename);
                     }
                     break;
+                case DP_CONTENT_PART_FILE_REFERENCE:
+                    cJSON_AddStringToObject(part_obj, "type", "file_reference");
+                    cJSON_AddStringToObject(part_obj, "file_id", part->file_reference.file_id);
+                    cJSON_AddStringToObject(part_obj, "mime_type", part->file_reference.mime_type);
+                    break;
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -125,6 +130,12 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
                         if (cJSON_IsString(mime_item) && cJSON_IsString(data_item)) {
                             const char* filename = (cJSON_IsString(filename_item)) ? filename_item->valuestring : NULL;
                             dp_message_add_file_data_part(current_msg, mime_item->valuestring, data_item->valuestring, filename);
+                        }
+                    } else if (strcmp(type_item->valuestring, "file_reference") == 0) {
+                        cJSON* file_id_item = cJSON_GetObjectItemCaseSensitive(part_obj, "file_id");
+                        cJSON* mime_item = cJSON_GetObjectItemCaseSensitive(part_obj, "mime_type");
+                        if (cJSON_IsString(file_id_item) && cJSON_IsString(mime_item)) {
+                            dp_message_add_file_reference_part(current_msg, file_id_item->valuestring, mime_item->valuestring);
                         }
                     }
                 }

@@ -32,7 +32,12 @@ check_PROGRAMS = \
     test_openai_auth_failure_dp \
     test_abrupt_stream_dp \
     test_anthropic_streaming_error_dp \
-    test_anthropic_streaming_ping_dp
+    test_anthropic_streaming_ping_dp \
+    test_deserialize_malformed_file_dp \
+    test_serialization_all_parts_dp \
+    test_unsupported_file_uploads_dp \
+    test_upload_large_file_dp \
+    test_upload_zero_byte_file_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -68,6 +73,11 @@ test_openai_auth_failure_dp_SOURCES = test_openai_auth_failure_dp.c
 test_abrupt_stream_dp_SOURCES = test_abrupt_stream_dp.c
 test_anthropic_streaming_error_dp_SOURCES = test_anthropic_streaming_error_dp.c
 test_anthropic_streaming_ping_dp_SOURCES = test_anthropic_streaming_ping_dp.c
+test_deserialize_malformed_file_dp_SOURCES = test_deserialize_malformed_file_dp.c
+test_serialization_all_parts_dp_SOURCES = test_serialization_all_parts_dp.c
+test_unsupported_file_uploads_dp_SOURCES = test_unsupported_file_uploads_dp.c
+test_upload_large_file_dp_SOURCES = test_upload_large_file_dp.c
+test_upload_zero_byte_file_dp_SOURCES = test_upload_zero_byte_file_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)

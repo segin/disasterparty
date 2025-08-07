@@ -65,7 +65,7 @@
   - Include model validation and capabilities handling
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [-] 12. Update build system configuration
+- [x] 12. Update build system configuration
   - Modify `src/Makefile.am` to include all new source files in the build
   - Ensure proper dependency tracking and linking for all modules
   - Verify that `-Wall -Werror` compilation works with the new structure
@@ -77,25 +77,25 @@
   - Verify that all existing functionality works with the new modular structure
   - _Requirements: 1.3, 1.4, 1.5_
 
-- [ ] 14. Identify and catalog missing tests from test-expansions
+- [x] 14. Identify and catalog missing tests from test-expansions
   - Compare test directories between main and test-expansions branches
   - Create a list of test files that exist in test-expansions but not in main
   - Document the purpose and coverage of each missing test
   - _Requirements: 2.1, 2.2_
 
-- [ ] 15. Migrate authentication failure tests
+- [x] 15. Migrate authentication failure tests
   - Adapt `test_anthropic_auth_failure_dp.c`, `test_gemini_auth_failure_dp.c`, and `test_openai_auth_failure_dp.c`
   - Modify tests to work with current mainline architecture and API
   - Integrate tests with GNU autotools testsuite and ensure proper exit codes
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 16. Migrate streaming and error handling tests
+- [x] 16. Migrate streaming and error handling tests
   - Adapt `test_abrupt_stream_dp.c`, `test_anthropic_streaming_error_dp.c`, and `test_anthropic_streaming_ping_dp.c`
   - Modify tests to work with current streaming implementation
   - Ensure tests integrate properly with testsuite and handle skip conditions
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 17. Migrate serialization and file handling tests
+- [x] 17. Migrate serialization and file handling tests
   - Adapt `test_deserialize_malformed_file_dp.c`, `test_serialization_all_parts_dp.c`
   - Migrate file upload tests: `test_unsupported_file_uploads_dp.c`, `test_upload_large_file_dp.c`, `test_upload_zero_byte_file_dp.c`
   - Ensure tests work with current serialization and file handling implementation

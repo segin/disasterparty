@@ -43,7 +43,8 @@ typedef enum {
     DP_CONTENT_PART_TEXT, 
     DP_CONTENT_PART_IMAGE_URL,
     DP_CONTENT_PART_IMAGE_BASE64,
-    DP_CONTENT_PART_FILE_DATA
+    DP_CONTENT_PART_FILE_DATA,
+    DP_CONTENT_PART_FILE_REFERENCE
 } dp_content_part_type_t;
 
 /**
@@ -67,6 +68,10 @@ typedef struct {
         char* data;
         char* filename;
     } file_data;
+    struct {
+        char* file_id;
+        char* mime_type;
+    } file_reference;
 } dp_content_part_t; 
 
 typedef struct {
@@ -117,6 +122,17 @@ typedef struct {
     char* error_message;        
     long http_status_code;      
 } dp_model_list_t;
+
+typedef struct {
+    char* file_id;
+    char* display_name;
+    char* mime_type;
+    long size_bytes;
+    char* create_time;
+    char* uri;
+    long http_status_code;
+    char* error_message;
+} dp_file_t;
 
 typedef enum {
     DP_ANTHROPIC_EVENT_UNKNOWN,
@@ -189,6 +205,7 @@ bool dp_message_add_text_part(dp_message_t* message, const char* text);
 bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url);
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
 bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type, const char* base64_data, const char* filename);
+bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_id, const char* mime_type);
 
 const char* dp_get_version(void);
 
@@ -196,6 +213,9 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
 int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** messages_out, size_t* num_messages_out);
 int dp_serialize_messages_to_file(const dp_message_t* messages, size_t num_messages, const char* path);
 int dp_deserialize_messages_from_file(const char* path, dp_message_t** messages_out, size_t* num_messages_out);
+
+int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out);
+void dp_free_file(dp_file_t* file);
 
 #endif // DISASTERPARTY_H
 

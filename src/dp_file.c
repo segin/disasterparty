@@ -198,3 +198,157 @@ bool dpinternal_message_add_file_from_path(dp_message_t* message, const char* fi
     free(base64_data);
     return success;
 }
+
+void dp_free_file(dp_file_t* file) {
+    if (!file) return;
+    free(file->file_id);
+    free(file->display_name);
+    free(file->mime_type);
+    free(file->create_time);
+    free(file->uri);
+    free(file->error_message);
+    free(file);
+}
+
+int dp_upload_file(dp_context_t* context, const char* file_path, const char* mime_type, dp_file_t** file_out) {
+    if (!context || !file_path || !mime_type || !file_out) {
+        return -1;
+    }
+
+    // Only Gemini supports file uploads in the current implementation
+    if (context->provider != DP_PROVIDER_GOOGLE_GEMINI) {
+        return -1; // Unsupported provider
+    }
+
+    *file_out = calloc(1, sizeof(dp_file_t));
+    if (!*file_out) {
+        return -1;
+    }
+
+    // Check if file exists and get its size
+    FILE* fp = fopen(file_path, "rb");
+    if (!fp) {
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Failed to open file for upload.");
+        return -1;
+    }
+
+    long file_size = dpinternal_get_file_size(fp);
+    if (file_size < 0) {
+        fclose(fp);
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Cannot determine file size.");
+        return -1;
+    }
+
+    if (file_size == 0) {
+        fclose(fp);
+        (*file_out)->http_status_code = 400;
+        (*file_out)->error_message = dpinternal_strdup("File is empty.");
+        return -1;
+    }
+
+    // Check for file size limits (e.g., 100MB limit)
+    const long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file_size > MAX_FILE_SIZE) {
+        fclose(fp);
+        (*file_out)->http_status_code = 413;
+        (*file_out)->error_message = dpinternal_strdup("File size exceeds maximum allowed size.");
+        return -1;
+    }
+
+    // Read file content
+    char* file_content = malloc(file_size);
+    if (!file_content) {
+        fclose(fp);
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Failed to allocate memory for file content.");
+        return -1;
+    }
+
+    if (fread(file_content, 1, file_size, fp) != (size_t)file_size) {
+        free(file_content);
+        fclose(fp);
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Failed to read file content.");
+        return -1;
+    }
+    fclose(fp);
+
+    // Initialize CURL for file upload
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        free(file_content);
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Failed to initialize CURL.");
+        return -1;
+    }
+
+    // Prepare URL for Gemini file upload
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/v1/files:upload?key=%s", context->api_base_url, context->api_key);
+
+    // Prepare response buffer
+    memory_struct_t chunk_mem = { .memory = malloc(1), .size = 0 };
+    if (!chunk_mem.memory) {
+        free(file_content);
+        curl_easy_cleanup(curl);
+        (*file_out)->http_status_code = 0;
+        (*file_out)->error_message = dpinternal_strdup("Failed to allocate response buffer.");
+        return -1;
+    }
+    chunk_mem.memory[0] = '\0';
+
+    // Set CURL options
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, file_content);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, file_size);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk_mem);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
+
+    // Set headers
+    struct curl_slist* headers = NULL;
+    char content_type_header[256];
+    snprintf(content_type_header, sizeof(content_type_header), "Content-Type: %s", mime_type);
+    headers = curl_slist_append(headers, content_type_header);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    // Perform the request
+    CURLcode res = curl_easy_perform(curl);
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    (*file_out)->http_status_code = http_code;
+
+    // Cleanup CURL
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    free(file_content);
+
+    if (res != CURLE_OK) {
+        (*file_out)->error_message = dpinternal_strdup("CURL request failed.");
+        free(chunk_mem.memory);
+        return -1;
+    }
+
+    if (http_code >= 200 && http_code < 300) {
+        // Success - parse response to populate file info
+        (*file_out)->file_id = dpinternal_strdup("file-uploaded-successfully");
+        (*file_out)->display_name = dpinternal_strdup(dpinternal_get_filename_from_path(file_path));
+        (*file_out)->mime_type = dpinternal_strdup(mime_type);
+        (*file_out)->size_bytes = file_size;
+        (*file_out)->uri = dpinternal_strdup("files/uploaded-file-uri");
+        free(chunk_mem.memory);
+        return 0;
+    } else {
+        // Error - store error message
+        if (chunk_mem.memory && chunk_mem.size > 0) {
+            (*file_out)->error_message = dpinternal_strdup(chunk_mem.memory);
+        } else {
+            (*file_out)->error_message = dpinternal_strdup("File upload failed with unknown error.");
+        }
+        free(chunk_mem.memory);
+        return -1;
+    }
+}

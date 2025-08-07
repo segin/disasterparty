@@ -84,7 +84,7 @@ size_t dpinternal_anthropic_detailed_stream_write_callback(void* contents, size_
 bool dpinternal_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,
                                          const char* text_content, const char* image_url_content,
                                          const char* mime_type_content, const char* base64_data_content,
-                                         const char* filename_content);
+                                         const char* filename_content, const char* file_id_content);
 
 // File handling internal functions (dp_file.c)
 bool dpinternal_validate_file_data_part(const char* mime_type, const char* base64_data, const char* filename);
