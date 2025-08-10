@@ -1,0 +1,23 @@
+{
+  "test_data": {
+    "name": "Test Dataset",
+    "version": "1.0",
+    "description": "Sample JSON data for testing file upload functionality",
+    "items": [
+      {
+        "id": 1,
+        "name": "Item One",
+        "value": 100
+      },
+      {
+        "id": 2,
+        "name": "Item Two", 
+        "value": 200
+      }
+    ],
+    "metadata": {
+      "created": "2025-01-01",
+      "license": "Public Domain"
+    }
+  }
+}
