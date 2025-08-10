@@ -36,4 +36,4 @@ See the files in the `tests/` directory for usage examples.
 
 ## Testing
 
-For complete testing instructions, environment setup, and test suite information, see **[tests/TESTING.md](tests/TESTING.md)**.
+For complete testing instructions, environment setup, and test suite information, see **[TESTING.md](TESTING.md)**.
