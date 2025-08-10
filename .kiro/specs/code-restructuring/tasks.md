@@ -125,7 +125,7 @@
   - Ensure no regressions were introduced during the restructuring
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 22. Clean up test-expansions checkout and branch
+- [-] 22. Clean up test-expansions checkout and branch
   - Remove the test-expansions subdirectory checkout used for analysis
   - Delete the test-expansions branch from the local repository
   - Push the branch deletion to origin to clean up the remote repository
