@@ -1,4 +1,4 @@
-.TH DP_FREE_FILE 3 "August 03, 2025" "Disaster Party" "Disaster Party API Documentation"
+.TH DP_FREE_FILE 3 "August 09, 2025" "Disaster Party" "Disaster Party API Documentation"
 .SH NAME
 dp_free_file \- free a Disaster Party file structure
 .SH SYNOPSIS

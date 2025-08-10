@@ -1,5 +1,5 @@
 ." Man page for disasterparty library overview
-.TH disasterparty 7 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH disasterparty 7 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 disasterparty \- overview of the Disaster Party LLM client library

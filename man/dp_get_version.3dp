@@ -1,5 +1,5 @@
 ." Man page for dp_get_version from libdisasterparty
-.TH DP_GET_VERSION 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_GET_VERSION 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_get_version \- get the version string of the Disaster Party library

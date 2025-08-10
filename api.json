@@ -2,8 +2,55 @@
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
   "version": "0.5.0",
+  "lastUpdated": "August 09, 2025",
   "headerFile": "disasterparty.h",
+  "privateHeaderFile": "dp_private.h",
   "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
+  "architecture": {
+    "description": "Modular architecture with focused source files for improved maintainability",
+    "sourceFiles": [
+      {
+        "name": "disasterparty.c",
+        "description": "Main library entry point and version information"
+      },
+      {
+        "name": "dp_constants.c", 
+        "description": "Provider constants and default configurations"
+      },
+      {
+        "name": "dp_context.c",
+        "description": "Context initialization and management"
+      },
+      {
+        "name": "dp_request.c",
+        "description": "Request handling and API communication"
+      },
+      {
+        "name": "dp_message.c",
+        "description": "Message construction and manipulation"
+      },
+      {
+        "name": "dp_stream.c",
+        "description": "Streaming response handling"
+      },
+      {
+        "name": "dp_serialize.c",
+        "description": "Message serialization/deserialization"
+      },
+      {
+        "name": "dp_file.c",
+        "description": "File upload and management"
+      },
+      {
+        "name": "dp_models.c",
+        "description": "Model listing functionality"
+      },
+      {
+        "name": "dp_utils.c",
+        "description": "Utility functions and helpers"
+      }
+    ]
+  },
   "dependencies": [
     { "name": "libcurl", "version_requirement": ">= 7.20.0" },
     { "name": "libcjson", "version_requirement": ">= 1.7.10" }

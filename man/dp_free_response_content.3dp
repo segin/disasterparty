@@ -1,5 +1,5 @@
 ." Man page for dp_free_response_content from libdisasterparty
-.TH DP_FREE_RESPONSE_CONTENT 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_FREE_RESPONSE_CONTENT 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_free_response_content \- free content of a Disaster Party response structure

@@ -1,5 +1,5 @@
 ." Man page for dp_count_tokens from libdisasterparty
-.TH DP_COUNT_TOKENS 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_COUNT_TOKENS 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_count_tokens \- count tokens in a prompt for supported LLM providers

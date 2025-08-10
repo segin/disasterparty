@@ -1,5 +1,5 @@
 ." Man page for dp_list_models from libdisasterparty
-.TH DP_LIST_MODELS 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_LIST_MODELS 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_list_models \- list available models from the LLM provider

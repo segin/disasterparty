@@ -1,5 +1,26 @@
 # Disaster Party LLM Client Library - Full Documentation
 **Version: 0.5.0**
+**Last Updated: August 09, 2025**
+
+## Code Structure
+
+The Disaster Party library has been refactored into a modular structure for improved maintainability:
+
+### Source Files
+- **disasterparty.c** - Main library entry point and version information
+- **dp_constants.c** - Provider constants and default configurations
+- **dp_context.c** - Context initialization and management
+- **dp_request.c** - Request handling and API communication
+- **dp_message.c** - Message construction and manipulation
+- **dp_stream.c** - Streaming response handling
+- **dp_serialize.c** - Message serialization/deserialization
+- **dp_file.c** - File upload and management
+- **dp_models.c** - Model listing functionality
+- **dp_utils.c** - Utility functions and helpers
+
+### Header Files
+- **disasterparty.h** - Public API declarations
+- **dp_private.h** - Internal function declarations and shared structures
 
 ## 1. Overview (disasterparty.7)
 

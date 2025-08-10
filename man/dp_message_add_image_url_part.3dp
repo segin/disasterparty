@@ -1,5 +1,5 @@
 .\" Man page for dp_message_add_image_url_part from libdisasterparty
-.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "August 03, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+.TH DP_MESSAGE_ADD_IMAGE_URL_PART 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
 dp_message_add_image_url_part \- add an image URL content part to a message
