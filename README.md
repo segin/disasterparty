@@ -6,6 +6,25 @@ A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic
 
 This library is named "Disaster Party" and uses the `dp_` prefix for its C symbols. The library file is `libdisasterparty.so`.
 
+## Architecture
+
+The library is organized into focused modules for maintainability:
+
+- **`disasterparty.h`** - Public API definitions and declarations
+- **`dp_private.h`** - Private API and internal structures shared across modules
+- **`disasterparty.c`** - Main library entry points and coordination
+- **`dp_context.c`** - Context management and initialization
+- **`dp_models.c`** - Model listing and provider-specific logic
+- **`dp_message.c`** - Message construction and management
+- **`dp_request.c`** - HTTP request handling and API calls
+- **`dp_stream.c`** - Streaming response processing
+- **`dp_serialize.c`** - Conversation serialization/deserialization
+- **`dp_file.c`** - File attachment handling
+- **`dp_utils.c`** - Utility functions and helpers
+- **`dp_constants.c`** - Constants and default values
+
+This modular design improves code maintainability while preserving the complete public API.
+
 ## Building
 
 This project uses GNU Autotools.
