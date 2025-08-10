@@ -10,6 +10,25 @@ The **Disaster Party** library provides a robust, portable C interface for inter
 
 The library is designed to be relatively simple to integrate and use, leveraging **libcurl**(3) for HTTP(S) communication and **cJSON**(3) for robust JSON parsing and generation.
 
+### Architecture
+
+The library is organized into focused modules for improved maintainability:
+
+- **`disasterparty.h`** - Public API definitions and declarations
+- **`dp_private.h`** - Private API and internal structures shared across modules
+- **`disasterparty.c`** - Main library entry points and coordination
+- **`dp_context.c`** - Context management and initialization
+- **`dp_models.c`** - Model listing and provider-specific logic
+- **`dp_message.c`** - Message construction and management
+- **`dp_request.c`** - HTTP request handling and API calls
+- **`dp_stream.c`** - Streaming response processing
+- **`dp_serialize.c`** - Conversation serialization/deserialization
+- **`dp_file.c`** - File attachment handling
+- **`dp_utils.c`** - Utility functions and helpers
+- **`dp_constants.c`** - Constants and default values
+
+This modular design improves code maintainability while preserving the complete public API.
+
 ### Core Features (as of v0.5.0)
 
 * **Multi-Provider Support:** A unified interface for interacting with OpenAI, Google Gemini, and Anthropic.
