@@ -36,18 +36,17 @@ See the files in the `tests/` directory for usage examples.
 
 ## Testing
 
-The test suite can be run with `make check`. The tests make live API calls and require certain environment variables to be set. Tests for a specific provider or feature will be skipped if their required variables are not found.
+The test suite can be run with `make check`. The tests include both live API calls and mock server tests for error conditions and edge cases.
 
-To run the full test suite, the following environment variables are needed:
+For complete testing setup instructions, including all required environment variables and mock server configuration, see **[tests/TESTING.md](tests/TESTING.md)**.
 
-### API Keys
-* **`OPENAI_API_KEY`**: Your API key for OpenAI or any OpenAI-compatible service.
-* **`GEMINI_API_KEY`**: Your API key for Google's Gemini API.
-* **`ANTHROPIC_API_KEY`**: Your API key for Anthropic's Claude API.
-
-### Image Paths (for Multimodal Tests)
-* **`GEMINI_TEST_IMAGE_PATH`**: A valid path to a JPEG or PNG image for Gemini multimodal tests.
-* **`ANTHROPIC_TEST_IMAGE_PATH`**: A valid path to a JPEG or PNG image for Anthropic multimodal tests.
+Quick setup for basic testing:
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+export GEMINI_API_KEY="your-gemini-api-key" 
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+make check
+```
 * **`TEST_IMAGE_PATH_1`**: Path to the first image for the generic inline context test.
 * **`TEST_IMAGE_PATH_2`**: Path to the second image for the generic inline context test.
 
