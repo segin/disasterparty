@@ -16,6 +16,7 @@ man3_MANS = \
 	dp_list_models.3 \
 	dp_message_add_base64_image_part.3 \
 	dp_message_add_file_data_part.3 \
+	dp_message_add_file_reference_part.3 \
 	dp_message_add_image_url_part.3 \
 	dp_message_add_text_part.3 \
 	dp_message.3 \
