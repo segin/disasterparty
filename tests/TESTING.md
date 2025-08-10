@@ -168,6 +168,36 @@ cd tests
 make -C tests check VERBOSE=1
 ```
 
+## Test Suite Overview
+
+The test suite currently includes the following test programs:
+
+* `test_openai_text_dp`
+* `test_openai_multimodal_dp`
+* `test_openai_streaming_dp`
+* `test_openai_list_models_dp`
+* `test_openai_streaming_multimodal_dp`
+* `test_gemini_text_dp`
+* `test_gemini_multimodal_dp`
+* `test_gemini_streaming_dp`
+* `test_gemini_list_models_dp`
+* `test_gemini_streaming_multimodal_dp`
+* `test_gemini_file_completion_dp`
+* `test_gemini_file_attachment_dp`
+* `test_anthropic_text_dp`
+* `test_anthropic_multimodal_dp`
+* `test_anthropic_streaming_dp`
+* `test_anthropic_streaming_detailed_dp`
+* `test_anthropic_list_models_dp`
+* `test_anthropic_streaming_multimodal_dp`
+* `test_anthropic_all_event_types_dp`
+* `test_serialization_dp`
+* `test_inline_multimodal_dp`
+* `test_error_handling_dp`
+* `test_parameters_dp`
+* `test_anthropic_streaming_multimodal_detailed_dp`
+* `test_multiprovider_multithread_dp`
+
 ## Test Results
 
 Tests will:
