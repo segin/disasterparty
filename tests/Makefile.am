@@ -41,7 +41,10 @@ check_PROGRAMS = \
     test_anthropic_multimodal_token_count_dp \
     test_gemini_multimodal_token_count_dp \
     test_rate_limit_completion_dp \
-    test_rate_limit_list_models_dp
+    test_rate_limit_list_models_dp \
+    test_invalid_provider_dp \
+    test_list_models_empty_dp \
+    test_non_json_error_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -86,6 +89,9 @@ test_anthropic_multimodal_token_count_dp_SOURCES = test_anthropic_multimodal_tok
 test_gemini_multimodal_token_count_dp_SOURCES = test_gemini_multimodal_token_count_dp.c
 test_rate_limit_completion_dp_SOURCES = test_rate_limit_completion_dp.c
 test_rate_limit_list_models_dp_SOURCES = test_rate_limit_list_models_dp.c
+test_invalid_provider_dp_SOURCES = test_invalid_provider_dp.c
+test_list_models_empty_dp_SOURCES = test_list_models_empty_dp.c
+test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)
