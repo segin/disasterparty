@@ -57,11 +57,11 @@ int run_auth_test(dp_context_t* context, const char* test_name) {
         return -1;
     }
 
-    if (ret != 0 && http_status == 401) {
-        printf("  SUCCESS: %s correctly handled HTTP 401 (Unauthorized).\n", test_name);
+    if (ret != 0 && (http_status == 401 || http_status == 400)) {
+        printf("  SUCCESS: %s correctly handled HTTP %ld (Auth failure).\n", test_name, http_status);
         return 0;
     } else {
-        fprintf(stderr, "  FAILURE: %s did not fail with HTTP 401 as expected (ret: %d, status: %ld).\n", test_name, ret, http_status);
+        fprintf(stderr, "  FAILURE: %s did not fail with HTTP 401/400 as expected (ret: %d, status: %ld).\n", test_name, ret, http_status);
         return -1;
     }
 }

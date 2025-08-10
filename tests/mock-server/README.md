@@ -11,12 +11,44 @@ This directory contains mock servers used for testing the Disaster Party library
 
 ### Running the Main Mock Server
 
+#### Quick Start (Daemon Mode)
 ```bash
 cd tests/mock-server
-python3 main.py
+./start_server.sh
 ```
 
-The server will start on `http://localhost:8080` by default.
+The server will start in daemon mode on `http://localhost:8080` by default.
+
+#### Foreground Mode
+```bash
+cd tests/mock-server
+./start_server.sh --foreground
+```
+
+#### Manual Start
+```bash
+cd tests/mock-server
+python3 main.py [--port 8080] [--foreground]
+```
+
+### Server Management
+
+#### Check Server Status
+```bash
+./control.py status
+```
+
+#### Restart Server (reload code changes)
+```bash
+./control.py restart
+```
+
+#### Stop Server
+```bash
+./control.py shutdown
+# or
+./stop_server.sh
+```
 
 ### Running Tests with Mock Server
 
@@ -70,6 +102,22 @@ The mock server implements the following endpoints:
 ### Anthropic
 - `POST /v1/messages` - Messages endpoint
 - `POST /v1/messages/count_tokens` - Token counting
+
+### Management Endpoints
+- `GET /_control/status` - Get server status and process information
+- `POST /_control/restart` - Restart the server (reloads code changes)
+- `POST /_control/shutdown` - Gracefully shutdown the server
+
+## Server Features
+
+### Daemonization
+By default, the server runs as a daemon process in the background. Use `--foreground` to run in the foreground for debugging.
+
+### Hot Restart
+The server supports hot restart via the `/_control/restart` endpoint, which allows reloading code changes without manually stopping and starting the server.
+
+### Process Management
+The server properly handles signals and can be managed through the control endpoints or standard process signals.
 
 ## Dependencies
 

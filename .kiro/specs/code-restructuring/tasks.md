@@ -101,25 +101,25 @@
   - Ensure tests work with current serialization and file handling implementation
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 18. Migrate token counting and rate limiting tests
+- [x] 18. Migrate token counting and rate limiting tests
   - Adapt `test_anthropic_multimodal_token_count_dp.c`, `test_gemini_multimodal_token_count_dp.c`
   - Migrate `test_rate_limit_completion_dp.c` and `test_rate_limit_list_models_dp.c`
   - Ensure tests work with current token counting and rate limiting logic
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 19. Migrate remaining edge case and error tests
+- [x] 19. Migrate remaining edge case and error tests
   - Adapt `test_invalid_provider_dp.c`, `test_list_models_empty_dp.c`, `test_non_json_error_dp.c`
   - Ensure all edge case tests work with current error handling implementation
   - Verify proper integration with testsuite and exit code handling
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 20. Update testsuite configuration
+- [x] 20. Update testsuite configuration
   - Add all migrated tests to the GNU autotools testsuite configuration
   - Verify that all tests run properly and report results correctly
   - Ensure tests return exit code 77 when skipped as required
   - _Requirements: 2.3, 2.4_
 
-- [ ] 21. Run comprehensive test validation
+- [x] 21. Run comprehensive test validation
   - Execute the complete test suite to verify all tests pass
   - Validate that both existing and migrated tests work correctly
   - Ensure no regressions were introduced during the restructuring

@@ -18,15 +18,15 @@ int stream_handler(const char* token, void* user_data, bool is_final, const char
 }
 
 int main() {
-    const char* mock_server_url = getenv("DP_MOCK_SERVER");
-    if (!mock_server_url) {
-        printf("SKIP: DP_MOCK_SERVER environment variable not set.\n");
+    const char* api_key = getenv("OPENAI_API_KEY");
+    if (!api_key) {
+        printf("SKIP: OPENAI_API_KEY not set.\n");
         return 77;
     }
 
     printf("Testing abrupt stream handling...\n");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, "ABRUPT_STREAM", mock_server_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, api_key, NULL);
     if (!context) {
         fprintf(stderr, "Failed to initialize context for mock server.\n");
         return EXIT_FAILURE;

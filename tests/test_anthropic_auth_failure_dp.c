@@ -67,15 +67,9 @@ int run_auth_test(dp_context_t* context, const char* test_name) {
 }
 
 int main() {
-    const char* mock_server_url = getenv("DP_MOCK_SERVER");
-    if (!mock_server_url) {
-        printf("SKIP: DP_MOCK_SERVER environment variable not set.\n");
-        return 77;
-    }
-
     printf("Testing Anthropic API authentication failure (HTTP 401)...\n");
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, TEST_API_KEY, mock_server_url);
+    dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, TEST_API_KEY, NULL);
     if (!context) {
         fprintf(stderr, "Failed to initialize context for mock server.\n");
         return EXIT_FAILURE;

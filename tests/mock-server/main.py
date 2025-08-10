@@ -1,8 +1,18 @@
-from flask import Flask, Response, request
+from flask import Flask, Response, request, jsonify
 import time
 import json
+import os
+import sys
+import signal
+import subprocess
+import threading
+import atexit
 
 app = Flask(__name__)
+
+# Global variable to track if we should run in foreground
+foreground_mode = False
+server_process = None
 
 # This single endpoint will simulate different responses based on the prompt.
 @app.route('/v1/chat/completions', methods=['POST'])
@@ -43,6 +53,7 @@ def completions_openai():
     return Response('{"error": "No test scenario triggered in mock server"}', status=400, mimetype='application/json')
 
 @app.route('/v1/models/<model_id>:generateContent', methods=['POST'])
+@app.route('/models/<model_id>:generateContent', methods=['POST'])
 def completions_gemini(model_id):
     data = request.get_json()
     scenario = None
@@ -59,6 +70,7 @@ def completions_gemini(model_id):
     return Response(json.dumps({"error": "No test scenario triggered for Gemini completions endpoint"}), status=400, mimetype='application/json')
 
 @app.route('/v1/messages', methods=['POST'])
+@app.route('/messages', methods=['POST'])
 def completions_anthropic():
     data = request.get_json()
     scenario = None
@@ -170,6 +182,7 @@ def upload_file_gemini():
     return Response(json.dumps({"error": "No test scenario triggered for files:upload endpoint"}), status=400, mimetype='application/json')
 
 @app.route('/v1/models/<model_id>:countTokens', methods=['POST'])
+@app.route('/models/<model_id>:countTokens', methods=['POST'])
 def count_tokens_gemini(model_id):
     scenario = None
     if 'Authorization' in request.headers:
@@ -185,6 +198,7 @@ def count_tokens_gemini(model_id):
     return Response(json.dumps({"error": "No test scenario triggered for countTokens endpoint"}), status=400, mimetype='application/json')
 
 @app.route('/v1/messages/count_tokens', methods=['POST'])
+@app.route('/messages/count_tokens', methods=['POST'])
 def count_tokens_anthropic():
     scenario = None
     if 'x-api-key' in request.headers:
@@ -195,12 +209,119 @@ def count_tokens_anthropic():
 
     return Response(json.dumps({"error": "No test scenario triggered for Anthropic count_tokens endpoint"}), status=400, mimetype='application/json')
 
+# Management endpoints
+@app.route('/_control/restart', methods=['POST'])
+def restart_server():
+    """Restart the server by reloading the current script"""
+    def restart():
+        time.sleep(0.5)  # Give time for response to be sent
+        print("Restarting server...")
+        # Use os.execv to replace the current process
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    
+    threading.Thread(target=restart).start()
+    return jsonify({"status": "restarting", "message": "Server will restart in 0.5 seconds"})
+
+@app.route('/_control/shutdown', methods=['POST'])
+def shutdown_server():
+    """Shutdown the server gracefully"""
+    def shutdown():
+        time.sleep(0.5)  # Give time for response to be sent
+        print("Shutting down server...")
+        os._exit(0)
+    
+    threading.Thread(target=shutdown).start()
+    return jsonify({"status": "shutting_down", "message": "Server will shutdown in 0.5 seconds"})
+
+@app.route('/_control/status', methods=['GET'])
+def server_status():
+    """Get server status information"""
+    return jsonify({
+        "status": "running",
+        "version": "1.1.0",
+        "pid": os.getpid(),
+        "foreground_mode": foreground_mode,
+        "endpoints": [
+            "/_control/restart (POST) - Restart the server",
+            "/_control/shutdown (POST) - Shutdown the server", 
+            "/_control/status (GET) - Get server status"
+        ]
+    })
+
+def daemonize():
+    """Daemonize the current process"""
+    try:
+        # First fork
+        pid = os.fork()
+        if pid > 0:
+            # Parent process, exit
+            sys.exit(0)
+    except OSError as e:
+        print(f"Fork #1 failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Decouple from parent environment
+    os.chdir("/")
+    os.setsid()
+    os.umask(0)
+
+    try:
+        # Second fork
+        pid = os.fork()
+        if pid > 0:
+            # Parent process, exit
+            sys.exit(0)
+    except OSError as e:
+        print(f"Fork #2 failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Redirect standard file descriptors
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
+    # Redirect to /dev/null
+    with open('/dev/null', 'r') as f:
+        os.dup2(f.fileno(), sys.stdin.fileno())
+    with open('/dev/null', 'w') as f:
+        os.dup2(f.fileno(), sys.stdout.fileno())
+        os.dup2(f.fileno(), sys.stderr.fileno())
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    print(f"Received signal {signum}, shutting down...")
+    os._exit(0)
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Disaster Party Mock Server')
     parser.add_argument('--port', type=int, default=8080, help='Port to run the server on (default: 8080)')
+    parser.add_argument('--foreground', action='store_true', help='Run in foreground mode (default: daemonize)')
     args = parser.parse_args()
+    
+    foreground_mode = args.foreground
     
     print(f"Starting Disaster Party mock server on port {args.port}")
     print(f"Set DP_MOCK_SERVER=http://localhost:{args.port} to use with tests")
-    app.run(port=args.port, debug=False)
+    print(f"Management endpoints available at http://localhost:{args.port}/_control/")
+    
+    if not foreground_mode:
+        print("Daemonizing server... (use --foreground to run in foreground)")
+        daemonize()
+    else:
+        print("Running in foreground mode...")
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Register cleanup function
+    atexit.register(lambda: print("Server shutting down..."))
+    
+    try:
+        app.run(host='0.0.0.0', port=args.port, debug=False, use_reloader=False)
+    except KeyboardInterrupt:
+        print("Server interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Server error: {e}")
+        sys.exit(1)
