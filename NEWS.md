@@ -1,4 +1,46 @@
-# Version 0.5.0 (2025-07-31)
+# Version 0.5.0 (2025-08-09)
+
+## Major Code Restructuring and Improvements
+
+* **MAJOR REFACTORING**: Complete restructuring of the codebase from a monolithic 2203-line `disasterparty.c` file into 10 focused, maintainable modules:
+  * `disasterparty.c` - Main library entry point and version information
+  * `dp_constants.c` - Provider constants and default configurations  
+  * `dp_context.c` - Context initialization and management
+  * `dp_request.c` - Request handling and API communication
+  * `dp_message.c` - Message construction and manipulation
+  * `dp_stream.c` - Streaming response handling
+  * `dp_serialize.c` - Message serialization/deserialization
+  * `dp_file.c` - File upload and management
+  * `dp_models.c` - Model listing functionality
+  * `dp_utils.c` - Utility functions and helpers
+
+* **ENHANCED TEST COVERAGE**: Integrated 18 additional tests from abandoned development branch:
+  * Authentication failure tests for all providers
+  * Streaming error handling tests
+  * File upload edge case tests (large files, zero-byte files, unsupported types)
+  * Rate limiting tests
+  * Malformed data handling tests
+  * Provider validation tests
+  * All tests properly integrated with GNU autotools testsuite
+
+* **IMPROVED BUILD SYSTEM**: 
+  * All modules compile cleanly with `-Wall -Werror` strict warning settings
+  * Enhanced Makefile structure for modular builds
+  * All 30 manual pages updated with current date (August 09, 2025)
+  * Added missing `dp_message_add_file_reference_part.3` manual page
+
+* **DOCUMENTATION UPDATES**:
+  * Updated `DOCUMENTATION.md` to reflect modular architecture
+  * Enhanced `api.json` with detailed architecture documentation
+  * All manual pages regenerated with current dates
+  * README.md updated to reflect structural changes
+
+* **REPOSITORY CLEANUP**:
+  * Removed abandoned development branches and artifacts
+  * Clean repository state with no orphaned code
+  * All changes properly committed and documented
+
+## Previous 0.5.0 Features (2025-07-31)
 
 * **ABI BREAKING CHANGE**: The `dp_content_part_type_t` enum has been extended with `DP_CONTENT_PART_FILE_DATA`. The `dp_content_part_t` struct has been extended with a `file_data` member. The `dp_context_s` struct has been extended with a `user_agent` field. SOVER incremented from 3:0:0 to 4:0:0 (libdisasterparty.so.4.0.0). Recompilation of applications will be required.
 * Added support for general file attachments (PDFs, CSVs, text files, etc.) across all providers.
