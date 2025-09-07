@@ -56,3 +56,20 @@ See the files in the `tests/` directory for usage examples.
 ## Testing
 
 For complete testing instructions, environment setup, and test suite information, see **[TESTING.md](TESTING.md)**.
+
+## Documentation
+
+The Disaster Party library includes comprehensive documentation:
+
+- **Manual Pages**: Individual manual pages for each function are available in the `man/` directory. These provide detailed API documentation with examples and usage information.
+- **Complete Documentation**: A consolidated markdown version of all manual pages is available in **[docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)**, designed for easy reading and AI consumption.
+
+To view manual pages (after installation):
+```sh
+man disasterparty        # Library overview
+man dp_init_context      # Context initialization
+man dp_perform_completion # Basic completion requests
+# ... and many more
+```
+
+The documentation covers all public API functions, data structures, usage examples, and provider-specific considerations.
