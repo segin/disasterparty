@@ -2,7 +2,7 @@
 .TH DP_ANTHROPIC_STREAM_EVENT 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
-dp_anthropic_stream_event_t \- structure for a detailed Anthropic API stream event
+dp_anthropic_stream_event_t \- structure for a detailed Claude API stream event
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
@@ -32,7 +32,7 @@ The
 structure is used exclusively by the
 .BR dp_perform_anthropic_streaming_completion (3)
 function. It is passed to the user-provided callback for each Server-Sent Event (SSE)
-received from the Anthropic API, allowing for fine-grained handling of the
+received from the Claude API, allowing for fine-grained handling of the
 streaming process.
 
 .SH MEMBERS of dp_anthropic_stream_event_t

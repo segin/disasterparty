@@ -2,7 +2,7 @@
 .TH DP_PERFORM_ANTHROPIC_STREAMING_COMPLETION 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
 
 .SH NAME
-dp_perform_anthropic_streaming_completion \- perform a streaming request to Anthropic with detailed event handling
+dp_perform_anthropic_streaming_completion \- perform a streaming request to Claude API with detailed event handling
 
 .SH SYNOPSIS
 .B #include <disasterparty.h>
@@ -12,14 +12,14 @@ dp_perform_anthropic_streaming_completion \- perform a streaming request to Anth
 .SH DESCRIPTION
 The
 .B dp_perform_anthropic_streaming_completion()
-function sends a streaming request specifically to the Anthropic API. It is designed
+function sends a streaming request specifically to the Claude API (formerly Anthropic API). It is designed
 for applications that need to process the fine-grained, event-based Server-Sent
-Events (SSE) that the Anthropic API provides.
+Events (SSE) that the Claude API provides.
 
 The provider in the
 .I context
 must be
-.BR DP_PROVIDER_ANTHROPIC ,
+.BR DP_PROVIDER_ANTHROPIC " (Claude API),"
 and
 .I request_config->stream
 must be set to
@@ -44,14 +44,14 @@ int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event,
                                               const char* error_during_stream);
 .fi
 .PP
-- \fBevent\fP: Pointer to the detailed Anthropic event structure.
+- \fBevent\fP: Pointer to the detailed Claude API event structure.
 - \fBuser_data\fP: User-defined data passed from the streaming call.
 - \fBerror_during_stream\fP: Error message if an error occurred during stream processing. NULL otherwise.
 .PP
 Return \fB0\fP to continue streaming, non-zero to attempt to stop.
 
 .SH RETURN VALUE
-Returns \fB0\fP if the stream was successfully initiated and \fB-1\fP on setup error or if provider is not Anthropic. The \fIresponse\fP struct contains the final status.
+Returns \fB0\fP if the stream was successfully initiated and \fB-1\fP on setup error or if provider is not Claude API. The \fIresponse\fP struct contains the final status.
 
 .SH EXAMPLE
 .nf
@@ -61,10 +61,10 @@ Returns \fB0\fP if the stream was successfully initiated and \fB-1\fP on setup e
 #include <string.h>
 #include <cjson/cJSON.h>
 
-// Callback to handle detailed Anthropic stream events
+// Callback to handle detailed Claude API stream events
 int anthropic_stream_callback(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_during_stream) {
     if (error_during_stream) {
-        fprintf(stderr, "Anthropic stream error: %s\n", error_during_stream);
+        fprintf(stderr, "Claude API stream error: %s\n", error_during_stream);
         return 1; // Stop streaming on error
     }
 
@@ -131,14 +131,14 @@ int main() {
     };
 
     dp_response_t response = {0};
-    printf("Streaming Anthropic completion (detailed events):\n");
+    printf("Streaming Claude API completion (detailed events):\n");
     int ret = dp_perform_anthropic_streaming_completion(context, &config, anthropic_stream_callback, NULL, &response);
 
     if (ret != 0) {
-        fprintf(stderr, "Anthropic streaming completion failed to start: %s\n",
+        fprintf(stderr, "Claude API streaming completion failed to start: %s\n",
                 response.error_message ? response.error_message : "(none)");
     } else if (response.http_status_code >= 400) {
-        fprintf(stderr, "Anthropic streaming completion finished with HTTP error: %ld, Error: %s\n",
+        fprintf(stderr, "Claude API streaming completion finished with HTTP error: %ld, Error: %s\n",
                 response.http_status_code, response.error_message ? response.error_message : "(none)");
     }
 

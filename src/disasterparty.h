@@ -23,7 +23,7 @@ typedef struct cJSON cJSON;
 typedef enum {
     DP_PROVIDER_OPENAI_COMPATIBLE, 
     DP_PROVIDER_GOOGLE_GEMINI,
-    DP_PROVIDER_ANTHROPIC 
+    DP_PROVIDER_ANTHROPIC  // Claude API (formerly Anthropic API)
 } dp_provider_type_t; 
 
 /**
@@ -144,12 +144,12 @@ typedef enum {
     DP_ANTHROPIC_EVENT_MESSAGE_DELTA,
     DP_ANTHROPIC_EVENT_MESSAGE_STOP,
     DP_ANTHROPIC_EVENT_ERROR
-} dp_anthropic_event_type_t;
+} dp_anthropic_event_type_t;  // Claude API event types (maintains "anthropic" naming for backwards compatibility)
 
 typedef struct {
     dp_anthropic_event_type_t event_type; 
     const char* raw_json_data;            
-} dp_anthropic_stream_event_t;
+} dp_anthropic_stream_event_t;  // Claude API stream event (maintains "anthropic" naming for backwards compatibility)
 
 typedef int (*dp_stream_callback_t)(const char* token, 
                                     void* user_data,
@@ -158,7 +158,7 @@ typedef int (*dp_stream_callback_t)(const char* token,
 
 typedef int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event,
                                               void* user_data,
-                                              const char* error_during_stream);
+                                              const char* error_during_stream);  // Claude API callback (maintains "anthropic" naming for backwards compatibility)
 
 typedef struct dp_context_s dp_context_t; 
 
@@ -188,7 +188,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               const dp_request_config_t* request_config,
                                               dp_anthropic_stream_callback_t anthropic_callback,
                                               void* user_data,
-                                              dp_response_t* response);
+                                              dp_response_t* response);  // Claude API streaming (maintains "anthropic" naming for backwards compatibility)
 
 int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out);
 
