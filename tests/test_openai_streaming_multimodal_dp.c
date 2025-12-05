@@ -70,7 +70,7 @@ int main() {
         curl_global_cleanup();
         return EXIT_FAILURE;
     }
-    const char* image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/640px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
+    const char* image_url = "https://www.spacejam.com/1996/img/p-jamlogo.gif";
     if (!dp_message_add_image_url_part(&messages[0], image_url)) {
         fprintf(stderr, "Failed to add image part.\n");
         dp_free_messages(messages, 1);
