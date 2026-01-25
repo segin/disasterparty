@@ -66,6 +66,7 @@ char* dpinternal_build_anthropic_count_tokens_json_payload_with_cjson(const dp_r
 
 // Response processing (dp_request.c)
 char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out);
+bool dpinternal_parse_response_content(const char* json_response_str, dp_provider_type_t provider, dp_response_part_t** parts_out, size_t* num_parts_out, char** finish_reason_out);
 bool dpinternal_is_token_parameter_error(const char* error_response, long http_status);
 CURLcode dpinternal_perform_openai_request_with_fallback(CURL* curl, dp_context_t* context, 
                                                         const dp_request_config_t* request_config,

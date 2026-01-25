@@ -11,9 +11,9 @@ typedef struct cJSON cJSON;
 /**
  * @brief Library version string for Disaster Party.
  */
-#define DP_VERSION "0.5.0"
+#define DP_VERSION "0.6.0"
 #define DP_VERSION_MAJOR 0
-#define DP_VERSION_MINOR 5 
+#define DP_VERSION_MINOR 6 
 #define DP_VERSION_PATCH 0 
 
 
@@ -37,6 +37,23 @@ typedef enum {
 } dp_message_role_t; 
 
 /**
+ * @brief Tool type enumeration.
+ */
+typedef enum {
+    DP_TOOL_TYPE_FUNCTION
+} dp_tool_type_t;
+
+/**
+ * @brief Tool choice type enumeration.
+ */
+typedef enum {
+    DP_TOOL_CHOICE_AUTO,
+    DP_TOOL_CHOICE_ANY,
+    DP_TOOL_CHOICE_TOOL,
+    DP_TOOL_CHOICE_NONE
+} dp_tool_choice_type_t;
+
+/**
  * @brief Represents a part of a multimodal message content.
  */
 typedef enum {
@@ -44,7 +61,10 @@ typedef enum {
     DP_CONTENT_PART_IMAGE_URL,
     DP_CONTENT_PART_IMAGE_BASE64,
     DP_CONTENT_PART_FILE_DATA,
-    DP_CONTENT_PART_FILE_REFERENCE
+    DP_CONTENT_PART_FILE_REFERENCE,
+    DP_CONTENT_PART_TOOL_CALL,
+    DP_CONTENT_PART_TOOL_RESULT,
+    DP_CONTENT_PART_THINKING
 } dp_content_part_type_t;
 
 /**
@@ -54,6 +74,22 @@ typedef enum {
     DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS,  // Modern parameter (preferred)
     DP_TOKEN_PARAM_MAX_TOKENS              // Legacy parameter (fallback)
 } dp_token_param_type_t; 
+
+typedef struct {
+    char* name;
+    char* description;
+    char* parameters_json_schema; 
+} dp_tool_function_t;
+
+typedef struct {
+    dp_tool_type_t type;
+    dp_tool_function_t function;
+} dp_tool_definition_t;
+
+typedef struct {
+    dp_tool_choice_type_t type;
+    char* tool_name; 
+} dp_tool_choice_t;
 
 typedef struct {
     dp_content_part_type_t type;
@@ -72,6 +108,20 @@ typedef struct {
         char* file_id;
         char* mime_type;
     } file_reference;
+    struct {
+        char* id;
+        char* function_name;
+        char* arguments_json;
+    } tool_call;
+    struct {
+        char* tool_call_id;
+        char* content;
+        bool is_error;
+    } tool_result;
+    struct {
+        char* thinking;
+        char* signature;
+    } thinking;
 } dp_content_part_t; 
 
 typedef struct {
@@ -92,11 +142,27 @@ typedef struct {
     int top_k;                      // New parameter for top-k sampling
     const char** stop_sequences;    // New: Array of stop sequences
     size_t num_stop_sequences;      // New: Number of stop sequences
+    const dp_tool_definition_t* tools; // New: Array of tool definitions
+    size_t num_tools;                  // New: Number of tools
+    dp_tool_choice_t tool_choice;      // New: Tool choice configuration
+    struct {
+        bool enabled;
+        int budget_tokens;
+    } thinking;
 } dp_request_config_t; 
 
 typedef struct {
     dp_content_part_type_t type; 
     char* text;
+    struct {
+        char* id;
+        char* function_name;
+        char* arguments_json;
+    } tool_call;
+    struct {
+        char* thinking;
+        char* signature;
+    } thinking;
 } dp_response_part_t; 
 
 typedef struct {
@@ -143,7 +209,8 @@ typedef enum {
     DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP,
     DP_ANTHROPIC_EVENT_MESSAGE_DELTA,
     DP_ANTHROPIC_EVENT_MESSAGE_STOP,
-    DP_ANTHROPIC_EVENT_ERROR
+    DP_ANTHROPIC_EVENT_ERROR,
+    DP_ANTHROPIC_EVENT_THINKING_DELTA
 } dp_anthropic_event_type_t;
 
 typedef struct {
@@ -206,6 +273,9 @@ bool dp_message_add_image_url_part(dp_message_t* message, const char* image_url)
 bool dp_message_add_base64_image_part(dp_message_t* message, const char* mime_type, const char* base64_data);
 bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type, const char* base64_data, const char* filename);
 bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_id, const char* mime_type);
+bool dp_message_add_tool_call_part(dp_message_t* message, const char* id, const char* function_name, const char* arguments_json);
+bool dp_message_add_tool_result_part(dp_message_t* message, const char* tool_call_id, const char* content, bool is_error);
+bool dp_message_add_thinking_part(dp_message_t* message, const char* thinking, const char* signature);
 
 const char* dp_get_version(void);
 

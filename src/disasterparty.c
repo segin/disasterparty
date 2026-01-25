@@ -180,6 +180,41 @@ char* dpinternal_build_openai_json_payload_with_cjson(const dp_request_config_t*
         cJSON_AddItemToObject(root, "stop", stop_array);
     }
 
+    if (request_config->tools && request_config->num_tools > 0) {
+        cJSON* tools_array = cJSON_AddArrayToObject(root, "tools");
+        for (size_t i = 0; i < request_config->num_tools; ++i) {
+            cJSON* tool_obj = cJSON_CreateObject();
+            cJSON_AddStringToObject(tool_obj, "type", "function");
+            
+            cJSON* func_obj = cJSON_CreateObject();
+            cJSON_AddStringToObject(func_obj, "name", request_config->tools[i].function.name);
+            cJSON_AddStringToObject(func_obj, "description", request_config->tools[i].function.description);
+            
+            if (request_config->tools[i].function.parameters_json_schema) {
+                 cJSON* params = cJSON_Parse(request_config->tools[i].function.parameters_json_schema);
+                 if (params) {
+                     cJSON_AddItemToObject(func_obj, "parameters", params);
+                 }
+            }
+            
+            cJSON_AddItemToObject(tool_obj, "function", func_obj);
+            cJSON_AddItemToArray(tools_array, tool_obj);
+        }
+        
+        if (request_config->tool_choice.type == DP_TOOL_CHOICE_NONE) {
+            cJSON_AddStringToObject(root, "tool_choice", "none");
+        } else if (request_config->tool_choice.type == DP_TOOL_CHOICE_ANY) {
+            cJSON_AddStringToObject(root, "tool_choice", "required");
+        } else if (request_config->tool_choice.type == DP_TOOL_CHOICE_TOOL) {
+            cJSON* choice_obj = cJSON_CreateObject();
+            cJSON_AddStringToObject(choice_obj, "type", "function");
+            cJSON* func_choice = cJSON_CreateObject();
+            cJSON_AddStringToObject(func_choice, "name", request_config->tool_choice.tool_name);
+            cJSON_AddItemToObject(choice_obj, "function", func_choice);
+            cJSON_AddItemToObject(root, "tool_choice", choice_obj);
+        }
+    }
+
     cJSON *messages_array = cJSON_AddArrayToObject(root, "messages");
     if (!messages_array) {
         cJSON_Delete(root);
@@ -209,13 +244,41 @@ char* dpinternal_build_openai_json_payload_with_cjson(const dp_request_config_t*
         }
         cJSON_AddStringToObject(msg_obj, "role", role_str);
 
-        if (msg->num_parts == 1 && msg->parts[0].type == DP_CONTENT_PART_TEXT) {
+        if (msg->role == DP_ROLE_TOOL) {
+            for (size_t j = 0; j < msg->num_parts; ++j) {
+                if (msg->parts[j].type == DP_CONTENT_PART_TOOL_RESULT) {
+                    cJSON_AddStringToObject(msg_obj, "content", msg->parts[j].tool_result.content);
+                    cJSON_AddStringToObject(msg_obj, "tool_call_id", msg->parts[j].tool_result.tool_call_id);
+                    break;
+                }
+            }
+        } else if (msg->num_parts == 1 && msg->parts[0].type == DP_CONTENT_PART_TEXT) {
             cJSON_AddStringToObject(msg_obj, "content", msg->parts[0].text);
         } else {
-            cJSON *content_array = cJSON_AddArrayToObject(msg_obj, "content");
-            if (!content_array) { cJSON_Delete(root); return NULL; }
+            cJSON *content_array = NULL;
+            cJSON *tool_calls_array = NULL;
+
             for (size_t j = 0; j < msg->num_parts; ++j) {
                 const dp_content_part_t* part = &msg->parts[j];
+
+                if (part->type == DP_CONTENT_PART_TOOL_CALL) {
+                    if (!tool_calls_array) tool_calls_array = cJSON_AddArrayToObject(msg_obj, "tool_calls");
+                    cJSON* tc_obj = cJSON_CreateObject();
+                    cJSON_AddStringToObject(tc_obj, "id", part->tool_call.id);
+                    cJSON_AddStringToObject(tc_obj, "type", "function");
+                    cJSON* func_obj = cJSON_CreateObject();
+                    cJSON_AddStringToObject(func_obj, "name", part->tool_call.function_name);
+                    cJSON_AddStringToObject(func_obj, "arguments", part->tool_call.arguments_json);
+                    cJSON_AddItemToObject(tc_obj, "function", func_obj);
+                    cJSON_AddItemToArray(tool_calls_array, tc_obj);
+                    continue;
+                }
+
+                if (!content_array) {
+                    content_array = cJSON_AddArrayToObject(msg_obj, "content");
+                    if (!content_array) { cJSON_Delete(root); return NULL; }
+                }
+
                 cJSON *part_obj = cJSON_CreateObject();
                 if (!part_obj) { cJSON_Delete(root); return NULL; }
                 if (part->type == DP_CONTENT_PART_TEXT) {
@@ -319,6 +382,40 @@ char* dpinternal_build_gemini_json_payload_with_cjson(const dp_request_config_t*
         cJSON_AddItemToArray(sys_parts_array, sys_part_obj);
     }
 
+    if (request_config->tools && request_config->num_tools > 0) {
+        cJSON* tools_array = cJSON_AddArrayToObject(root, "tools");
+        cJSON* func_decls_wrapper = cJSON_CreateObject();
+        cJSON* func_decls = cJSON_AddArrayToObject(func_decls_wrapper, "function_declarations");
+        
+        for (size_t i = 0; i < request_config->num_tools; ++i) {
+            cJSON* func_obj = cJSON_CreateObject();
+            cJSON_AddStringToObject(func_obj, "name", request_config->tools[i].function.name);
+            cJSON_AddStringToObject(func_obj, "description", request_config->tools[i].function.description);
+            if (request_config->tools[i].function.parameters_json_schema) {
+                 cJSON* params = cJSON_Parse(request_config->tools[i].function.parameters_json_schema);
+                 if (params) {
+                     cJSON_AddItemToObject(func_obj, "parameters", params);
+                 }
+            }
+            cJSON_AddItemToArray(func_decls, func_obj);
+        }
+        cJSON_AddItemToArray(tools_array, func_decls_wrapper);
+
+        if (request_config->tool_choice.type != DP_TOOL_CHOICE_AUTO) {
+            cJSON* tool_config = cJSON_AddObjectToObject(root, "toolConfig");
+            cJSON* func_calling_config = cJSON_AddObjectToObject(tool_config, "functionCallingConfig");
+            if (request_config->tool_choice.type == DP_TOOL_CHOICE_ANY) {
+                cJSON_AddStringToObject(func_calling_config, "mode", "ANY");
+            } else if (request_config->tool_choice.type == DP_TOOL_CHOICE_NONE) {
+                 cJSON_AddStringToObject(func_calling_config, "mode", "NONE");
+            } else if (request_config->tool_choice.type == DP_TOOL_CHOICE_TOOL) {
+                 cJSON_AddStringToObject(func_calling_config, "mode", "ANY");
+                 cJSON* allowed = cJSON_AddArrayToObject(func_calling_config, "allowedFunctionNames");
+                 cJSON_AddItemToArray(allowed, cJSON_CreateString(request_config->tool_choice.tool_name));
+            }
+        }
+    }
+
     cJSON *contents_array = cJSON_AddArrayToObject(root, "contents");
     if (!contents_array) { cJSON_Delete(root); return NULL; }
 
@@ -329,7 +426,11 @@ char* dpinternal_build_gemini_json_payload_with_cjson(const dp_request_config_t*
         cJSON *content_obj = cJSON_CreateObject();
         if (!content_obj) { cJSON_Delete(root); return NULL; }
 
-        const char* role_str = (msg->role == DP_ROLE_ASSISTANT) ? "model" : "user";
+        const char* role_str;
+        if (msg->role == DP_ROLE_ASSISTANT) role_str = "model";
+        else if (msg->role == DP_ROLE_TOOL) role_str = "function";
+        else role_str = "user";
+
         cJSON_AddStringToObject(content_obj, "role", role_str);
 
         cJSON *parts_array = cJSON_AddArrayToObject(content_obj, "parts");
@@ -366,6 +467,29 @@ char* dpinternal_build_gemini_json_payload_with_cjson(const dp_request_config_t*
                 cJSON_AddStringToObject(file_data_obj, "mime_type", part->file_reference.mime_type);
                 cJSON_AddStringToObject(file_data_obj, "file_uri", part->file_reference.file_id);
                 cJSON_AddItemToObject(part_obj, "file_data", file_data_obj);
+            } else if (part->type == DP_CONTENT_PART_TOOL_CALL) {
+                cJSON* func_call = cJSON_CreateObject();
+                cJSON_AddStringToObject(func_call, "name", part->tool_call.function_name);
+                cJSON* args = cJSON_Parse(part->tool_call.arguments_json);
+                if (args) cJSON_AddItemToObject(func_call, "args", args);
+                else cJSON_AddItemToObject(func_call, "args", cJSON_CreateObject());
+                cJSON_AddItemToObject(part_obj, "functionCall", func_call);
+            } else if (part->type == DP_CONTENT_PART_TOOL_RESULT) {
+                cJSON* func_resp = cJSON_CreateObject();
+                // For Gemini, we use tool_call_id as the function name
+                cJSON_AddStringToObject(func_resp, "name", part->tool_result.tool_call_id);
+                
+                cJSON* response_content = cJSON_Parse(part->tool_result.content);
+                cJSON* resp_wrapper = cJSON_CreateObject();
+                
+                if (response_content) {
+                     cJSON_AddItemToObject(resp_wrapper, "content", response_content);
+                } else {
+                     // If not JSON, treat as simple string
+                     cJSON_AddStringToObject(resp_wrapper, "content", part->tool_result.content);
+                }
+                cJSON_AddItemToObject(func_resp, "response", resp_wrapper);
+                cJSON_AddItemToObject(part_obj, "functionResponse", func_resp);
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -409,8 +533,42 @@ char* dpinternal_build_anthropic_json_payload_with_cjson(const dp_request_config
         cJSON_AddItemToObject(root, "stop_sequences", stop_array);
     }
 
+    if (request_config->thinking.enabled) {
+        cJSON* thinking_obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(thinking_obj, "type", "enabled");
+        cJSON_AddNumberToObject(thinking_obj, "budget_tokens", request_config->thinking.budget_tokens > 0 ? request_config->thinking.budget_tokens : 1024);
+        cJSON_AddItemToObject(root, "thinking", thinking_obj);
+    }
+
     if (request_config->system_prompt && strlen(request_config->system_prompt) > 0) {
         cJSON_AddStringToObject(root, "system", request_config->system_prompt);
+    }
+
+    if (request_config->tools && request_config->num_tools > 0) {
+        cJSON* tools_array = cJSON_AddArrayToObject(root, "tools");
+        for (size_t i = 0; i < request_config->num_tools; ++i) {
+            cJSON* tool_obj = cJSON_CreateObject();
+            cJSON_AddStringToObject(tool_obj, "name", request_config->tools[i].function.name);
+            cJSON_AddStringToObject(tool_obj, "description", request_config->tools[i].function.description);
+            if (request_config->tools[i].function.parameters_json_schema) {
+                 cJSON* params = cJSON_Parse(request_config->tools[i].function.parameters_json_schema);
+                 if (params) {
+                     cJSON_AddItemToObject(tool_obj, "input_schema", params);
+                 }
+            }
+            cJSON_AddItemToArray(tools_array, tool_obj);
+        }
+
+        if (request_config->tool_choice.type == DP_TOOL_CHOICE_ANY) {
+            cJSON* tc = cJSON_CreateObject();
+            cJSON_AddStringToObject(tc, "type", "any");
+            cJSON_AddItemToObject(root, "tool_choice", tc);
+        } else if (request_config->tool_choice.type == DP_TOOL_CHOICE_TOOL) {
+            cJSON* tc = cJSON_CreateObject();
+            cJSON_AddStringToObject(tc, "type", "tool");
+            cJSON_AddStringToObject(tc, "name", request_config->tool_choice.tool_name);
+            cJSON_AddItemToObject(root, "tool_choice", tc);
+        }
     }
 
     cJSON *messages_array = cJSON_AddArrayToObject(root, "messages");
@@ -466,6 +624,24 @@ char* dpinternal_build_anthropic_json_payload_with_cjson(const dp_request_config
                          part->file_reference.file_id, part->file_reference.mime_type);
                 cJSON_AddStringToObject(part_obj, "type", "text");
                 cJSON_AddStringToObject(part_obj, "text", temp_text);
+            } else if (part->type == DP_CONTENT_PART_TOOL_CALL) {
+                cJSON_AddStringToObject(part_obj, "type", "tool_use");
+                cJSON_AddStringToObject(part_obj, "id", part->tool_call.id);
+                cJSON_AddStringToObject(part_obj, "name", part->tool_call.function_name);
+                cJSON* input_json = cJSON_Parse(part->tool_call.arguments_json);
+                if (input_json) cJSON_AddItemToObject(part_obj, "input", input_json);
+                else cJSON_AddItemToObject(part_obj, "input", cJSON_CreateObject());
+            } else if (part->type == DP_CONTENT_PART_TOOL_RESULT) {
+                cJSON_AddStringToObject(part_obj, "type", "tool_result");
+                cJSON_AddStringToObject(part_obj, "tool_use_id", part->tool_result.tool_call_id);
+                cJSON_AddStringToObject(part_obj, "content", part->tool_result.content);
+                if (part->tool_result.is_error) {
+                    cJSON_AddTrueToObject(part_obj, "is_error");
+                }
+            } else if (part->type == DP_CONTENT_PART_THINKING) {
+                cJSON_AddStringToObject(part_obj, "type", "thinking");
+                cJSON_AddStringToObject(part_obj, "thinking", part->thinking.thinking);
+                cJSON_AddStringToObject(part_obj, "signature", part->thinking.signature);
             }
             cJSON_AddItemToArray(content_array_for_anthropic, part_obj);
         }
@@ -543,62 +719,99 @@ CURLcode dpinternal_perform_openai_request_with_fallback(CURL* curl, dp_context_
 
 
 
-char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
+bool dpinternal_parse_response_content(const char* json_response_str, dp_provider_type_t provider, dp_response_part_t** parts_out, size_t* num_parts_out, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
-    if (!json_response_str) return NULL;
+    if (parts_out) *parts_out = NULL;
+    if (num_parts_out) *num_parts_out = 0;
+    if (!json_response_str) return false;
 
     cJSON *root = cJSON_Parse(json_response_str);
-    if (!root) {
-        return NULL;
-    }
+    if (!root) return false;
 
-    char* extracted_text = NULL;
-    cJSON *item_array = NULL; 
+    dp_response_part_t* parts = NULL;
+    size_t num_parts = 0;
 
     if (provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
-        item_array = cJSON_GetObjectItemCaseSensitive(root, "choices");
-        if (cJSON_IsArray(item_array) && cJSON_GetArraySize(item_array) > 0) {
-            cJSON *first_choice = cJSON_GetArrayItem(item_array, 0);
-            if (first_choice) {
-                cJSON *message = cJSON_GetObjectItemCaseSensitive(first_choice, "message");
-                if (message) {
-                    cJSON *content = cJSON_GetObjectItemCaseSensitive(message, "content");
-                    if (cJSON_IsString(content) && content->valuestring) {
-                        extracted_text = dpinternal_strdup(content->valuestring);
-                    }
+        cJSON* choices = cJSON_GetObjectItemCaseSensitive(root, "choices");
+        if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
+            cJSON* first_choice = cJSON_GetArrayItem(choices, 0);
+            cJSON* message = cJSON_GetObjectItemCaseSensitive(first_choice, "message");
+            if (message) {
+                cJSON* content = cJSON_GetObjectItemCaseSensitive(message, "content");
+                if (cJSON_IsString(content) && content->valuestring) {
+                    parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                    memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                    parts[num_parts].type = DP_CONTENT_PART_TEXT;
+                    parts[num_parts].text = dpinternal_strdup(content->valuestring);
+                    num_parts++;
                 }
-                if (finish_reason_out) {
-                    cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_choice, "finish_reason");
-                    if (cJSON_IsString(reason_item) && reason_item->valuestring) {
-                        *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
-                    }
-                }
-            }
-        }
-    } else if (provider == DP_PROVIDER_GOOGLE_GEMINI) {
-        item_array = cJSON_GetObjectItemCaseSensitive(root, "candidates");
-        if (cJSON_IsArray(item_array) && cJSON_GetArraySize(item_array) > 0) {
-            cJSON *first_candidate = cJSON_GetArrayItem(item_array, 0);
-            if (first_candidate) {
-                cJSON *content = cJSON_GetObjectItemCaseSensitive(first_candidate, "content");
-                if (content) {
-                    cJSON *parts_array = cJSON_GetObjectItemCaseSensitive(content, "parts");
-                    if (cJSON_IsArray(parts_array) && cJSON_GetArraySize(parts_array) > 0) {
-                        cJSON* part_item = NULL;
-                        cJSON_ArrayForEach(part_item, parts_array) {
-                            cJSON *text_item = cJSON_GetObjectItemCaseSensitive(part_item, "text");
-                            if (cJSON_IsString(text_item) && text_item->valuestring) {
-                                extracted_text = dpinternal_strdup(text_item->valuestring);
-                                break; 
+                cJSON* tool_calls = cJSON_GetObjectItemCaseSensitive(message, "tool_calls");
+                if (cJSON_IsArray(tool_calls)) {
+                    cJSON* tc = NULL;
+                    cJSON_ArrayForEach(tc, tool_calls) {
+                        cJSON* id = cJSON_GetObjectItemCaseSensitive(tc, "id");
+                        cJSON* func = cJSON_GetObjectItemCaseSensitive(tc, "function");
+                        if (cJSON_IsString(id) && func) {
+                            cJSON* name = cJSON_GetObjectItemCaseSensitive(func, "name");
+                            cJSON* args = cJSON_GetObjectItemCaseSensitive(func, "arguments");
+                            if (cJSON_IsString(name) && cJSON_IsString(args)) {
+                                parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                                memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                                parts[num_parts].type = DP_CONTENT_PART_TOOL_CALL;
+                                parts[num_parts].tool_call.id = dpinternal_strdup(id->valuestring);
+                                parts[num_parts].tool_call.function_name = dpinternal_strdup(name->valuestring);
+                                parts[num_parts].tool_call.arguments_json = dpinternal_strdup(args->valuestring);
+                                num_parts++;
                             }
                         }
                     }
                 }
-                if (finish_reason_out) { 
-                     cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(first_candidate, "finishReason"); 
-                     if (cJSON_IsString(reason_item) && reason_item->valuestring) {
-                         *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
-                     }
+            }
+            if (finish_reason_out) {
+                cJSON* reason = cJSON_GetObjectItemCaseSensitive(first_choice, "finish_reason");
+                if (cJSON_IsString(reason) && reason->valuestring) {
+                    *finish_reason_out = dpinternal_strdup(reason->valuestring);
+                }
+            }
+        }
+    } else if (provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        cJSON* candidates = cJSON_GetObjectItemCaseSensitive(root, "candidates");
+        if (cJSON_IsArray(candidates) && cJSON_GetArraySize(candidates) > 0) {
+            cJSON* first_candidate = cJSON_GetArrayItem(candidates, 0);
+            cJSON* content = cJSON_GetObjectItemCaseSensitive(first_candidate, "content");
+            if (content) {
+                cJSON* parts_array = cJSON_GetObjectItemCaseSensitive(content, "parts");
+                if (cJSON_IsArray(parts_array)) {
+                    cJSON* part = NULL;
+                    cJSON_ArrayForEach(part, parts_array) {
+                        cJSON* text = cJSON_GetObjectItemCaseSensitive(part, "text");
+                        cJSON* func_call = cJSON_GetObjectItemCaseSensitive(part, "functionCall");
+                        if (cJSON_IsString(text) && text->valuestring) {
+                            parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                            memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                            parts[num_parts].type = DP_CONTENT_PART_TEXT;
+                            parts[num_parts].text = dpinternal_strdup(text->valuestring);
+                            num_parts++;
+                        } else if (func_call) {
+                            cJSON* name = cJSON_GetObjectItemCaseSensitive(func_call, "name");
+                            cJSON* args = cJSON_GetObjectItemCaseSensitive(func_call, "args");
+                            if (cJSON_IsString(name)) {
+                                parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                                memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                                parts[num_parts].type = DP_CONTENT_PART_TOOL_CALL;
+                                parts[num_parts].tool_call.id = dpinternal_strdup(name->valuestring);
+                                parts[num_parts].tool_call.function_name = dpinternal_strdup(name->valuestring);
+                                parts[num_parts].tool_call.arguments_json = cJSON_PrintUnformatted(args ? args : cJSON_CreateObject());
+                                num_parts++;
+                            }
+                        }
+                    }
+                }
+            }
+            if (finish_reason_out) {
+                cJSON* reason = cJSON_GetObjectItemCaseSensitive(first_candidate, "finishReason");
+                if (cJSON_IsString(reason) && reason->valuestring) {
+                    *finish_reason_out = dpinternal_strdup(reason->valuestring);
                 }
             }
         }
@@ -612,26 +825,90 @@ char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_res
             }
         }
     } else if (provider == DP_PROVIDER_ANTHROPIC) {
-        item_array = cJSON_GetObjectItemCaseSensitive(root, "content");
-        if(cJSON_IsArray(item_array) && cJSON_GetArraySize(item_array) > 0) {
-            cJSON* content_block = cJSON_GetArrayItem(item_array, 0); 
-            if(content_block && cJSON_IsObject(content_block)) {
-                cJSON* text_item = cJSON_GetObjectItemCaseSensitive(content_block, "text");
-                if(cJSON_IsString(text_item) && text_item->valuestring) {
-                    extracted_text = dpinternal_strdup(text_item->valuestring);
+        cJSON* content = cJSON_GetObjectItemCaseSensitive(root, "content");
+        if (cJSON_IsArray(content)) {
+            cJSON* block = NULL;
+            cJSON_ArrayForEach(block, content) {
+                cJSON* type = cJSON_GetObjectItemCaseSensitive(block, "type");
+                if (cJSON_IsString(type)) {
+                    if (strcmp(type->valuestring, "text") == 0) {
+                        cJSON* text = cJSON_GetObjectItemCaseSensitive(block, "text");
+                        if (cJSON_IsString(text) && text->valuestring) {
+                            parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                            memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                            parts[num_parts].type = DP_CONTENT_PART_TEXT;
+                            parts[num_parts].text = dpinternal_strdup(text->valuestring);
+                            num_parts++;
+                        }
+                    } else if (strcmp(type->valuestring, "tool_use") == 0) {
+                        cJSON* id = cJSON_GetObjectItemCaseSensitive(block, "id");
+                        cJSON* name = cJSON_GetObjectItemCaseSensitive(block, "name");
+                        cJSON* input = cJSON_GetObjectItemCaseSensitive(block, "input");
+                        if (cJSON_IsString(id) && cJSON_IsString(name)) {
+                            parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                            memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                            parts[num_parts].type = DP_CONTENT_PART_TOOL_CALL;
+                            parts[num_parts].tool_call.id = dpinternal_strdup(id->valuestring);
+                            parts[num_parts].tool_call.function_name = dpinternal_strdup(name->valuestring);
+                            parts[num_parts].tool_call.arguments_json = cJSON_PrintUnformatted(input ? input : cJSON_CreateObject());
+                            num_parts++;
+                        }
+                    } else if (strcmp(type->valuestring, "thinking") == 0) {
+                        cJSON* thinking = cJSON_GetObjectItemCaseSensitive(block, "thinking");
+                        cJSON* signature = cJSON_GetObjectItemCaseSensitive(block, "signature");
+                        if (cJSON_IsString(thinking) && thinking->valuestring && cJSON_IsString(signature) && signature->valuestring) {
+                            parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                            memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                            parts[num_parts].type = DP_CONTENT_PART_THINKING;
+                            parts[num_parts].thinking.thinking = dpinternal_strdup(thinking->valuestring);
+                            parts[num_parts].thinking.signature = dpinternal_strdup(signature->valuestring);
+                            num_parts++;
+                        }
+                    }
                 }
             }
         }
-        if(finish_reason_out) {
-            cJSON* reason_item = cJSON_GetObjectItemCaseSensitive(root, "stop_reason");
-            if(cJSON_IsString(reason_item) && reason_item->valuestring) {
-                *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
+        if (finish_reason_out) {
+            cJSON* reason = cJSON_GetObjectItemCaseSensitive(root, "stop_reason");
+            if (cJSON_IsString(reason) && reason->valuestring) {
+                *finish_reason_out = dpinternal_strdup(reason->valuestring);
             }
         }
     }
-    
+
     cJSON_Delete(root);
-    return extracted_text;
+    *parts_out = parts;
+    *num_parts_out = num_parts;
+    return true;
+}
+
+char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
+    dp_response_part_t* parts = NULL;
+    size_t num_parts = 0;
+    
+    if (!dpinternal_parse_response_content(json_response_str, provider, &parts, &num_parts, finish_reason_out)) {
+        return NULL;
+    }
+
+    char* text = NULL;
+    // Find first text part and clean up everything
+    for (size_t i = 0; i < num_parts; ++i) {
+        if (parts[i].type == DP_CONTENT_PART_TEXT && !text) {
+            text = dpinternal_strdup(parts[i].text);
+        }
+        
+        free(parts[i].text);
+        if (parts[i].type == DP_CONTENT_PART_TOOL_CALL) {
+             free(parts[i].tool_call.id);
+             free(parts[i].tool_call.function_name);
+             free(parts[i].tool_call.arguments_json);
+        } else if (parts[i].type == DP_CONTENT_PART_THINKING) {
+             free(parts[i].thinking.thinking);
+             free(parts[i].thinking.signature);
+        }
+    }
+    free(parts);
+    return text;
 }
 
 
@@ -648,6 +925,14 @@ void dp_free_response_content(dp_response_t* response) {
     if (response->parts) {
         for (size_t i = 0; i < response->num_parts; ++i) {
             free(response->parts[i].text); 
+            if (response->parts[i].type == DP_CONTENT_PART_TOOL_CALL) {
+                free(response->parts[i].tool_call.id);
+                free(response->parts[i].tool_call.function_name);
+                free(response->parts[i].tool_call.arguments_json);
+            } else if (response->parts[i].type == DP_CONTENT_PART_THINKING) {
+                free(response->parts[i].thinking.thinking);
+                free(response->parts[i].thinking.signature);
+            }
         }
         free(response->parts);
     }

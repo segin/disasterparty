@@ -36,6 +36,11 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
     }
     memset(response, 0, sizeof(dp_response_t));
 
+    if (request_config->thinking.enabled && context->provider != DP_PROVIDER_ANTHROPIC) {
+        response->error_message = dpinternal_strdup("Thinking tokens are currently only supported by the Anthropic provider.");
+        return -1;
+    }
+
     CURL* curl = curl_easy_init();
     if (!curl) {
         response->error_message = dpinternal_strdup("curl_easy_init() failed for Disaster Party completion.");
@@ -104,17 +109,10 @@ int dp_perform_completion(dp_context_t* context, const dp_request_config_t* requ
                  curl_easy_strerror(res), response->http_status_code);
     } else {
         if (response->http_status_code >= 200 && response->http_status_code < 300) {
-            char* extracted_text = dpinternal_extract_text_from_full_response_with_cjson(chunk_mem.memory, context->provider, &response->finish_reason);
-            if (extracted_text) {
-                response->parts = calloc(1, sizeof(dp_response_part_t));
-                if (response->parts) {
-                    response->num_parts = 1;
-                    response->parts[0].type = DP_CONTENT_PART_TEXT;
-                    response->parts[0].text = extracted_text; 
-                } else {
-                    free(extracted_text); 
-                    response->error_message = dpinternal_strdup("Failed to allocate memory for response part structure.");
-                }
+            bool parse_success = dpinternal_parse_response_content(chunk_mem.memory, context->provider, &response->parts, &response->num_parts, &response->finish_reason);
+
+            if (parse_success && response->num_parts > 0) {
+                // Success
             } else { 
                 cJSON* error_root = cJSON_Parse(chunk_mem.memory);
                 if (error_root) {
@@ -186,6 +184,11 @@ int dp_perform_streaming_completion(dp_context_t* context, const dp_request_conf
     
     if (context->provider != DP_PROVIDER_GOOGLE_GEMINI && !request_config->stream) {
          if (response) response->error_message = dpinternal_strdup("dp_perform_streaming_completion requires stream=true in config for OpenAI and Anthropic.");
+        return -1;
+    }
+
+    if (request_config->thinking.enabled && context->provider != DP_PROVIDER_ANTHROPIC) {
+        if (response) response->error_message = dpinternal_strdup("Thinking tokens are currently only supported by the Anthropic provider.");
         return -1;
     }
 
@@ -364,6 +367,11 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               dp_response_t* response) {
     if (!context || !request_config || !anthropic_callback || !response) {
         if (response) response->error_message = dpinternal_strdup("Invalid arguments to dp_perform_anthropic_streaming_completion.");
+        return -1;
+    }
+
+    if (context->provider != DP_PROVIDER_ANTHROPIC) {
+        if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion requires a context initialized with DP_PROVIDER_ANTHROPIC.");
         return -1;
     }
     if (context->provider != DP_PROVIDER_ANTHROPIC) {
