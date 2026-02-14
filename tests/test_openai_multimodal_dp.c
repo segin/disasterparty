@@ -88,7 +88,7 @@ int main() {
     }
 
     bool success = (result == 0 && response.error_message == NULL && response.http_status_code == 200);
-    int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
+    final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
 
     if (!success && (response.http_status_code == 429 || response.http_status_code == 402 || 
         (response.error_message && (

@@ -87,6 +87,8 @@ int main() {
         fprintf(stderr, "Request failed. HTTP: %ld, Error: %s\n", response.http_status_code, response.error_message);
     }
 
+    bool success = (result == 0 && response.http_status_code == 200);
+
     // Cleanup
     if (!success && (response.http_status_code == 429 || response.http_status_code == 402 || 
         (response.error_message && (
