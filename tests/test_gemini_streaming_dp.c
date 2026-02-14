@@ -1,4 +1,5 @@
-#include "disasterparty.h" 
+#define _GNU_SOURCE
+#include "disasterparty.h"
 #include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
@@ -95,6 +96,19 @@ int main() {
 
     bool success = (result == 0 && response_status.error_message == NULL && response_status.http_status_code == 200);
     int final_exit_code = success ? EXIT_SUCCESS : EXIT_FAILURE;
+
+    if (!success) {
+        if (response_status.http_status_code == 429 || response_status.http_status_code == 403 || 
+            (response_status.error_message && (
+                strcasestr(response_status.error_message, "quota") || 
+                strcasestr(response_status.error_message, "billing") || 
+                strcasestr(response_status.error_message, "credit") || 
+                strcasestr(response_status.error_message, "RESOURCE_EXHAUSTED")
+            ))) {
+            printf("SKIP: Billing or quota error detected.\n");
+            final_exit_code = 77;
+        }
+    }
 
     dp_free_response_content(&response_status);
     dp_free_messages(messages, request_config.num_messages);

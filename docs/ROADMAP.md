@@ -87,14 +87,16 @@ These features represent significant new capabilities and would likely require a
 
 This section outlines the expansion of `libdisasterparty` to support modalities beyond text and static images.
 
-### 4.1. Image Generation (e.g., DALL-E)
+### 4.1. Image Generation (e.g., DALL-E, Imagen, Gemini)
 
-* **Goal:** Enable users to generate images from text prompts.
+* **Goal:** Enable users to generate images from text prompts using modern models like DALL-E 3, Imagen 3, and Nano Banana Pro (`gemini-3-pro-image-preview`).
 * **Difficulty:** Medium
 * **Action Items:**
-    1.  **Struct Definition:** Define `dp_image_generation_config_t` (prompt, size, quality, style) and `dp_image_generation_response_t` (url or base64 data).
-    2.  **API Implementation:** Implement `dp_generate_image` function targeting the `/v1/images/generations` endpoint (OpenAI) and equivalent for Google/Anthropic if available.
-    3.  **Testing:** Create `test_image_generation_dp.c`.
+    1.  **Struct Definition:** Define `dp_image_generation_config_t` (prompt, size, quality, style, model) and `dp_image_generation_response_t` (url or base64 data).
+    2.  **API Implementation:** Implement `dp_generate_image` function targeting:
+        *   OpenAI: `/v1/images/generations` (DALL-E 3)
+        *   Google: Endpoints for Imagen 3 and `gemini-3-pro-image-preview`.
+    3.  **Testing:** Create `test_image_generation_dp.c` covering multiple providers.
 
 ### 4.2. Speech-to-Text (e.g., Whisper)
 

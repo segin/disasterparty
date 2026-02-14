@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <string.h>
 #include "disasterparty.h"
 #include <curl/curl.h>
 #include <stdio.h>
@@ -87,6 +88,20 @@ int main() {
     }
 
     // Cleanup
+    if (!success && (response.http_status_code == 429 || response.http_status_code == 402 || 
+        (response.error_message && (
+            strcasestr(response.error_message, "quota") || 
+            strcasestr(response.error_message, "billing") ||
+            strcasestr(response.error_message, "credit") ||
+            strcasestr(response.error_message, "overloaded")
+        )))) {
+            printf("SKIP: Billing or quota error detected.\n");
+            dp_free_response_content(&response);
+            dp_destroy_context(context);
+            curl_global_cleanup();
+            return 77;
+    }
+
     dp_free_response_content(&response);
     dp_free_messages(messages, 1);
     dp_destroy_context(context);

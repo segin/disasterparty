@@ -370,12 +370,8 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
         return -1;
     }
 
-    if (context->provider != DP_PROVIDER_ANTHROPIC) {
-        if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion requires a context initialized with DP_PROVIDER_ANTHROPIC.");
-        return -1;
-    }
-    if (context->provider != DP_PROVIDER_ANTHROPIC) {
-        if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion called with non-Anthropic provider.");
+    if (context->provider != DP_PROVIDER_ANTHROPIC && context->provider != DP_PROVIDER_OPENAI_COMPATIBLE) {
+        if (response) response->error_message = dpinternal_strdup("dp_perform_anthropic_streaming_completion requires a context initialized with DP_PROVIDER_ANTHROPIC or DP_PROVIDER_OPENAI_COMPATIBLE.");
         return -1;
     }
     if (!request_config->stream) {
@@ -387,7 +383,7 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        response->error_message = dpinternal_strdup("curl_easy_init() failed for Anthropic streaming.");
+        response->error_message = dpinternal_strdup("curl_easy_init() failed for detailed streaming.");
         return -1;
     }
 
@@ -397,35 +393,59 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     processor.buffer_capacity = 8192; 
     processor.buffer = malloc(processor.buffer_capacity);
     if (!processor.buffer) { 
-        response->error_message = dpinternal_strdup("Anthropic stream processor buffer alloc failed.");
+        response->error_message = dpinternal_strdup("Detailed stream processor buffer alloc failed.");
         curl_easy_cleanup(curl); return -1; 
     }
     processor.buffer[0] = '\0';
 
-    char* json_payload_str = dpinternal_build_anthropic_json_payload_with_cjson(request_config);
+    char* json_payload_str = NULL;
+    if (context->provider == DP_PROVIDER_ANTHROPIC) {
+        json_payload_str = dpinternal_build_anthropic_json_payload_with_cjson(request_config);
+    } else {
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+    }
+
     if (!json_payload_str) { 
-        response->error_message = dpinternal_strdup("Payload build failed for Anthropic streaming.");
+        response->error_message = dpinternal_strdup("Payload build failed for detailed streaming.");
         free(processor.buffer); curl_easy_cleanup(curl); return -1; 
     }
 
     char url[1024];
     struct curl_slist* headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
-    snprintf(url, sizeof(url), "%s/messages", context->api_base_url);
-    char api_key_header[512];
-    snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
-    headers = curl_slist_append(headers, api_key_header);
-    headers = curl_slist_append(headers, "anthropic-version: 2023-06-01"); 
+
+    if (context->provider == DP_PROVIDER_ANTHROPIC) {
+        snprintf(url, sizeof(url), "%s/messages", context->api_base_url);
+        char api_key_header[512];
+        snprintf(api_key_header, sizeof(api_key_header), "x-api-key: %s", context->api_key);
+        headers = curl_slist_append(headers, api_key_header);
+        headers = curl_slist_append(headers, "anthropic-version: 2023-06-01"); 
+    } else {
+        snprintf(url, sizeof(url), "%s/chat/completions", context->api_base_url);
+        char auth_header[512];
+        snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", context->api_key);
+        headers = curl_slist_append(headers, auth_header);
+    }
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_anthropic_detailed_stream_write_callback); 
+    if (context->provider == DP_PROVIDER_ANTHROPIC) {
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_anthropic_detailed_stream_write_callback);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_openai_detailed_stream_write_callback);
+    }
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&processor);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
 
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    CURLcode res;
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        res = dpinternal_perform_openai_detailed_streaming_request_with_fallback(curl, context, request_config, &processor, &response->http_status_code);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+    }
 
     if (!processor.stop_streaming_signal) { 
         const char* final_stream_error = processor.accumulated_error_during_stream;
@@ -509,4 +529,109 @@ int dp_perform_anthropic_streaming_completion(dp_context_t* context,
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     return response->error_message ? -1 : 0;
+}
+
+int dp_generate_image(dp_context_t* context, const dp_image_generation_config_t* config, dp_image_generation_response_t* response) {
+    if (!context || !config || !response) return -1;
+    memset(response, 0, sizeof(dp_image_generation_response_t));
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        response->error_message = dpinternal_strdup("curl_easy_init() failed.");
+        return -1;
+    }
+
+    char* json_payload = NULL;
+    char url[2048];
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+        snprintf(url, sizeof(url), "%s/images/generations", context->api_base_url);
+        char auth[512];
+        snprintf(auth, sizeof(auth), "Authorization: Bearer %s", context->api_key);
+        headers = curl_slist_append(headers, auth);
+        json_payload = dpinternal_build_openai_image_generation_payload_with_cjson(config);
+    } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+        // Use :predict for Imagen
+        snprintf(url, sizeof(url), "%s/models/%s:predict?key=%s", 
+                 context->api_base_url, 
+                 config->model ? config->model : "imagen-3.0-generate-001", 
+                 context->api_key);
+        json_payload = dpinternal_build_google_image_generation_payload_with_cjson(config, context);
+    } else {
+        response->error_message = dpinternal_strdup("Provider not supported for image generation.");
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+        return -1;
+    }
+
+    if (!json_payload) {
+        response->error_message = dpinternal_strdup("Failed to build JSON payload.");
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+        return -1;
+    }
+
+    memory_struct_t chunk = { .memory = malloc(1), .size = 0 };
+    if (chunk.memory) chunk.memory[0] = '\0';
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dpinternal_write_memory_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, context->user_agent);
+    
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->http_status_code);
+
+    if (res != CURLE_OK) {
+        dpinternal_safe_asprintf(&response->error_message, "curl failed: %s", curl_easy_strerror(res));
+    } else if (response->http_status_code >= 200 && response->http_status_code < 300) {
+        cJSON* root = cJSON_Parse(chunk.memory);
+        if (root) {
+            if (context->provider == DP_PROVIDER_OPENAI_COMPATIBLE) {
+                cJSON* data = cJSON_GetObjectItem(root, "data");
+                cJSON* created = cJSON_GetObjectItem(root, "created");
+                if (created) response->created = (long)created->valuedouble;
+                if (cJSON_IsArray(data)) {
+                    response->num_images = cJSON_GetArraySize(data);
+                    response->images = calloc(response->num_images, sizeof(dp_image_data_t));
+                    for (size_t i = 0; i < response->num_images; i++) {
+                        cJSON* item = cJSON_GetArrayItem(data, i);
+                        cJSON* url_item = cJSON_GetObjectItem(item, "url");
+                        cJSON* b64 = cJSON_GetObjectItem(item, "b64_json");
+                        cJSON* rev = cJSON_GetObjectItem(item, "revised_prompt");
+                        if (url_item && url_item->valuestring) response->images[i].url = dpinternal_strdup(url_item->valuestring);
+                        if (b64 && b64->valuestring) response->images[i].base64_json = dpinternal_strdup(b64->valuestring);
+                        if (rev && rev->valuestring) response->images[i].revised_prompt = dpinternal_strdup(rev->valuestring);
+                    }
+                }
+            } else if (context->provider == DP_PROVIDER_GOOGLE_GEMINI) {
+                cJSON* predictions = cJSON_GetObjectItem(root, "predictions");
+                if (cJSON_IsArray(predictions)) {
+                    response->num_images = cJSON_GetArraySize(predictions);
+                    response->images = calloc(response->num_images, sizeof(dp_image_data_t));
+                    for (size_t i = 0; i < response->num_images; i++) {
+                        cJSON* item = cJSON_GetArrayItem(predictions, i);
+                        cJSON* bytes = cJSON_GetObjectItem(item, "bytesBase64Encoded");
+                        if (bytes && bytes->valuestring) response->images[i].base64_json = dpinternal_strdup(bytes->valuestring);
+                    }
+                }
+            }
+            cJSON_Delete(root);
+        } else {
+            response->error_message = dpinternal_strdup("Failed to parse response JSON.");
+        }
+    } else {
+         dpinternal_safe_asprintf(&response->error_message, "API Error %ld: %s", response->http_status_code, chunk.memory ? chunk.memory : "");
+    }
+
+    free(json_payload);
+    free(chunk.memory);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    return (response->error_message) ? -1 : 0;
 }

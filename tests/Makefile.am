@@ -50,7 +50,12 @@ check_PROGRAMS = \
     test_tool_calling_anthropic_dp \
     test_anthropic_thinking_dp \
     test_fuzz_runner_dp \
-    test_provider_compatibility_dp
+    test_openai_thinking_failure_dp \
+    test_gemini_thinking_failure_dp \
+    test_openai_anthropic_stream_misuse_dp \
+    test_openai_image_generation_dp \
+    test_gemini_image_generation_dp \
+    test_anthropic_image_generation_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -103,7 +108,12 @@ test_tool_calling_gemini_dp_SOURCES = test_tool_calling_gemini_dp.c
 test_tool_calling_anthropic_dp_SOURCES = test_tool_calling_anthropic_dp.c
 test_anthropic_thinking_dp_SOURCES = test_anthropic_thinking_dp.c
 test_fuzz_runner_dp_SOURCES = test_fuzz_runner_dp.c test_fuzz_response_parser_dp.c
-test_provider_compatibility_dp_SOURCES = test_provider_compatibility_dp.c
+test_openai_thinking_failure_dp_SOURCES = test_openai_thinking_failure_dp.c
+test_gemini_thinking_failure_dp_SOURCES = test_gemini_thinking_failure_dp.c
+test_openai_anthropic_stream_misuse_dp_SOURCES = test_openai_anthropic_stream_misuse_dp.c
+test_openai_image_generation_dp_SOURCES = test_openai_image_generation_dp.c
+test_gemini_image_generation_dp_SOURCES = test_gemini_image_generation_dp.c
+test_anthropic_image_generation_dp_SOURCES = test_anthropic_image_generation_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)

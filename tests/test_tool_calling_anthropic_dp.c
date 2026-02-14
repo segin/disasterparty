@@ -106,6 +106,23 @@ int main() {
     }
 
     if (!step1_success) {
+        if (response1.http_status_code == 429 || response1.http_status_code == 402 || 
+            (response1.error_message && (
+                strcasestr(response1.error_message, "quota") || 
+                strcasestr(response1.error_message, "billing") || 
+                strcasestr(response1.error_message, "credit") || 
+                strcasestr(response1.error_message, "overloaded")
+            ))) {
+            printf("SKIP: Billing or quota error detected in Step 1.\n");
+            if (tool_call_id) free(tool_call_id);
+            if (function_name) free(function_name);
+            if (args_json) free(args_json);
+            dp_free_response_content(&response1);
+            dp_free_messages(messages, 1);
+            dp_destroy_context(context);
+            curl_global_cleanup();
+            return 77;
+        }
         fprintf(stderr, "Step 1 Failed: Did not receive expected tool call.\n");
         if (tool_call_id) free(tool_call_id);
         if (function_name) free(function_name);
@@ -164,6 +181,16 @@ int main() {
         printf("\nSUCCESS: Tool calling flow completed successfully.\n");
         return EXIT_SUCCESS;
     } else {
+        if (response2.http_status_code == 429 || response2.http_status_code == 402 || 
+            (response2.error_message && (
+                strcasestr(response2.error_message, "quota") || 
+                strcasestr(response2.error_message, "billing") || 
+                strcasestr(response2.error_message, "credit") || 
+                strcasestr(response2.error_message, "overloaded")
+            ))) {
+            printf("SKIP: Billing or quota error detected in Step 2.\n");
+            return 77;
+        }
         fprintf(stderr, "\nFAILURE: Step 2 failed or did not incorporate tool result.\n");
         return EXIT_FAILURE;
     }

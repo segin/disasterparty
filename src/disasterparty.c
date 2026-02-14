@@ -165,6 +165,7 @@ char* dpinternal_build_openai_json_payload_with_cjson(const dp_request_config_t*
     if (!root) return NULL;
 
     cJSON_AddStringToObject(root, "model", request_config->model);
+    if (request_config->reasoning_effort) cJSON_AddStringToObject(root, "reasoning_effort", request_config->reasoning_effort);
     if (request_config->temperature >= 0.0) cJSON_AddNumberToObject(root, "temperature", request_config->temperature);
     if (request_config->max_tokens > 0) {
         const char* token_param = (context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS) 
@@ -658,6 +659,48 @@ char* dpinternal_build_anthropic_json_payload_with_cjson(const dp_request_config
     return json_string;
 }
 
+char* dpinternal_build_openai_image_generation_payload_with_cjson(const dp_image_generation_config_t* config) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+
+    cJSON_AddStringToObject(root, "prompt", config->prompt);
+    cJSON_AddStringToObject(root, "model", config->model ? config->model : "dall-e-3");
+    
+    if (config->n > 0) cJSON_AddNumberToObject(root, "n", config->n);
+    else cJSON_AddNumberToObject(root, "n", 1);
+    
+    if (config->size) cJSON_AddStringToObject(root, "size", config->size);
+    else cJSON_AddStringToObject(root, "size", "1024x1024");
+
+    if (config->quality) cJSON_AddStringToObject(root, "quality", config->quality);
+    if (config->style) cJSON_AddStringToObject(root, "style", config->style);
+    
+    if (config->response_format) cJSON_AddStringToObject(root, "response_format", config->response_format);
+
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string;
+}
+
+char* dpinternal_build_google_image_generation_payload_with_cjson(const dp_image_generation_config_t* config, const dp_context_t* context) {
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+
+    cJSON *instances = cJSON_AddArrayToObject(root, "instances");
+    cJSON *inst = cJSON_CreateObject();
+    cJSON_AddStringToObject(inst, "prompt", config->prompt);
+    cJSON_AddItemToArray(instances, inst);
+
+    cJSON *parameters = cJSON_AddObjectToObject(root, "parameters");
+    cJSON_AddNumberToObject(parameters, "sampleCount", config->n > 0 ? config->n : 1);
+
+    if (config->size) cJSON_AddStringToObject(parameters, "aspectRatio", config->size);
+    
+    char* json_string = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_string;
+}
+
 // Helper function to detect if an error is related to unrecognized token parameters
 bool dpinternal_is_token_parameter_error(const char* error_response, long http_status) {
     if (http_status != 400 || !error_response) {
@@ -919,6 +962,20 @@ char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_res
 
 
 
+
+void dp_free_image_generation_response(dp_image_generation_response_t* response) {
+    if (!response) return;
+    if (response->images) {
+        for (size_t i = 0; i < response->num_images; ++i) {
+            free(response->images[i].url);
+            free(response->images[i].base64_json);
+            free(response->images[i].revised_prompt);
+        }
+        free(response->images);
+    }
+    free(response->error_message);
+    memset(response, 0, sizeof(dp_image_generation_response_t));
+}
 
 void dp_free_response_content(dp_response_t* response) {
     if (!response) return;
