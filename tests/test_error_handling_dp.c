@@ -51,6 +51,7 @@ bool run_test(const char* test_name, dp_provider_type_t provider, const char* ap
 }
 
 int main() {
+    if (!getenv("DP_MOCK_SERVER")) return 77;
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;
