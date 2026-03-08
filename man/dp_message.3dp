@@ -84,7 +84,20 @@ Kirn Gill II <segin2005@gmail.com>
 .br
 Gemini (Conceptualization and initial C code generation)
 
+.TP
+.B DP_CONTENT_PART_TOOL_CALL
+Represents a request from the model to execute a tool.
+.TP
+.B DP_CONTENT_PART_TOOL_RESULT
+Represents the output of a tool execution.
+.TP
+.B DP_CONTENT_PART_THINKING
+Represents the model's internal reasoning process (Thinking tokens).
+
 .SH SEE ALSO
+.BR dp_message_add_tool_call_part (3),
+.BR dp_message_add_tool_result_part (3),
+.BR dp_message_add_thinking_part (3),
 .BR dp_message_add_text_part (3),
 .BR dp_message_add_image_url_part (3),
 .BR dp_message_add_base64_image_part (3),

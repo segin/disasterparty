@@ -12,14 +12,21 @@ typedef struct {
     const char* model;
     dp_message_t* messages;
     size_t num_messages;
-    const char* system_prompt; 
-    double temperature;       
-    int max_tokens;           
-    bool stream;              
+    const char* system_prompt;
+    double temperature;
+    int max_tokens;
+    bool stream;
     double top_p;
     int top_k;
     const char** stop_sequences;
     size_t num_stop_sequences;
+    const dp_tool_definition_t* tools;
+    size_t num_tools;
+    dp_tool_choice_t tool_choice;
+    struct {
+        bool enabled;
+        int budget_tokens;
+    } thinking;
 } dp_request_config_t;
 .fi
 
@@ -71,6 +78,23 @@ An array of strings that, if generated, will cause the model to stop generation.
 The number of strings in the
 .I stop_sequences
 array.
+.TP
+.B const dp_tool_definition_t* tools
+An array of tool definitions available to the model.
+.TP
+.B size_t num_tools
+The number of tools in the
+.I tools
+array.
+.TP
+.B dp_tool_choice_t tool_choice
+Configuration for how the model should select tools (e.g., auto, any, tool, none).
+.TP
+.B thinking.enabled
+Boolean flag to enable "Thinking" tokens (primarily for Anthropic models like Claude 3.7 Sonnet).
+.TP
+.B thinking.budget_tokens
+The token budget allocated for the thinking process.
 
 .SH BUGS
 Please report any bugs or issues by opening a ticket on the GitHub issue tracker:

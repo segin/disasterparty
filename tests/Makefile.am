@@ -44,7 +44,18 @@ check_PROGRAMS = \
     test_rate_limit_list_models_dp \
     test_invalid_provider_dp \
     test_list_models_empty_dp \
-    test_non_json_error_dp
+    test_non_json_error_dp \
+    test_tool_calling_openai_dp \
+    test_tool_calling_gemini_dp \
+    test_tool_calling_anthropic_dp \
+    test_anthropic_thinking_dp \
+    test_fuzz_runner_dp \
+    test_openai_thinking_failure_dp \
+    test_gemini_thinking_failure_dp \
+    test_openai_anthropic_stream_misuse_dp \
+    test_openai_image_generation_dp \
+    test_gemini_image_generation_dp \
+    test_anthropic_image_generation_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -92,6 +103,17 @@ test_rate_limit_list_models_dp_SOURCES = test_rate_limit_list_models_dp.c
 test_invalid_provider_dp_SOURCES = test_invalid_provider_dp.c
 test_list_models_empty_dp_SOURCES = test_list_models_empty_dp.c
 test_non_json_error_dp_SOURCES = test_non_json_error_dp.c
+test_tool_calling_openai_dp_SOURCES = test_tool_calling_openai_dp.c
+test_tool_calling_gemini_dp_SOURCES = test_tool_calling_gemini_dp.c
+test_tool_calling_anthropic_dp_SOURCES = test_tool_calling_anthropic_dp.c
+test_anthropic_thinking_dp_SOURCES = test_anthropic_thinking_dp.c
+test_fuzz_runner_dp_SOURCES = test_fuzz_runner_dp.c test_fuzz_response_parser_dp.c
+test_openai_thinking_failure_dp_SOURCES = test_openai_thinking_failure_dp.c
+test_gemini_thinking_failure_dp_SOURCES = test_gemini_thinking_failure_dp.c
+test_openai_anthropic_stream_misuse_dp_SOURCES = test_openai_anthropic_stream_misuse_dp.c
+test_openai_image_generation_dp_SOURCES = test_openai_image_generation_dp.c
+test_gemini_image_generation_dp_SOURCES = test_gemini_image_generation_dp.c
+test_anthropic_image_generation_dp_SOURCES = test_anthropic_image_generation_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)

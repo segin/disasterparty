@@ -72,30 +72,64 @@ These features enhance the core capabilities of the library.
 
 These features represent significant new capabilities and would likely require a major version bump.
 
-### 3.1. Implement Tool Calls (Function Calling)
+### 3.1. Implement Tool Calls (Function Calling) & Interactive Application Support (complete)
 
-* **Goal:** Allow the library to serve as the engine for agentic workflows by enabling the model to request the execution of application-defined functions.
+* **Status:** Implemented in version 0.6.0. Includes `dp_tool_definition_t`, `dp_tool_choice_t`, support in `dp_request_config_t`, and full payload construction/response parsing for OpenAI, Gemini, and Anthropic.
+* **Note:** This feature satisfies the requirements for `libdisasterparty` to serve as the backend for complex, interactive applications (Playgrounds, Code Canvases), alongside the existing conversation serialization capabilities.
+
+### 3.2. Access to "Thinking" Tokens & Metacognition (complete)
+
+* **Status:** Implemented in version 0.6.0. Added `DP_CONTENT_PART_THINKING`, `dp_message_add_thinking_part`, and streaming support via `DP_ANTHROPIC_EVENT_THINKING_DELTA`.
+
+---
+
+## 4. Support for New Modalities
+
+This section outlines the expansion of `libdisasterparty` to support modalities beyond text and static images.
+
+### 4.1. Image Generation (e.g., DALL-E, Imagen, Gemini)
+
+* **Goal:** Enable users to generate images from text prompts using modern models like DALL-E 3, Imagen 3, and Nano Banana Pro (`gemini-3-pro-image-preview`).
+* **Difficulty:** Medium
+* **Action Items:**
+    1.  **Struct Definition:** Define `dp_image_generation_config_t` (prompt, size, quality, style, model) and `dp_image_generation_response_t` (url or base64 data).
+    2.  **API Implementation:** Implement `dp_generate_image` function targeting:
+        *   OpenAI: `/v1/images/generations` (DALL-E 3)
+        *   Google: Endpoints for Imagen 3 and `gemini-3-pro-image-preview`.
+    3.  **Testing:** Create `test_image_generation_dp.c` covering multiple providers.
+
+### 4.2. Speech-to-Text (e.g., Whisper)
+
+* **Goal:** Transcribe audio files into text.
 * **Difficulty:** High
-* **What it would take:** New data structures for tool definitions (`dp_tool_definition_t`) and tool call requests (`dp_tool_call_t`); adding a `tools` array to `dp_request_config_t`; and significantly enhancing response parsing to handle the `tool_calls` finish reason.
+* **Action Items:**
+    1.  **Multipart Support:** Implement `multipart/form-data` encoding in `dp_request.c` (currently we mostly do JSON).
+    2.  **API Implementation:** Implement `dp_transcribe_audio` function accepting a file path or buffer.
+    3.  **Testing:** Create `test_audio_transcription_dp.c` with sample audio files.
 
-### 3.2. Access to "Thinking" Tokens & Metacognition
+### 4.3. Text-to-Speech (TTS)
 
-* **Goal:** Expose the reasoning process of models that support it, primarily Anthropic's Claude.
+* **Goal:** Convert text into spoken audio.
+* **Difficulty:** Medium
+* **Action Items:**
+    1.  **Binary Response Handling:** Enhance response processing to handle binary audio streams instead of JSON.
+    2.  **API Implementation:** Implement `dp_generate_speech` function.
+    3.  **Testing:** Create `test_text_to_speech_dp.c` verifying audio headers/format.
+
+### 4.4. Text-to-Video (e.g., Veo, Sora)
+
+* **Goal:** Generate videos from text prompts.
 * **Difficulty:** High
-* **Implementation Steps:** Enhance the `dp_anthropic_stream_callback_t` to handle `thinking` events from the Anthropic API and update the internal stream parser accordingly.
+* **Action Items:**
+    1.  **Async Workflow:** Design a polling mechanism for long-running jobs, as video generation is rarely synchronous.
+    2.  **API Implementation:** Implement `dp_submit_video_job` and `dp_get_video_job_status`.
+    3.  **Testing:** Create `test_video_generation_dp.c`.
 
-### 3.3. Support for New Modalities
+### 4.5. Real-Time Conversational Audio
 
-* **Image Generation (DALL-E):** Requires a new function (`dp_generate_image`) and request/response structs for the `/v1/images/generations` endpoint.
-* **Speech-to-Text (Whisper):** High difficulty due to the need for `multipart/form-data` uploads. Requires a new function (`dp_transcribe_audio`).
-* **Text-to-Speech (TTS):** Medium difficulty. Requires a new function (`dp_generate_speech`) and logic to handle a binary audio stream as the response.
-* **Real-Time Conversational Audio:** Very high difficulty. Requires a new networking backend (e.g., WebSockets) and complex asynchronous I/O management.
-* **Text-to-Video (Veo):** High difficulty. Requires managing an asynchronous job submission and polling workflow with multiple new functions.
-
-### 3.4. Support for Interactive Playgrounds & Code Canvases
-
-* **Goal:** Enable `libdisasterparty` to be the backend for complex, interactive applications.
-* **Note:** This is an **application-level** goal. The library's role is to provide the necessary low-level capabilities.
-* **Prerequisites from `libdisasterparty`:**
-    1.  **Tool Calling:** This is the most critical prerequisite.
-    2.  **Conversation Serialization:** The existing serialization functions are essential for saving and loading state. (complete)
+* **Goal:** Low-latency, bidirectional audio streaming.
+* **Difficulty:** Very High
+* **Action Items:**
+    1.  **WebSocket Backend:** Research and integrate a WebSocket library (e.g., libwebsockets or curl's WS support) into the context manager.
+    2.  **Event Loop:** Design an asynchronous event loop for handling incoming audio chunks and events.
+    3.  **API Implementation:** Implement `dp_start_realtime_session` and callback handlers.

@@ -65,6 +65,23 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
                     cJSON_AddStringToObject(part_obj, "file_id", part->file_reference.file_id);
                     cJSON_AddStringToObject(part_obj, "mime_type", part->file_reference.mime_type);
                     break;
+                case DP_CONTENT_PART_TOOL_CALL:
+                    cJSON_AddStringToObject(part_obj, "type", "tool_call");
+                    cJSON_AddStringToObject(part_obj, "id", part->tool_call.id);
+                    cJSON_AddStringToObject(part_obj, "function_name", part->tool_call.function_name);
+                    cJSON_AddStringToObject(part_obj, "arguments_json", part->tool_call.arguments_json);
+                    break;
+                case DP_CONTENT_PART_TOOL_RESULT:
+                    cJSON_AddStringToObject(part_obj, "type", "tool_result");
+                    cJSON_AddStringToObject(part_obj, "tool_call_id", part->tool_result.tool_call_id);
+                    cJSON_AddStringToObject(part_obj, "content", part->tool_result.content);
+                    cJSON_AddBoolToObject(part_obj, "is_error", part->tool_result.is_error);
+                    break;
+                case DP_CONTENT_PART_THINKING:
+                    cJSON_AddStringToObject(part_obj, "type", "thinking");
+                    cJSON_AddStringToObject(part_obj, "thinking", part->thinking.thinking);
+                    cJSON_AddStringToObject(part_obj, "signature", part->thinking.signature);
+                    break;
             }
             cJSON_AddItemToArray(parts_array, part_obj);
         }
@@ -136,6 +153,27 @@ int dp_deserialize_messages_from_json_str(const char* json_str, dp_message_t** m
                         cJSON* mime_item = cJSON_GetObjectItemCaseSensitive(part_obj, "mime_type");
                         if (cJSON_IsString(file_id_item) && cJSON_IsString(mime_item)) {
                             dp_message_add_file_reference_part(current_msg, file_id_item->valuestring, mime_item->valuestring);
+                        }
+                    } else if (strcmp(type_item->valuestring, "tool_call") == 0) {
+                        cJSON* id_item = cJSON_GetObjectItemCaseSensitive(part_obj, "id");
+                        cJSON* func_item = cJSON_GetObjectItemCaseSensitive(part_obj, "function_name");
+                        cJSON* args_item = cJSON_GetObjectItemCaseSensitive(part_obj, "arguments_json");
+                        if (cJSON_IsString(id_item) && cJSON_IsString(func_item) && cJSON_IsString(args_item)) {
+                            dp_message_add_tool_call_part(current_msg, id_item->valuestring, func_item->valuestring, args_item->valuestring);
+                        }
+                    } else if (strcmp(type_item->valuestring, "tool_result") == 0) {
+                        cJSON* id_item = cJSON_GetObjectItemCaseSensitive(part_obj, "tool_call_id");
+                        cJSON* content_item = cJSON_GetObjectItemCaseSensitive(part_obj, "content");
+                        cJSON* error_item = cJSON_GetObjectItemCaseSensitive(part_obj, "is_error");
+                        bool is_error = cJSON_IsBool(error_item) ? cJSON_IsTrue(error_item) : false;
+                        if (cJSON_IsString(id_item) && cJSON_IsString(content_item)) {
+                            dp_message_add_tool_result_part(current_msg, id_item->valuestring, content_item->valuestring, is_error);
+                        }
+                    } else if (strcmp(type_item->valuestring, "thinking") == 0) {
+                        cJSON* thinking_item = cJSON_GetObjectItemCaseSensitive(part_obj, "thinking");
+                        cJSON* signature_item = cJSON_GetObjectItemCaseSensitive(part_obj, "signature");
+                        if (cJSON_IsString(thinking_item) && cJSON_IsString(signature_item)) {
+                            dp_message_add_thinking_part(current_msg, thinking_item->valuestring, signature_item->valuestring);
                         }
                     }
                 }

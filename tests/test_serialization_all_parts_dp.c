@@ -72,6 +72,29 @@ bool compare_messages(const dp_message_t* msg1, size_t num_msg1, const dp_messag
                         return false;
                     }
                     break;
+                case DP_CONTENT_PART_TOOL_CALL:
+                    if (strcmp(part1->tool_call.id, part2->tool_call.id) != 0 ||
+                        strcmp(part1->tool_call.function_name, part2->tool_call.function_name) != 0 ||
+                        strcmp(part1->tool_call.arguments_json, part2->tool_call.arguments_json) != 0) {
+                        fprintf(stderr, "Mismatch in tool call data for message %zu, part %zu\n", i, j);
+                        return false;
+                    }
+                    break;
+                case DP_CONTENT_PART_TOOL_RESULT:
+                    if (strcmp(part1->tool_result.tool_call_id, part2->tool_result.tool_call_id) != 0 ||
+                        strcmp(part1->tool_result.content, part2->tool_result.content) != 0 ||
+                        part1->tool_result.is_error != part2->tool_result.is_error) {
+                        fprintf(stderr, "Mismatch in tool result data for message %zu, part %zu\n", i, j);
+                        return false;
+                    }
+                    break;
+                case DP_CONTENT_PART_THINKING:
+                    if (strcmp(part1->thinking.thinking, part2->thinking.thinking) != 0 ||
+                        strcmp(part1->thinking.signature, part2->thinking.signature) != 0) {
+                        fprintf(stderr, "Mismatch in thinking data for message %zu, part %zu\n", i, j);
+                        return false;
+                    }
+                    break;
             }
         }
     }

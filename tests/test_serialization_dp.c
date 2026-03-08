@@ -42,6 +42,23 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
                            part->file_reference.file_id ? part->file_reference.file_id : "(null)",
                            part->file_reference.mime_type ? part->file_reference.mime_type : "(null)");
                     break;
+                case DP_CONTENT_PART_TOOL_CALL:
+                    printf("type=tool_call, id=\"%s\", name=\"%s\", args=\"%s\"\n",
+                           part->tool_call.id ? part->tool_call.id : "(null)",
+                           part->tool_call.function_name ? part->tool_call.function_name : "(null)",
+                           part->tool_call.arguments_json ? part->tool_call.arguments_json : "(null)");
+                    break;
+                case DP_CONTENT_PART_TOOL_RESULT:
+                    printf("type=tool_result, call_id=\"%s\", content=\"%s\", is_error=%s\n",
+                           part->tool_result.tool_call_id ? part->tool_result.tool_call_id : "(null)",
+                           part->tool_result.content ? part->tool_result.content : "(null)",
+                           part->tool_result.is_error ? "true" : "false");
+                    break;
+                case DP_CONTENT_PART_THINKING:
+                    printf("type=thinking, thinking=\"%s\", signature=\"%s\"\n",
+                           part->thinking.thinking ? part->thinking.thinking : "(null)",
+                           part->thinking.signature ? part->thinking.signature : "(null)");
+                    break;
             }
         }
     }

@@ -23,6 +23,16 @@ void dp_free_messages(dp_message_t* messages, size_t num_messages) {
                 } else if (part->type == DP_CONTENT_PART_FILE_REFERENCE) {
                     free(part->file_reference.file_id);
                     free(part->file_reference.mime_type);
+                } else if (part->type == DP_CONTENT_PART_TOOL_CALL) {
+                    free(part->tool_call.id);
+                    free(part->tool_call.function_name);
+                    free(part->tool_call.arguments_json);
+                } else if (part->type == DP_CONTENT_PART_TOOL_RESULT) {
+                    free(part->tool_result.tool_call_id);
+                    free(part->tool_result.content);
+                } else if (part->type == DP_CONTENT_PART_THINKING) {
+                    free(part->thinking.thinking);
+                    free(part->thinking.signature);
                 }
             }
             free(messages[i].parts);
@@ -102,4 +112,100 @@ bool dp_message_add_file_data_part(dp_message_t* message, const char* mime_type,
 
 bool dp_message_add_file_reference_part(dp_message_t* message, const char* file_id, const char* mime_type) {
     return dpinternal_message_add_part_internal(message, DP_CONTENT_PART_FILE_REFERENCE, NULL, NULL, mime_type, NULL, NULL, file_id);
+}
+
+bool dp_message_add_tool_call_part(dp_message_t* message, const char* id, const char* function_name, const char* arguments_json) {
+    if (!message) return false;
+    dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
+    if (!new_parts_array) return false;
+    message->parts = new_parts_array;
+
+    dp_content_part_t* new_part = &message->parts[message->num_parts];
+    memset(new_part, 0, sizeof(dp_content_part_t));
+    new_part->type = DP_CONTENT_PART_TOOL_CALL;
+
+    bool success = true;
+    if (id) {
+        new_part->tool_call.id = dpinternal_strdup(id);
+        if (!new_part->tool_call.id) success = false;
+    }
+    if (function_name && success) {
+        new_part->tool_call.function_name = dpinternal_strdup(function_name);
+        if (!new_part->tool_call.function_name) success = false;
+    }
+    if (arguments_json && success) {
+        new_part->tool_call.arguments_json = dpinternal_strdup(arguments_json);
+        if (!new_part->tool_call.arguments_json) success = false;
+    }
+
+    if (success) {
+        message->num_parts++;
+    } else {
+        free(new_part->tool_call.id); new_part->tool_call.id = NULL;
+        free(new_part->tool_call.function_name); new_part->tool_call.function_name = NULL;
+        free(new_part->tool_call.arguments_json); new_part->tool_call.arguments_json = NULL;
+        fprintf(stderr, "Failed to allocate memory for Disaster Party tool call part.\n");
+    }
+    return success;
+}
+
+bool dp_message_add_tool_result_part(dp_message_t* message, const char* tool_call_id, const char* content, bool is_error) {
+    if (!message) return false;
+    dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
+    if (!new_parts_array) return false;
+    message->parts = new_parts_array;
+
+    dp_content_part_t* new_part = &message->parts[message->num_parts];
+    memset(new_part, 0, sizeof(dp_content_part_t));
+    new_part->type = DP_CONTENT_PART_TOOL_RESULT;
+    new_part->tool_result.is_error = is_error;
+
+    bool success = true;
+    if (tool_call_id) {
+        new_part->tool_result.tool_call_id = dpinternal_strdup(tool_call_id);
+        if (!new_part->tool_result.tool_call_id) success = false;
+    }
+    if (content && success) {
+        new_part->tool_result.content = dpinternal_strdup(content);
+        if (!new_part->tool_result.content) success = false;
+    }
+
+    if (success) {
+        message->num_parts++;
+    } else {
+        free(new_part->tool_result.tool_call_id); new_part->tool_result.tool_call_id = NULL;
+        free(new_part->tool_result.content); new_part->tool_result.content = NULL;
+        fprintf(stderr, "Failed to allocate memory for Disaster Party tool result part.\n");
+    }
+    return success;
+}
+
+bool dp_message_add_thinking_part(dp_message_t* message, const char* thinking, const char* signature) {
+    if (!message) return false;
+    dp_content_part_t* new_parts_array = realloc(message->parts, (message->num_parts + 1) * sizeof(dp_content_part_t));
+    if (!new_parts_array) return false;
+    message->parts = new_parts_array;
+
+    dp_content_part_t* new_part = &message->parts[message->num_parts];
+    memset(new_part, 0, sizeof(dp_content_part_t));
+    new_part->type = DP_CONTENT_PART_THINKING;
+
+    bool success = true;
+    if (thinking) {
+        new_part->thinking.thinking = dpinternal_strdup(thinking);
+        if (!new_part->thinking.thinking) success = false;
+    }
+    if (signature && success) {
+        new_part->thinking.signature = dpinternal_strdup(signature);
+        if (!new_part->thinking.signature) success = false;
+    }
+
+    if (success) {
+        message->num_parts++;
+    } else {
+        free(new_part->thinking.thinking); new_part->thinking.thinking = NULL;
+        free(new_part->thinking.signature); new_part->thinking.signature = NULL;
+        fprintf(stderr, "Failed to allocate memory for Disaster Party thinking part.\n");
+    }
+    return success;
 }

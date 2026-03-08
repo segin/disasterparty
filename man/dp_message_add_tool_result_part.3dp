@@ -1,0 +1,53 @@
+." Man page for dp_message_add_tool_result_part from libdisasterparty
+.TH DP_MESSAGE_ADD_TOOL_RESULT_PART 3 "August 09, 2025" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_message_add_tool_result_part \- add a tool result content part to a Disaster Party message
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "bool dp_message_add_tool_result_part(dp_message_t *" message ", const char *" tool_call_id ", const char *" content ", bool " is_error ");"
+
+.SH DESCRIPTION
+The
+.B dp_message_add_tool_result_part()
+function adds a new content part of type
+.B DP_CONTENT_PART_TOOL_RESULT
+to the specified
+.I message
+structure. This type of part is typically used in messages with the role
+.B DP_ROLE_TOOL
+to provide the output of a previously requested tool execution back to the model.
+
+The function allocates memory for the part and copies the provided strings.
+
+.TP
+.I message
+A pointer to the
+.B dp_message_t
+structure to which the part will be added.
+.TP
+.I tool_call_id
+The unique identifier of the tool call that this result corresponds to. This must match the
+.I id
+provided in the preceding tool call message.
+.TP
+.I content
+The output produced by the tool. This is typically a JSON string representing the result, but can be a plain string depending on the tool definition.
+.TP
+.I is_error
+A boolean flag indicating whether the tool execution resulted in an error. This is particularly relevant for the Anthropic provider to distinguish between a successful result and a runtime error in the tool.
+
+.SH RETURN VALUE
+The function returns
+.B true
+if the part was successfully added, or
+.B false
+if memory allocation failed or if the message pointer was NULL.
+
+.SH SEE ALSO
+.BR dp_message (3),
+.BR dp_message_add_tool_call_part (3),
+.BR dp_free_messages (3),
+.BR disasterparty (7)

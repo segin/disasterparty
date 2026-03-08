@@ -37,6 +37,7 @@ typedef struct {
     char* finish_reason_capture;
     bool stop_streaming_signal;
     char* accumulated_error_during_stream;
+    bool is_thinking;
 } stream_processor_t;
 
 typedef struct {
@@ -48,6 +49,7 @@ typedef struct {
     char* finish_reason_capture;
     bool stop_streaming_signal;
     char* accumulated_error_during_stream;
+    bool is_thinking;
 } anthropic_stream_processor_t;
 
 // --- Shared Internal Function Prototypes ---
@@ -66,7 +68,12 @@ char* dpinternal_build_anthropic_count_tokens_json_payload_with_cjson(const dp_r
 
 // Response processing (dp_request.c)
 char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out);
+bool dpinternal_parse_response_content(const char* json_response_str, dp_provider_type_t provider, dp_response_part_t** parts_out, size_t* num_parts_out, char** finish_reason_out);
 bool dpinternal_is_token_parameter_error(const char* error_response, long http_status);
+
+// Image Generation Payload Builders
+char* dpinternal_build_openai_image_generation_payload_with_cjson(const dp_image_generation_config_t* config);
+char* dpinternal_build_google_image_generation_payload_with_cjson(const dp_image_generation_config_t* config, const dp_context_t* context);
 CURLcode dpinternal_perform_openai_request_with_fallback(CURL* curl, dp_context_t* context, 
                                                         const dp_request_config_t* request_config,
                                                         memory_struct_t* chunk_mem,
@@ -75,10 +82,16 @@ CURLcode dpinternal_perform_openai_streaming_request_with_fallback(CURL* curl, d
                                                                   const dp_request_config_t* request_config,
                                                                   stream_processor_t* processor,
                                                                   long* http_status_code);
+CURLcode dpinternal_perform_openai_detailed_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                  const dp_request_config_t* request_config,
+                                                                  anthropic_stream_processor_t* processor,
+                                                                  long* http_status_code);
 
 // Streaming callbacks (dp_stream.c)
 size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp);
 size_t dpinternal_anthropic_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp);
+size_t dpinternal_openai_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp);
+size_t dpinternal_gemini_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp);
 
 // Message handling internal functions (dp_message.c)
 bool dpinternal_message_add_part_internal(dp_message_t* message, dp_content_part_type_t type,

@@ -9,6 +9,20 @@ dp_response_t \- structure for holding an LLM API response
 .PP
 .nf
 typedef struct {
+    dp_content_part_type_t type;
+    char* text;
+    struct {
+        char* id;
+        char* function_name;
+        char* arguments_json;
+    } tool_call;
+    struct {
+        char* thinking;
+        char* signature;
+    } thinking;
+} dp_response_part_t;
+
+typedef struct {
     dp_response_part_t* parts;
     size_t num_parts;
     char* error_message;
@@ -28,7 +42,7 @@ contents must be freed with
 .SH MEMBERS
 .TP
 .B dp_response_part_t* parts
-For non-streaming responses, this will be an array of response parts. Currently, only a single text part is supported. `parts[0].text` holds the response content.
+For non-streaming responses, this will be an array of response parts. Each part typically contains text (`type == DP_CONTENT_PART_TEXT`), but may also contain tool calls (`DP_CONTENT_PART_TOOL_CALL`) or thinking content (`DP_CONTENT_PART_THINKING`) depending on the request configuration and model response.
 .TP
 .B size_t num_parts
 The number of parts in the

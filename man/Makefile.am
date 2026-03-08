@@ -19,7 +19,9 @@ man3_MANS = \
 	dp_message_add_file_reference_part.3 \
 	dp_message_add_image_url_part.3 \
 	dp_message_add_text_part.3 \
-	dp_message.3 \
+	dp_message_add_thinking_part.3 \
+	dp_message_add_tool_call_part.3 \
+	dp_message_add_tool_result_part.3 \
 	dp_model_list.3 \
 	dp_perform_anthropic_streaming_completion.3 \
 	dp_perform_completion.3 \

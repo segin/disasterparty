@@ -55,6 +55,53 @@ CURLcode dpinternal_perform_openai_streaming_request_with_fallback(CURL* curl, d
     return res;
 }
 
+CURLcode dpinternal_perform_openai_detailed_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                  const dp_request_config_t* request_config,
+                                                                  anthropic_stream_processor_t* processor,
+                                                                  long* http_status_code) {
+    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+    if (!json_payload_str) {
+        return CURLE_OUT_OF_MEMORY;
+    }
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    
+    // Check if we need to retry with fallback parameter
+    if (res == CURLE_OK && *http_status_code == 400 && 
+        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
+        dpinternal_is_token_parameter_error(processor->buffer, *http_status_code)) {
+        
+        // Switch to legacy parameter and retry
+        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
+        free(json_payload_str);
+        
+        // Reset processor buffer for retry
+        if (processor->buffer) {
+            processor->buffer[0] = '\0';
+            processor->buffer_size = 0;
+        }
+        if (processor->accumulated_error_during_stream) {
+            free(processor->accumulated_error_during_stream);
+            processor->accumulated_error_during_stream = NULL;
+        }
+        
+        // Build new payload with legacy parameter
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+        if (!json_payload_str) {
+            return CURLE_OUT_OF_MEMORY;
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    }
+    
+    free(json_payload_str);
+    return res;
+}
+
 size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
@@ -393,7 +440,12 @@ size_t dpinternal_anthropic_detailed_stream_write_callback(void* contents, size_
             if (strcmp(temp_event_type_str, "message_start") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_MESSAGE_START;
             else if (strcmp(temp_event_type_str, "content_block_start") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_CONTENT_BLOCK_START;
             else if (strcmp(temp_event_type_str, "ping") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_PING;
-            else if (strcmp(temp_event_type_str, "content_block_delta") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA;
+            else if (strcmp(temp_event_type_str, "content_block_delta") == 0) {
+                current_api_event.event_type = DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA;
+                if (temp_json_data_str && (strstr(temp_json_data_str, "\"type\": \"thinking_delta\"") || strstr(temp_json_data_str, "\"type\":\"thinking_delta\""))) {
+                    current_api_event.event_type = DP_ANTHROPIC_EVENT_THINKING_DELTA;
+                }
+            }
             else if (strcmp(temp_event_type_str, "content_block_stop") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP;
             else if (strcmp(temp_event_type_str, "message_delta") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_MESSAGE_DELTA;
             else if (strcmp(temp_event_type_str, "message_stop") == 0) current_api_event.event_type = DP_ANTHROPIC_EVENT_MESSAGE_STOP;
@@ -435,6 +487,117 @@ size_t dpinternal_anthropic_detailed_stream_write_callback(void* contents, size_
 
     if (remaining_in_buffer > 0 && current_event_start < processor->buffer + processor->buffer_size) {
         memmove(processor->buffer, current_event_start, remaining_in_buffer);
+    } else if (remaining_in_buffer == 0) {
+        processor->buffer_size = 0;
+        if (processor->buffer_capacity > 0) {
+            processor->buffer[0] = '\0';
+        }
+    }
+    processor->buffer_size = remaining_in_buffer;
+    return realsize;
+}
+
+size_t dpinternal_openai_detailed_stream_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t realsize = size * nmemb;
+    anthropic_stream_processor_t* processor = (anthropic_stream_processor_t*)userp;
+
+    if (processor->stop_streaming_signal) return realsize;
+
+    size_t needed_capacity = processor->buffer_size + realsize + 1;
+    if (processor->buffer_capacity < needed_capacity) {
+        size_t new_capacity = needed_capacity > processor->buffer_capacity * 2 ? needed_capacity : processor->buffer_capacity * 2;
+        if (new_capacity < 1024) new_capacity = 1024;
+        char* new_buf = realloc(processor->buffer, new_capacity);
+        if (!new_buf) {
+            dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_ERROR, .raw_json_data = "{\"error\":{\"type\":\"internal_error\",\"message\":\"Stream buffer memory re-allocation failed\"}}" };
+            processor->anthropic_user_callback(&event, processor->user_data, "Stream buffer memory re-allocation failed");
+            if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup("Stream buffer memory re-allocation failed");
+            return 0; 
+        }
+        processor->buffer = new_buf;
+        processor->buffer_capacity = new_capacity;
+    }
+    memcpy(processor->buffer + processor->buffer_size, contents, realsize);
+    processor->buffer_size += realsize;
+    processor->buffer[processor->buffer_size] = '\0';
+
+    char* current_line_start = processor->buffer;
+    size_t remaining_in_buffer = processor->buffer_size;
+
+    while (true) {
+        if (processor->stop_streaming_signal) break;
+
+        char* line_end = strchr(current_line_start, '\n');
+        if (!line_end) break; 
+
+        size_t line_len = line_end - current_line_start;
+        if (line_len > 0 && current_line_start[line_len - 1] == '\r') {
+            current_line_start[line_len - 1] = '\0'; 
+            line_len--;
+        }
+        *line_end = '\0'; 
+
+        char* line = current_line_start;
+        char* next_line_start = line_end + 1;
+        size_t consumed = next_line_start - current_line_start;
+        remaining_in_buffer -= consumed;
+        current_line_start = next_line_start;
+
+        if (strncmp(line, "data: ", 6) == 0) {
+            char* json_str = line + 6;
+            if (strcmp(json_str, "[DONE]") == 0) {
+                dp_anthropic_stream_event_t event = { .event_type = DP_ANTHROPIC_EVENT_MESSAGE_STOP, .raw_json_data = NULL };
+                processor->anthropic_user_callback(&event, processor->user_data, NULL);
+                processor->stop_streaming_signal = true;
+                break;
+            }
+
+            cJSON* root = cJSON_Parse(json_str);
+            if (root) {
+                cJSON* choices = cJSON_GetObjectItem(root, "choices");
+                if (cJSON_IsArray(choices) && cJSON_GetArraySize(choices) > 0) {
+                    cJSON* choice = cJSON_GetArrayItem(choices, 0);
+                    cJSON* delta = cJSON_GetObjectItem(choice, "delta");
+                    cJSON* finish_reason = cJSON_GetObjectItem(choice, "finish_reason");
+
+                    if (finish_reason && !cJSON_IsNull(finish_reason) && cJSON_IsString(finish_reason)) {
+                         if(processor->finish_reason_capture) free(processor->finish_reason_capture);
+                         processor->finish_reason_capture = dpinternal_strdup(finish_reason->valuestring);
+                    }
+
+                    if (delta) {
+                        cJSON* content = cJSON_GetObjectItem(delta, "content");
+                        cJSON* reasoning = cJSON_GetObjectItem(delta, "reasoning_content"); 
+                        
+                        // DeepSeek uses reasoning_content
+                        if (reasoning && cJSON_IsString(reasoning) && reasoning->valuestring) {
+                             dp_anthropic_stream_event_t event = { 
+                                 .event_type = DP_ANTHROPIC_EVENT_THINKING_DELTA, 
+                                 .raw_json_data = json_str 
+                             };
+                             if (processor->anthropic_user_callback(&event, processor->user_data, NULL) != 0) {
+                                 processor->stop_streaming_signal = true;
+                             }
+                             processor->is_thinking = true;
+                        } else if (content && cJSON_IsString(content) && content->valuestring) {
+                             dp_anthropic_stream_event_t event = { 
+                                 .event_type = DP_ANTHROPIC_EVENT_CONTENT_BLOCK_DELTA, 
+                                 .raw_json_data = json_str 
+                             };
+                             if (processor->anthropic_user_callback(&event, processor->user_data, NULL) != 0) {
+                                 processor->stop_streaming_signal = true;
+                             }
+                             processor->is_thinking = false;
+                        }
+                    }
+                }
+                cJSON_Delete(root);
+            }
+        }
+    }
+
+    if (remaining_in_buffer > 0 && current_line_start < processor->buffer + processor->buffer_size) {
+        memmove(processor->buffer, current_line_start, remaining_in_buffer);
     } else if (remaining_in_buffer == 0) {
         processor->buffer_size = 0;
         if (processor->buffer_capacity > 0) {
