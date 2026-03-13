@@ -229,6 +229,10 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
                                         char* current_event_accumulated_text = NULL; 
                                         cJSON_ArrayForEach(part_item_iter, parts) { 
                                             if(part_item_iter){
+                                                // Skip thought parts for now as they are not standard text responses
+                                                cJSON *thought_item = cJSON_GetObjectItemCaseSensitive(part_item_iter, "thought");
+                                                if (cJSON_IsTrue(thought_item)) continue;
+
                                                 cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item_iter, "text");
                                                 if (cJSON_IsString(text) && text->valuestring) {
                                                     if (strlen(text->valuestring) > 0) {
@@ -265,10 +269,17 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
                         }
                         cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(json_chunk, "promptFeedback");
                         if (prompt_feedback) {
-                            cJSON *reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
+                            cJSON *reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "blockReason");
+                            if (!reason_pf) reason_pf = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
                             if (cJSON_IsString(reason_pf) && reason_pf->valuestring) {
                                 if (!processor->finish_reason_capture) processor->finish_reason_capture = dpinternal_strdup(reason_pf->valuestring);
-                                is_final_for_this_event = true;
+                                // Only terminate if there's an actual block reason (SAFETY, OTHER, etc.)
+                                if (strcmp(reason_pf->valuestring, "SAFETY") == 0 || 
+                                    strcmp(reason_pf->valuestring, "OTHER") == 0 ||
+                                    strcmp(reason_pf->valuestring, "BLOCKLIST") == 0 ||
+                                    strcmp(reason_pf->valuestring, "PROHIBITED_CONTENT") == 0) {
+                                    is_final_for_this_event = true;
+                                }
                             }
                         }
                     } else if (processor->provider == DP_PROVIDER_ANTHROPIC) {

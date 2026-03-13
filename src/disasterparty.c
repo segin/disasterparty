@@ -829,6 +829,10 @@ bool dpinternal_parse_response_content(const char* json_response_str, dp_provide
                     cJSON_ArrayForEach(part, parts_array) {
                         cJSON* text = cJSON_GetObjectItemCaseSensitive(part, "text");
                         cJSON* func_call = cJSON_GetObjectItemCaseSensitive(part, "functionCall");
+                        // Skip thought parts for now
+                        cJSON *thought_item = cJSON_GetObjectItemCaseSensitive(part, "thought");
+                        if (cJSON_IsTrue(thought_item)) continue;
+
                         if (cJSON_IsString(text) && text->valuestring) {
                             parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
                             memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
@@ -861,7 +865,8 @@ bool dpinternal_parse_response_content(const char* json_response_str, dp_provide
         if (finish_reason_out && !*finish_reason_out) { 
             cJSON *prompt_feedback = cJSON_GetObjectItemCaseSensitive(root, "promptFeedback");
             if (prompt_feedback) {
-                cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
+                cJSON *reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "blockReason");
+                if (!reason_item) reason_item = cJSON_GetObjectItemCaseSensitive(prompt_feedback, "finishReason");
                 if (cJSON_IsString(reason_item) && reason_item->valuestring) {
                     *finish_reason_out = dpinternal_strdup(reason_item->valuestring);
                 }
