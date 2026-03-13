@@ -65,6 +65,7 @@ dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider,
 
     // Initialize token parameter preference (optimistically use modern parameter)
     context->token_param_preference = DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS;
+    context->features = 0;
 
     if (!context->api_key || !context->api_base_url || !context->user_agent) {
         perror("Failed to allocate API key, base URL, or user-agent in Disaster Party context");
@@ -75,6 +76,17 @@ dp_context_t* dp_init_context_with_app_info(dp_provider_type_t provider,
         return NULL;
     }
     return context;
+}
+
+void dp_enable_advanced_features(dp_context_t* context, ...) {
+    if (!context) return;
+    va_list args;
+    va_start(args, context);
+    int feature;
+    while ((feature = va_arg(args, int)) != 0) {
+        context->features |= (1ULL << (feature - 1));
+    }
+    va_end(args);
 }
 
 void dp_destroy_context(dp_context_t* context) {

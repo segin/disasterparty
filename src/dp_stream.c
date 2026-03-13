@@ -7,101 +7,6 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-// Helper function to perform OpenAI streaming request with automatic token parameter fallback
-CURLcode dpinternal_perform_openai_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
-                                                                      const dp_request_config_t* request_config,
-                                                                      stream_processor_t* processor,
-                                                                      long* http_status_code) {
-    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
-    if (!json_payload_str) {
-        return CURLE_OUT_OF_MEMORY;
-    }
-    
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
-    
-    // Check if we need to retry with fallback parameter
-    if (res == CURLE_OK && *http_status_code == 400 && 
-        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
-        dpinternal_is_token_parameter_error(processor->buffer, *http_status_code)) {
-        
-        // Switch to legacy parameter and retry
-        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
-        free(json_payload_str);
-        
-        // Reset processor buffer for retry
-        if (processor->buffer) {
-            processor->buffer[0] = '\0';
-            processor->buffer_size = 0;
-        }
-        if (processor->accumulated_error_during_stream) {
-            free(processor->accumulated_error_during_stream);
-            processor->accumulated_error_during_stream = NULL;
-        }
-        
-        // Build new payload with legacy parameter
-        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
-        if (!json_payload_str) {
-            return CURLE_OUT_OF_MEMORY;
-        }
-        
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
-        res = curl_easy_perform(curl);
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
-    }
-    
-    free(json_payload_str);
-    return res;
-}
-
-CURLcode dpinternal_perform_openai_detailed_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
-                                                                  const dp_request_config_t* request_config,
-                                                                  anthropic_stream_processor_t* processor,
-                                                                  long* http_status_code) {
-    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
-    if (!json_payload_str) {
-        return CURLE_OUT_OF_MEMORY;
-    }
-    
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
-    
-    // Check if we need to retry with fallback parameter
-    if (res == CURLE_OK && *http_status_code == 400 && 
-        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
-        dpinternal_is_token_parameter_error(processor->buffer, *http_status_code)) {
-        
-        // Switch to legacy parameter and retry
-        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
-        free(json_payload_str);
-        
-        // Reset processor buffer for retry
-        if (processor->buffer) {
-            processor->buffer[0] = '\0';
-            processor->buffer_size = 0;
-        }
-        if (processor->accumulated_error_during_stream) {
-            free(processor->accumulated_error_during_stream);
-            processor->accumulated_error_during_stream = NULL;
-        }
-        
-        // Build new payload with legacy parameter
-        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
-        if (!json_payload_str) {
-            return CURLE_OUT_OF_MEMORY;
-        }
-        
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
-        res = curl_easy_perform(curl);
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
-    }
-    
-    free(json_payload_str);
-    return res;
-}
-
 size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
@@ -203,7 +108,18 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
                                 cJSON *delta = cJSON_GetObjectItemCaseSensitive(choice, "delta");
                                 if (delta) {
                                     cJSON *content = cJSON_GetObjectItemCaseSensitive(delta, "content");
-                                    if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
+                                    cJSON *reasoning = cJSON_GetObjectItemCaseSensitive(delta, "reasoning_content");
+
+                                    if (cJSON_IsString(reasoning) && reasoning->valuestring && strlen(reasoning->valuestring) > 0) {
+                                        if (processor->features & (1ULL << (DP_FEATURE_THINKING - 1))) {
+                                            if (processor->detailed_callback) {
+                                                dp_stream_event_t ev = { .event_type = DP_EVENT_THINKING_DELTA, .raw_json_data = reasoning->valuestring };
+                                                processor->detailed_callback(&ev, processor->user_data, NULL);
+                                            } else {
+                                                extracted_token_str = dpinternal_strdup(reasoning->valuestring);
+                                            }
+                                        }
+                                    } else if (cJSON_IsString(content) && content->valuestring && strlen(content->valuestring) > 0) {
                                         extracted_token_str = dpinternal_strdup(content->valuestring);
                                     }
                                 }
@@ -229,11 +145,24 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
                                         char* current_event_accumulated_text = NULL; 
                                         cJSON_ArrayForEach(part_item_iter, parts) { 
                                             if(part_item_iter){
-                                                // Skip thought parts for now as they are not standard text responses
                                                 cJSON *thought_item = cJSON_GetObjectItemCaseSensitive(part_item_iter, "thought");
-                                                if (cJSON_IsTrue(thought_item)) continue;
-
                                                 cJSON *text = cJSON_GetObjectItemCaseSensitive(part_item_iter, "text");
+
+                                                if (cJSON_IsTrue(thought_item)) {
+                                                    if (processor->features & (1ULL << (DP_FEATURE_THINKING - 1))) {
+                                                        if (processor->detailed_callback) {
+                                                            dp_stream_event_t ev = { .event_type = DP_EVENT_THINKING_DELTA, .raw_json_data = text ? text->valuestring : NULL };
+                                                            processor->detailed_callback(&ev, processor->user_data, NULL);
+                                                        } else if (text && text->valuestring) {
+                                                            // Interleave in simple callback ONLY if enabled
+                                                            if (processor->user_callback(text->valuestring, processor->user_data, false, NULL) != 0) {
+                                                                processor->stop_streaming_signal = true;
+                                                            }
+                                                        }
+                                                    }
+                                                    continue;
+                                                }
+
                                                 if (cJSON_IsString(text) && text->valuestring) {
                                                     if (strlen(text->valuestring) > 0) {
                                                         if (!current_event_accumulated_text) { 

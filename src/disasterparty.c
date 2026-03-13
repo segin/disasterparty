@@ -762,12 +762,13 @@ CURLcode dpinternal_perform_openai_request_with_fallback(CURL* curl, dp_context_
 
 
 
-bool dpinternal_parse_response_content(const char* json_response_str, dp_provider_type_t provider, dp_response_part_t** parts_out, size_t* num_parts_out, char** finish_reason_out) {
+bool dpinternal_parse_response_content(const dp_context_t* context, const char* json_response_str, dp_response_part_t** parts_out, size_t* num_parts_out, char** finish_reason_out) {
     if (finish_reason_out) *finish_reason_out = NULL;
     if (parts_out) *parts_out = NULL;
     if (num_parts_out) *num_parts_out = 0;
-    if (!json_response_str) return false;
+    if (!json_response_str || !context) return false;
 
+    dp_provider_type_t provider = context->provider;
     cJSON *root = cJSON_Parse(json_response_str);
     if (!root) return false;
 
@@ -829,9 +830,20 @@ bool dpinternal_parse_response_content(const char* json_response_str, dp_provide
                     cJSON_ArrayForEach(part, parts_array) {
                         cJSON* text = cJSON_GetObjectItemCaseSensitive(part, "text");
                         cJSON* func_call = cJSON_GetObjectItemCaseSensitive(part, "functionCall");
-                        // Skip thought parts for now
                         cJSON *thought_item = cJSON_GetObjectItemCaseSensitive(part, "thought");
-                        if (cJSON_IsTrue(thought_item)) continue;
+
+                        if (cJSON_IsTrue(thought_item)) {
+                            if (context->features & (1ULL << (DP_FEATURE_THINKING - 1))) {
+                                if (cJSON_IsString(text) && text->valuestring) {
+                                    parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
+                                    memset(&parts[num_parts], 0, sizeof(dp_response_part_t));
+                                    parts[num_parts].type = DP_CONTENT_PART_THINKING;
+                                    parts[num_parts].thinking.thinking = dpinternal_strdup(text->valuestring);
+                                    num_parts++;
+                                }
+                            }
+                            continue;
+                        }
 
                         if (cJSON_IsString(text) && text->valuestring) {
                             parts = realloc(parts, (num_parts + 1) * sizeof(dp_response_part_t));
@@ -930,33 +942,48 @@ bool dpinternal_parse_response_content(const char* json_response_str, dp_provide
     return true;
 }
 
-char* dpinternal_extract_text_from_full_response_with_cjson(const char* json_response_str, dp_provider_type_t provider, char** finish_reason_out) {
-    dp_response_part_t* parts = NULL;
-    size_t num_parts = 0;
-    
-    if (!dpinternal_parse_response_content(json_response_str, provider, &parts, &num_parts, finish_reason_out)) {
-        return NULL;
+CURLcode dpinternal_perform_openai_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                        const dp_request_config_t* request_config,
+                                                                        stream_processor_t* processor,
+                                                                        long* http_status_code) {
+    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+    if (!json_payload_str) {
+        return CURLE_OUT_OF_MEMORY;
     }
-
-    char* text = NULL;
-    // Find first text part and clean up everything
-    for (size_t i = 0; i < num_parts; ++i) {
-        if (parts[i].type == DP_CONTENT_PART_TEXT && !text) {
-            text = dpinternal_strdup(parts[i].text);
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    
+    // Check if we need to retry with fallback parameter
+    if (res == CURLE_OK && *http_status_code == 400 && 
+        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
+        processor->accumulated_error_during_stream && 
+        dpinternal_is_token_parameter_error(processor->accumulated_error_during_stream, *http_status_code)) {
+        
+        // Switch to legacy parameter and retry
+        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
+        free(json_payload_str);
+        
+        // Reset response buffer for retry
+        if (processor->accumulated_error_during_stream) {
+            free(processor->accumulated_error_during_stream);
+            processor->accumulated_error_during_stream = NULL;
         }
         
-        free(parts[i].text);
-        if (parts[i].type == DP_CONTENT_PART_TOOL_CALL) {
-             free(parts[i].tool_call.id);
-             free(parts[i].tool_call.function_name);
-             free(parts[i].tool_call.arguments_json);
-        } else if (parts[i].type == DP_CONTENT_PART_THINKING) {
-             free(parts[i].thinking.thinking);
-             free(parts[i].thinking.signature);
+        // Build new payload with legacy parameter
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+        if (!json_payload_str) {
+            return CURLE_OUT_OF_MEMORY;
         }
+        
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
     }
-    free(parts);
-    return text;
+    
+    free(json_payload_str);
+    return res;
 }
 
 
@@ -1001,6 +1028,50 @@ void dp_free_response_content(dp_response_t* response) {
     free(response->error_message);
     free(response->finish_reason);
     memset(response, 0, sizeof(dp_response_t)); 
+}
+
+CURLcode dpinternal_perform_openai_detailed_streaming_request_with_fallback(CURL* curl, dp_context_t* context, 
+                                                                        const dp_request_config_t* request_config,
+                                                                        anthropic_stream_processor_t* processor,
+                                                                        long* http_status_code) {
+    char* json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+    if (!json_payload_str) {
+        return CURLE_OUT_OF_MEMORY;
+    }
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    
+    // Check if we need to retry with fallback parameter
+    if (res == CURLE_OK && *http_status_code == 400 && 
+        context->token_param_preference == DP_TOKEN_PARAM_MAX_COMPLETION_TOKENS &&
+        processor->accumulated_error_during_stream && 
+        dpinternal_is_token_parameter_error(processor->accumulated_error_during_stream, *http_status_code)) {
+        
+        // Switch to legacy parameter and retry
+        context->token_param_preference = DP_TOKEN_PARAM_MAX_TOKENS;
+        free(json_payload_str);
+        
+        // Reset response buffer for retry
+        if (processor->accumulated_error_during_stream) {
+            free(processor->accumulated_error_during_stream);
+            processor->accumulated_error_during_stream = NULL;
+        }
+        
+        // Build new payload with legacy parameter
+        json_payload_str = dpinternal_build_openai_json_payload_with_cjson(request_config, context);
+        if (!json_payload_str) {
+            return CURLE_OUT_OF_MEMORY;
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload_str);
+        res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, http_status_code);
+    }
+    
+    free(json_payload_str);
+    return res;
 }
 
 

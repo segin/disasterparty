@@ -267,9 +267,25 @@ typedef int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t*
                                               void* user_data,
                                               const char* error_during_stream);  // Claude API callback (maintains "anthropic" naming for backwards compatibility)
 
-typedef dp_anthropic_stream_callback_t dp_detailed_stream_callback_t;
-
 typedef struct dp_context_s dp_context_t; 
+
+/**
+ * @brief Advanced feature flags that can be enabled.
+ */
+typedef enum {
+    DP_FEATURE_THINKING = 1,
+    // Future features can be added here
+} dp_feature_t;
+
+/**
+ * @brief Enables advanced features for the context.
+ * 
+ * This function takes a variable number of features to enable,
+ * terminated by 0.
+ * 
+ * Example: dp_enable_advanced_features(ctx, DP_FEATURE_THINKING, 0);
+ */
+void dp_enable_advanced_features(dp_context_t* context, ...);
 
 dp_context_t* dp_init_context(dp_provider_type_t provider, 
                               const char* api_key,
@@ -292,6 +308,18 @@ int dp_perform_streaming_completion(dp_context_t* context,
                                     dp_stream_callback_t callback, 
                                     void* user_data,
                                     dp_response_t* response);
+
+/**
+ * @brief Detailed streaming completion for all providers.
+ * 
+ * This is an alias for dp_perform_anthropic_streaming_completion, which is now
+ * generalized to support detailed events across different providers.
+ */
+int dp_perform_detailed_streaming_completion(dp_context_t* context,
+                                              const dp_request_config_t* request_config,
+                                              dp_anthropic_stream_callback_t callback,
+                                              void* user_data,
+                                              dp_response_t* response);
 
 int dp_perform_anthropic_streaming_completion(dp_context_t* context,
                                               const dp_request_config_t* request_config,
