@@ -7,6 +7,33 @@
 #include <stdarg.h>
 #include <ctype.h>
 
+// Helper to chunk tokens before calling user callback to prevent buffer overflows in consumers with fixed limits
+static int dpinternal_chunked_callback(stream_processor_t* processor, const char* token, bool is_final) {
+    if (!processor->user_callback) return 0;
+    if (!token) return processor->user_callback(NULL, processor->user_data, is_final, NULL);
+    
+    size_t len = strlen(token);
+    if (len == 0) return processor->user_callback("", processor->user_data, is_final, NULL);
+    
+    const size_t MAX_CHUNK = 256; // Safely below motifgpt's 512-byte limit
+    size_t offset = 0;
+    while (offset < len) {
+        size_t remaining = len - offset;
+        size_t to_send = (remaining > MAX_CHUNK) ? MAX_CHUNK : remaining;
+        
+        char chunk[MAX_CHUNK + 1];
+        memcpy(chunk, token + offset, to_send);
+        chunk[to_send] = '\0';
+        
+        bool final_chunk = is_final && (offset + to_send == len);
+        if (processor->user_callback(chunk, processor->user_data, final_chunk, NULL) != 0) {
+            return -1;
+        }
+        offset += to_send;
+    }
+    return 0;
+}
+
 size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     stream_processor_t* processor = (stream_processor_t*)userp;
@@ -155,7 +182,7 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
                                                             processor->detailed_callback(&ev, processor->user_data, NULL);
                                                         } else if (text && text->valuestring) {
                                                             // Interleave in simple callback ONLY if enabled
-                                                            if (processor->user_callback(text->valuestring, processor->user_data, false, NULL) != 0) {
+                                                            if (dpinternal_chunked_callback(processor, text->valuestring, false) != 0) {
                                                                 processor->stop_streaming_signal = true;
                                                             }
                                                         }
@@ -268,7 +295,7 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
         free(event_data_segment);
 
         if (extracted_token_str) {
-            if (processor->user_callback(extracted_token_str, processor->user_data, is_final_for_this_event, NULL) != 0) {
+            if (dpinternal_chunked_callback(processor, extracted_token_str, is_final_for_this_event) != 0) {
                 processor->stop_streaming_signal = true;
             }
             free(extracted_token_str);
