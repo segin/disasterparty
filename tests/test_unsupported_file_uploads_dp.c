@@ -1,10 +1,12 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
 int main() {
+    load_env_file();
     dp_file_t* uploaded_file = NULL;
     int ret;
     int final_ret = EXIT_SUCCESS;

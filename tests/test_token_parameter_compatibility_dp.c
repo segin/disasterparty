@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include "test_utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include "../src/disasterparty.h"
 
 int main() {
+    load_env_file();
     printf("Testing token parameter compatibility...\n");
     
     // Test 1: Verify context initializes with modern parameter preference

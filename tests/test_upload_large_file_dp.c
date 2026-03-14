@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,7 @@
 #define LARGE_FILE_SIZE (1024 * 1024 * 101) // 101 MB
 
 int main() {
+    load_env_file();
     const char* mock_server_url = getenv("DP_MOCK_SERVER");
     if (!mock_server_url) {
         printf("SKIP: DP_MOCK_SERVER environment variable not set.\n");

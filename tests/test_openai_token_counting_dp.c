@@ -1,9 +1,11 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main() {
+    load_env_file();
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing OpenAI token counting error cases...\n");
     

@@ -1,4 +1,5 @@
-#include "disasterparty.h" 
+#include "disasterparty.h"
+#include "test_utils.h" 
 #include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
@@ -69,6 +70,7 @@ unsigned char* read_file_to_buffer(const char* filename, size_t* file_size) {
 }
 
 int main(int argc, char *argv[]) {
+    load_env_file();
     const char* api_key = getenv("GEMINI_API_KEY");
     if (!api_key) {
         printf("SKIP: GEMINI_API_KEY environment variable not set.\n");

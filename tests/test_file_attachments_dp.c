@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +80,7 @@ static char* encode_file_to_base64(const char* filename) {
 }
 
 int main() {
+    load_env_file();
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing file attachments functionality...\n");
     

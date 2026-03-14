@@ -1,8 +1,10 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 int main() {
+    load_env_file();
     printf("Testing dp_init_context with an invalid provider enum...\n");
 
     // An intentionally invalid provider type

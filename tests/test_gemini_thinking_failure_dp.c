@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +7,7 @@
 #include <stdbool.h>
 
 int main() {
+    load_env_file();
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;

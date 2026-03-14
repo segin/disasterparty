@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,7 @@ bool run_test(const char* test_name, dp_provider_type_t provider, const char* ap
 }
 
 int main() {
+    load_env_file();
     if (!getenv("DP_MOCK_SERVER")) return 77;
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");

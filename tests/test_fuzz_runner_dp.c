@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "test_utils.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -13,6 +14,7 @@ void run_test(const char* name, const uint8_t* data, size_t size) {
 }
 
 int main() {
+    load_env_file();
     printf("Starting Fuzz Runner Sanity Check...\n");
 
     // Case 1: Empty input

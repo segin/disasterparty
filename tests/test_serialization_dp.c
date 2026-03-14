@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,7 @@ void print_messages(const char* header, const dp_message_t* messages, size_t num
 
 
 int main() {
+    load_env_file();
     printf("Running Disaster Party Serialization Test...\n");
 
     // 1. Create a sample conversation

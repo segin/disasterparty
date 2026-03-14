@@ -4,7 +4,40 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "disasterparty.h"
+
+// Simple helper to load .env file if it exists
+static inline void load_env_file() {
+    FILE* fp = fopen("../.env", "r");
+    if (!fp) {
+        fp = fopen(".env", "r");
+    }
+    if (!fp) return;
+
+    char line[1024];
+    while (fgets(line, sizeof(line), fp)) {
+        // Trim newline
+        line[strcspn(line, "\r\n")] = 0;
+        
+        // Skip comments and empty lines
+        if (line[0] == '#' || line[0] == '\0') continue;
+        
+        char* eq = strchr(line, '=');
+        if (eq) {
+            *eq = '\0';
+            const char* key = line;
+            const char* val = eq + 1;
+            
+            // Only set if not already set in environment
+            if (!getenv(key)) {
+                setenv(key, val, 1);
+            }
+        }
+    }
+    fclose(fp);
+}
 
 // Helper to case-insensitive substring search
 static inline const char* stristr(const char* haystack, const char* needle) {

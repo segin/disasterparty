@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,7 @@ int run_auth_test(dp_context_t* context, const char* test_name) {
 }
 
 int main() {
+    load_env_file();
     const char* mock_server_url = getenv("DP_MOCK_SERVER");
     if (!mock_server_url) {
         printf("SKIP: DP_MOCK_SERVER environment variable not set.\n");

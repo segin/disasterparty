@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,6 +63,7 @@ unsigned char* read_file_to_buffer(const char* filename, size_t* file_size) {
 
 
 int main(int argc, char* argv[]) {
+    load_env_file();
     printf("Running Inline Multimodal Context Test...\n");
 
     const char* image_path_1 = getenv("TEST_IMAGE_PATH_1");

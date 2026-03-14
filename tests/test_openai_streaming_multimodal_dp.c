@@ -1,4 +1,5 @@
-#include "disasterparty.h" 
+#include "disasterparty.h"
+#include "test_utils.h" 
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h> 
@@ -22,6 +23,7 @@ int stream_handler(const char* token, void* user_data, bool is_final, const char
 }
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("OPENAI_API_KEY");
     const char* base_url = getenv("OPENAI_API_BASE_URL");
     const char* model_vision_env = getenv("OPENAI_MODEL_VISION");

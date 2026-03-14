@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h> 
 #include <stdio.h>
 #include <stdlib.h> 
@@ -24,6 +25,7 @@ int gemini_stream_handler_dp(const char* token, void* user_data, bool is_final, 
 }
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("GEMINI_API_KEY");
     if (!api_key) {
         printf("SKIP: GEMINI_API_KEY environment variable not set.\n");

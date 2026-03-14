@@ -1,9 +1,11 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main() {
+    load_env_file();
     printf("Testing dp_deserialize_messages_from_file with a malformed JSON file...\n");
 
     const char* malformed_json_file_path = "./malformed_conversation.json";

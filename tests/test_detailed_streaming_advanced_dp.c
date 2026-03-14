@@ -1,4 +1,5 @@
-#include "disasterparty.h" 
+#include "disasterparty.h"
+#include "test_utils.h" 
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h> 
@@ -57,6 +58,7 @@ void run_detailed_test(dp_provider_type_t provider, const char* api_key, const c
 }
 
 int main() {
+    load_env_file();
     curl_global_init(CURL_GLOBAL_ALL);
     
     run_detailed_test(DP_PROVIDER_GOOGLE_GEMINI, getenv("GEMINI_API_KEY"), getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-flash-latest");

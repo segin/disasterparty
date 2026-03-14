@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,7 @@ int stream_handler(const char* token, void* user_data, bool is_final, const char
 }
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("OPENAI_API_KEY");
     if (!api_key) {
         printf("SKIP: OPENAI_API_KEY not set.\n");

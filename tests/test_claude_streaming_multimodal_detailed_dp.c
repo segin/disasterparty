@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <cjson/cJSON.h>
 #include <stdio.h>
@@ -62,6 +63,7 @@ int anthropic_detailed_multimodal_stream_handler(const dp_anthropic_stream_event
 }
 
 int main(int argc, char* argv[]) {
+    load_env_file();
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");

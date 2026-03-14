@@ -6,6 +6,7 @@
  */
 
 #include "disasterparty.h"
+#include "test_utils.h"
 #include "dp_private.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -73,6 +74,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
 #ifdef DP_FUZZ_STANDALONE
 int main(int argc, char **argv) {
+    load_env_file();
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <file>\n", argv[0]);
         return 1;

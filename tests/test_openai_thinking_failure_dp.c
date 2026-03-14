@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@ int stream_callback(const char* token, void* user_data, bool is_final, const cha
 }
 
 int main() {
+    load_env_file();
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "curl_global_init() failed.\n");
         return EXIT_FAILURE;

@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@ static const char* get_user_agent_from_context(dp_context_t* context) {
 }
 
 int main() {
+    load_env_file();
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Testing user-agent functionality...\n");
     

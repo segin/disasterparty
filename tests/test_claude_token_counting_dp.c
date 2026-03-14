@@ -1,9 +1,11 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");

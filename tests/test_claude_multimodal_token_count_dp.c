@@ -1,9 +1,11 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main() {
+    load_env_file();
     printf("Testing Anthropic multimodal token counting...\n");
 
     dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, "dummy_key", NULL);

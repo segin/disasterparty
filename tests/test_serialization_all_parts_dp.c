@@ -1,4 +1,5 @@
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,6 +103,7 @@ bool compare_messages(const dp_message_t* msg1, size_t num_msg1, const dp_messag
 }
 
 int main() {
+    load_env_file();
     printf("Testing serialization/deserialization with all content part types...\n");
 
     dp_message_t original_messages[2];

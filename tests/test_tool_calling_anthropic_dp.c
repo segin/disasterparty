@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #include <stdbool.h>
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     const char* base_url = getenv("ANTHROPIC_API_BASE_URL");
     const char* model_env = getenv("ANTHROPIC_MODEL");

@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "disasterparty.h"
+#include "test_utils.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@ int anthropic_generic_stream_handler(const char* token, void* user_data, bool is
 }
 
 int main() {
+    load_env_file();
     const char* api_key = getenv("ANTHROPIC_API_KEY");
     if (!api_key) {
         printf("SKIP: ANTHROPIC_API_KEY environment variable not set.\n");
