@@ -1,3 +1,24 @@
+# Version 0.6.0 (2026-03-07)
+
+## New Features and API Additions
+
+* **ABI BREAKING CHANGE**: Multiple core structures have been expanded to support new features, changing their memory layout. SOVER incremented from 4:0:0 to 5:0:0 (libdisasterparty.so.5.0.0). **Full recompilation of all applications is mandatory.**
+* **Source Compatibility**: Version 0.6.0 maintains high source-level compatibility with 0.5.0. Existing code using named initializers or API helper functions will compile without changes. However, code using positional struct initialization or strict enum switching (without defaults) may require minor updates.
+* **Tool Calling Support**: Comprehensive support for function calling across all providers:
+  * New `dp_tool_definition_t` and `dp_tool_choice_t` structures for request configuration.
+  * New `dp_message_add_tool_call_part()` and `dp_message_add_tool_result_part()` for conversation management.
+  * Support for tool call identification in responses.
+* **Thinking Tokens & Reasoning**: Added support for advanced reasoning models:
+  * Support for Anthropic's "thinking" blocks in both streaming and non-streaming modes.
+  * New `dp_message_add_thinking_part()` to persist reasoning in conversation history.
+  * Support for `reasoning_effort` and thinking budgets in OpenAI-compatible providers.
+* **Detailed Streaming (SSE)**: Enhanced streaming capabilities for OpenAI-compatible providers, enabling processing of complex event types (like reasoning deltas from DeepSeek R1).
+* **Image Generation**: Initial support for text-to-image generation:
+  * New `dp_generate_image()` function.
+  * Support for OpenAI (DALL-E 3) and Google (Imagen 3).
+  * New `dp_image_generation_config_t` and `dp_image_generation_response_t` structures.
+* **Architecture Documentation**: Added `ARCHITECTURE.md` providing a high-level overview of the modular library design and system flow.
+
 # Version 0.5.0 (2025-08-09)
 
 ## New Features and API Additions
@@ -99,7 +120,7 @@
 * Updated library version to 0.1.1.
 * Corrected SSE event separator detection for Gemini streams (handles `\r\n\r\n`).
 * Updated OpenAI test model from `gpt-3.5-turbo` to `gpt-4.1-nano`.
-* Updated Gemini test model to `gemini-2.0-flash` and token limits.
+* Updated Gemini test model to `gemini-2.5-flash` and token limits.
 * Added `dp_list_models()` and `dp_free_model_list()` functions for enumerating models available at the API endpoint.
 * Added man pages for all public functions and a library overview (section 7).
 * Updated User-Agent string to `disasterparty/0.1.1`.

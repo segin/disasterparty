@@ -29,7 +29,7 @@ int main() {
     dp_message_add_text_part(&messages[0], "Think before you answer. Tell me about the band MAGIC GIANT.");
 
     dp_request_config_t request_config = {
-        .model = getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-2.0-flash",
+        .model = getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-2.5-flash",
         .messages = messages,
         .num_messages = 1,
         .stream = true

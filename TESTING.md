@@ -50,8 +50,8 @@ These allow overriding default models used in tests:
 ```bash
 export OPENAI_MODEL="gpt-4o-mini"                    # Default: gpt-4.1-nano
 export OPENAI_MODEL_VISION="gpt-4o"                 # Default: gpt-4o
-export GEMINI_MODEL="gemini-2.0-flash"              # Default: gemini-2.0-flash
-export GEMINI_MODEL_VISION="gemini-2.0-flash"      # Default: gemini-2.0-flash
+export GEMINI_MODEL="gemini-2.5-flash"              # Default: gemini-2.5-flash
+export GEMINI_MODEL_VISION="gemini-2.5-flash"      # Default: gemini-2.5-flash
 export ANTHROPIC_MODEL="claude-3-haiku-20240307"   # Default: claude-3-haiku-20240307
 ```
 
@@ -143,7 +143,7 @@ export TEST_IMAGE_PATH_2="tests/assets/test_image_medium.png"
 
 # Optional: Override default models
 # export OPENAI_MODEL="gpt-4o-mini"
-# export GEMINI_MODEL="gemini-2.0-flash"
+# export GEMINI_MODEL="gemini-2.5-flash"
 # export ANTHROPIC_MODEL="claude-3-haiku-20240307"
 
 echo "Environment configured for testing"

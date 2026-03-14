@@ -36,7 +36,7 @@ int main() {
     }
 
     const char* model_env = getenv("GEMINI_MODEL");
-    const char* model_to_use = model_env ? model_env : "gemini-2.0-flash";
+    const char* model_to_use = model_env ? model_env : "gemini-2.5-flash";
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
