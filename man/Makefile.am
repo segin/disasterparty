@@ -4,9 +4,11 @@
 man3_MANS = \
 	dp_anthropic_stream_event.3 \
 	dp_count_tokens.3 \
-	dp_destroy_context.3 \
 	dp_deserialize_messages_from_file.3 \
 	dp_deserialize_messages_from_json_str.3 \
+	dp_destroy_context.3 \
+	dp_enable_advanced_features.3 \
+	dp_free_file.3 \
 	dp_free_messages.3 \
 	dp_free_model_list.3 \
 	dp_free_response_content.3 \
@@ -25,14 +27,14 @@ man3_MANS = \
 	dp_model_list.3 \
 	dp_perform_anthropic_streaming_completion.3 \
 	dp_perform_completion.3 \
+	dp_perform_detailed_streaming_completion.3 \
 	dp_perform_streaming_completion.3 \
 	dp_request_config.3 \
 	dp_response.3 \
 	dp_serialize.3 \
 	dp_serialize_messages_to_file.3 \
 	dp_serialize_messages_to_json_str.3 \
-	dp_upload_file.3 \
-	dp_free_file.3
+	dp_upload_file.3
 
 # List all man pages to be installed in section 7
 man7_MANS = \

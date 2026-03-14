@@ -109,7 +109,7 @@ int main() {
     }
 
     printf("Context initialized with custom user-agent!\n");
-    // User-Agent will be: "MyApp/1.0.0 (disasterparty/0.5.0)"
+    // User-Agent will be: "MyApp/1.0.0 (disasterparty/0.6.0)"
 
     dp_destroy_context(context);
     return 0;

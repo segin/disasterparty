@@ -55,7 +55,8 @@ check_PROGRAMS = \
     test_openai_anthropic_stream_misuse_dp \
     test_openai_image_generation_dp \
     test_gemini_image_generation_dp \
-    test_anthropic_image_generation_dp
+    test_anthropic_image_generation_dp \
+    test_gemini_thinking_enabled_dp
 
 # Sources for each test program
 test_openai_text_dp_SOURCES = test_openai_text_dp.c
@@ -114,6 +115,7 @@ test_openai_anthropic_stream_misuse_dp_SOURCES = test_openai_anthropic_stream_mi
 test_openai_image_generation_dp_SOURCES = test_openai_image_generation_dp.c
 test_gemini_image_generation_dp_SOURCES = test_gemini_image_generation_dp.c
 test_anthropic_image_generation_dp_SOURCES = test_anthropic_image_generation_dp.c
+test_gemini_thinking_enabled_dp_SOURCES = test_gemini_thinking_enabled_dp.c
 
 
 LDADD = ../src/libdisasterparty.la $(CURL_LIBS) $(CJSON_LIBS)

@@ -1,0 +1,33 @@
+.TH DP_ENABLE_ADVANCED_FEATURES 3 "March 13, 2026" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_enable_advanced_features \- enable advanced features for a context
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "void dp_enable_advanced_features(dp_context_t *" context ", ...);"
+
+.SH DESCRIPTION
+The
+.B dp_enable_advanced_features()
+function enables specific optional behaviors for the given
+.I context .
+It takes a variable number of feature flags, and the list must be terminated by a literal 0.
+
+.SH FEATURES
+.TP
+.B DP_FEATURE_THINKING
+Enables processing of "thinking" or "reasoning" content from models that support it.
+By default, these tokens are filtered out to maintain a clean text baseline for legacy consumers.
+When enabled, they are returned as `DP_CONTENT_PART_THINKING` in non-streaming responses,
+or interleaved/detailed in streaming responses.
+
+.SH EXAMPLE
+.nf
+dp_enable_advanced_features(ctx, DP_FEATURE_THINKING, 0);
+.fi
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR disasterparty (7)

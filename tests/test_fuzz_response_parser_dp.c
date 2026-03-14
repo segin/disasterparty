@@ -51,11 +51,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     size_t num_parts = 0;
     char* finish_reason = NULL;
 
+    // Use a temporary context for the fuzzer
+    dp_context_t* ctx = dp_init_context(provider, "fuzz-key", "https://api.example.com");
+    if (!ctx) {
+        free(json_str);
+        return 0;
+    }
+
     // Call the target function
     // We ignore the return value as we are testing for crashes/memory safety
-    dpinternal_parse_response_content(json_str, provider, &parts, &num_parts, &finish_reason);
+    dpinternal_parse_response_content(ctx, json_str, &parts, &num_parts, &finish_reason);
 
     // Cleanup
+    dp_destroy_context(ctx);
     cleanup_parts(parts, num_parts);
     free(finish_reason);
     free(json_str);

@@ -1,8 +1,8 @@
 {
   "libraryName": "Disaster Party",
   "libraryIdentifier": "disasterparty",
-  "version": "0.5.0",
-  "lastUpdated": "August 09, 2025",
+  "version": "0.6.0",
+  "lastUpdated": "March 13, 2026",
   "headerFile": "disasterparty.h",
   "privateHeaderFile": "dp_private.h",
   "description": "A C library for interacting with OpenAI-compatible, Google Gemini, and Anthropic Claude LLM APIs, supporting text and multimodal inputs, and both regular and streaming responses.",
@@ -77,6 +77,17 @@
       ]
     },
     {
+      "name": "dp_feature_t",
+      "type": "enum",
+      "description": "Advanced feature flags that can be enabled.",
+      "values": [
+        {
+          "name": "DP_FEATURE_THINKING",
+          "description": "Enable internal reasoning / thinking tokens support."
+        }
+      ]
+    },
+    {
       "name": "dp_message_role_t",
       "type": "enum",
       "description": "Enumeration for the role in a message.",
@@ -110,6 +121,22 @@
         {
           "name": "DP_CONTENT_PART_FILE_DATA",
           "description": "Base64 encoded file data."
+        },
+        {
+          "name": "DP_CONTENT_PART_FILE_REFERENCE",
+          "description": "Reference to an uploaded file."
+        },
+        {
+          "name": "DP_CONTENT_PART_TOOL_CALL",
+          "description": "Request for a tool/function call."
+        },
+        {
+          "name": "DP_CONTENT_PART_TOOL_RESULT",
+          "description": "Result of a tool/function call."
+        },
+        {
+          "name": "DP_CONTENT_PART_THINKING",
+          "description": "Internal reasoning / thinking process content."
         }
       ]
     },
@@ -171,6 +198,26 @@
               "description": "Optional filename for the file."
             }
           ]
+        },
+        {
+          "name": "file_reference",
+          "type": "struct { char* file_id; char* mime_type; }",
+          "description": "Reference to an uploaded file (if type is DP_CONTENT_PART_FILE_REFERENCE)."
+        },
+        {
+          "name": "tool_call",
+          "type": "struct { char* id; char* function_name; char* arguments_json; }",
+          "description": "Tool call details (if type is DP_CONTENT_PART_TOOL_CALL)."
+        },
+        {
+          "name": "tool_result",
+          "type": "struct { char* tool_call_id; char* content; bool is_error; }",
+          "description": "Tool result details (if type is DP_CONTENT_PART_TOOL_RESULT)."
+        },
+        {
+          "name": "thinking",
+          "type": "struct { char* thinking; char* signature; }",
+          "description": "Thinking/reasoning content (if type is DP_CONTENT_PART_THINKING)."
         }
       ]
     },
@@ -219,12 +266,12 @@
         {
           "name": "system_prompt",
           "type": "const char*",
-          "description": "Optional system prompt, primarily for Anthropic."
+          "description": "Optional system prompt."
         },
         {
           "name": "temperature",
           "type": "double",
-          "description": "Sampling temperature for generation (0.0-2.0 for OpenAI/Gemini, 0.0-1.0 for Anthropic)."
+          "description": "Sampling temperature for generation."
         },
         {
           "name": "max_tokens",
@@ -234,44 +281,37 @@
         {
           "name": "stream",
           "type": "bool",
-          "description": "True for streaming response, false for single blocking response."
+          "description": "True for streaming response."
         },
         {
           "name": "top_p",
           "type": "double",
-          "description": "Nucleus sampling parameter (0.0-1.0). Controls diversity by considering only tokens with cumulative probability up to top_p."
+          "description": "Nucleus sampling parameter."
         },
         {
           "name": "top_k",
           "type": "int",
-          "description": "Top-k sampling parameter. Limits the number of highest probability tokens to consider. Primarily used by Google Gemini."
+          "description": "Top-k sampling parameter."
         },
         {
           "name": "stop_sequences",
           "type": "const char**",
-          "description": "Array of stop sequences that will halt generation when encountered."
+          "description": "Array of stop sequences."
         },
         {
           "name": "num_stop_sequences",
           "type": "size_t",
-          "description": "Number of stop sequences in the 'stop_sequences' array."
-        }
-      ]
-    },
-    {
-      "name": "dp_response_part_t",
-      "type": "struct",
-      "description": "Represents a part of an LLM's response (primarily for non-streaming full content).",
-      "fields": [
-        {
-          "name": "type",
-          "type": "dp_content_part_type_t",
-          "description": "Type of this response part (usually DP_CONTENT_PART_TEXT)."
+          "description": "Number of stop sequences."
         },
         {
-          "name": "text",
-          "type": "char*",
-          "description": "Text content of the response part."
+          "name": "thinking",
+          "type": "struct { bool enabled; int budget_tokens; }",
+          "description": "Thinking configuration for models that support it."
+        },
+        {
+          "name": "reasoning_effort",
+          "type": "const char*",
+          "description": "OpenAI-specific reasoning effort (low, medium, high)."
         }
       ]
     },
@@ -283,7 +323,7 @@
         {
           "name": "parts",
           "type": "dp_response_part_t*",
-          "description": "Array of response parts (for non-streaming full response)."
+          "description": "Array of response parts."
         },
         {
           "name": "num_parts",
@@ -303,115 +343,14 @@
         {
           "name": "finish_reason",
           "type": "char*",
-          "description": "Reason the generation finished (e.g., \"stop\", \"length\", \"end_turn\")."
-        }
-      ]
-    },
-    {
-      "name": "dp_model_info_t",
-      "type": "struct",
-      "description": "Holds information about a single available LLM model.",
-      "fields": [
-        {
-          "name": "model_id",
-          "type": "char*",
-          "description": "Unique identifier for the model."
-        },
-        {
-          "name": "display_name",
-          "type": "char*",
-          "description": "User-friendly display name."
-        },
-        {
-          "name": "version",
-          "type": "char*",
-          "description": "Specific version string of the model."
-        },
-        {
-          "name": "description",
-          "type": "char*",
-          "description": "Brief description of the model."
-        },
-        {
-          "name": "input_token_limit",
-          "type": "long",
-          "description": "Maximum input tokens."
-        },
-        {
-          "name": "output_token_limit",
-          "type": "long",
-          "description": "Maximum output tokens."
-        }
-      ]
-    },
-    {
-      "name": "dp_file_t",
-      "type": "struct",
-      "description": "Holds information about an uploaded file.",
-      "fields": [
-        {
-          "name": "file_id",
-          "type": "char*",
-          "description": "Unique identifier for the file."
-        },
-        {
-          "name": "display_name",
-          "type": "char*",
-          "description": "User-provided display name for the file."
-        },
-        {
-          "name": "mime_type",
-          "type": "char*",
-          "description": "MIME type of the file."
-        },
-        {
-          "name": "size_bytes",
-          "type": "long",
-          "description": "Size of the file in bytes."
-        },
-        {
-          "name": "create_time",
-          "type": "char*",
-          "description": "Timestamp when the file was created."
-        },
-        {
-          "name": "uri",
-          "type": "char*",
-          "description": "URI of the file, used for referencing in messages."
-        }
-      ]
-    },
-    {
-      "name": "dp_model_list_t",
-      "type": "struct",
-      "description": "Holds a list of available models and status from the listing operation.",
-      "fields": [
-        {
-          "name": "models",
-          "type": "dp_model_info_t*",
-          "description": "Array of model information structures."
-        },
-        {
-          "name": "count",
-          "type": "size_t",
-          "description": "Number of models in the 'models' array."
-        },
-        {
-          "name": "error_message",
-          "type": "char*",
-          "description": "Error message if the listing operation failed."
-        },
-        {
-          "name": "http_status_code",
-          "type": "long",
-          "description": "HTTP status code of the list models API call."
+          "description": "Reason the generation finished."
         }
       ]
     },
     {
       "name": "dp_anthropic_event_type_t",
       "type": "enum",
-      "description": "Enumeration for Anthropic stream event types.",
+      "description": "Enumeration for detailed stream event types.",
       "values": [
         { "name": "DP_ANTHROPIC_EVENT_UNKNOWN" },
         { "name": "DP_ANTHROPIC_EVENT_MESSAGE_START" },
@@ -421,555 +360,48 @@
         { "name": "DP_ANTHROPIC_EVENT_CONTENT_BLOCK_STOP" },
         { "name": "DP_ANTHROPIC_EVENT_MESSAGE_DELTA" },
         { "name": "DP_ANTHROPIC_EVENT_MESSAGE_STOP" },
-        { "name": "DP_ANTHROPIC_EVENT_ERROR" }
+        { "name": "DP_ANTHROPIC_EVENT_ERROR" },
+        { "name": "DP_ANTHROPIC_EVENT_THINKING_DELTA" }
       ]
     },
     {
-      "name": "dp_anthropic_stream_event_t",
+      "name": "dp_stream_event_t",
       "type": "struct",
-      "description": "Structure to hold a detailed Anthropic stream event.",
+      "description": "Structure to hold a detailed stream event.",
       "fields": [
         {
           "name": "event_type",
-          "type": "dp_anthropic_event_type_t",
+          "type": "dp_stream_event_type_t",
           "description": "The type of the SSE event."
         },
         {
           "name": "raw_json_data",
           "type": "const char*",
-          "description": "The raw JSON string from the 'data:' line of the SSE event."
+          "description": "The raw JSON or text data of the event."
         }
       ]
-    },
-    {
-      "name": "dp_context_s",
-      "type": "struct",
-      "description": "Opaque context structure for managing LLM client state. Internals are not public.",
-      "isOpaque": true
-    },
-    {
-      "name": "dp_context_t",
-      "type": "typedef",
-      "definition": "struct dp_context_s",
-      "description": "Typedef for the opaque client context structure."
-    },
-    {
-      "name": "dp_stream_callback_t",
-      "type": "function_pointer",
-      "signature": "int (*dp_stream_callback_t)(const char* token, void* user_data, bool is_final_chunk, const char* error_during_stream)",
-      "description": "Generic callback function type for handling streamed text tokens.",
-      "parameters": [
-        {
-          "name": "token",
-          "type": "const char*",
-          "description": "Received text chunk. NULL on final call or error."
-        },
-        {
-          "name": "user_data",
-          "type": "void*",
-          "description": "User-defined data passed from the streaming call."
-        },
-        {
-          "name": "is_final_chunk",
-          "type": "bool",
-          "description": "True if this is the last content-bearing chunk or stream end signal."
-        },
-        {
-          "name": "error_during_stream",
-          "type": "const char*",
-          "description": "Error message if an error occurred during stream processing."
-        }
-      ],
-      "returnType": "int",
-      "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
-    },
-    {
-      "name": "dp_anthropic_stream_callback_t",
-      "type": "function_pointer",
-      "signature": "int (*dp_anthropic_stream_callback_t)(const dp_anthropic_stream_event_t* event, void* user_data, const char* error_during_stream)",
-      "description": "Callback function type for handling detailed Anthropic streamed events.",
-      "parameters": [
-        {
-          "name": "event",
-          "type": "const dp_anthropic_stream_event_t*",
-          "description": "Pointer to the detailed Anthropic event structure."
-        },
-        {
-          "name": "user_data",
-          "type": "void*",
-          "description": "User-defined data passed from the streaming call."
-        },
-        {
-          "name": "error_during_stream",
-          "type": "const char*",
-          "description": "Error message if an error occurred during stream processing."
-        }
-      ],
-      "returnType": "int",
-      "returnDescription": "Return 0 to continue streaming, non-zero to attempt to stop."
     }
   ],
   "functions": [
     {
-      "name": "dp_get_version",
-      "description": "Returns the version string of the Disaster Party library.",
-      "returnType": "const char*",
-      "parameters": [{ "name": "void", "type": "" }]
-    },
-    {
-      "name": "dp_init_context",
-      "description": "Initializes a Disaster Party LLM client context with default user-agent.",
-      "returnType": "dp_context_t*",
-      "parameters": [
-        {
-          "name": "provider",
-          "type": "dp_provider_type_t",
-          "description": "The LLM provider type."
-        },
-        {
-          "name": "api_key",
-          "type": "const char*",
-          "description": "The API key for authentication."
-        },
-        {
-          "name": "api_base_url",
-          "type": "const char*",
-          "description": "Optional base URL for the API. If NULL, defaults are used."
-        }
-      ]
-    },
-    {
-      "name": "dp_init_context_with_app_info",
-      "description": "Initializes a Disaster Party LLM client context with custom user-agent information.",
-      "returnType": "dp_context_t*",
-      "parameters": [
-        {
-          "name": "provider",
-          "type": "dp_provider_type_t",
-          "description": "The LLM provider type."
-        },
-        {
-          "name": "api_key",
-          "type": "const char*",
-          "description": "The API key for authentication."
-        },
-        {
-          "name": "api_base_url",
-          "type": "const char*",
-          "description": "Optional base URL for the API. If NULL, defaults are used."
-        },
-        {
-          "name": "app_name",
-          "type": "const char*",
-          "description": "Optional application name for user-agent string. If NULL, only library name is used."
-        },
-        {
-          "name": "app_version",
-          "type": "const char*",
-          "description": "Optional application version for user-agent string. Only used if app_name is also provided."
-        }
-      ]
-    },
-    {
-      "name": "dp_destroy_context",
-      "description": "Destroys a Disaster Party LLM client context and frees associated resources, including API key, base URL, and user-agent string.",
+      "name": "dp_enable_advanced_features",
+      "description": "Enables advanced features for the context using a variable number of features, terminated by 0.",
       "returnType": "void",
       "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "The context to destroy."
-        }
+        { "name": "context", "type": "dp_context_t*", "description": "The context to modify." },
+        { "name": "...", "type": "dp_feature_t", "description": "Sequence of feature flags." }
       ]
     },
     {
-      "name": "dp_perform_completion",
-      "description": "Performs a non-streaming completion request to the LLM. `request_config->stream` should be false.",
+      "name": "dp_perform_detailed_streaming_completion",
+      "description": "Performs a streaming completion request, providing detailed events to the callback across all providers.",
       "returnType": "int",
-      "returnDescription": "0 on success, -1 on error.",
       "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context."
-        },
-        {
-          "name": "request_config",
-          "type": "const dp_request_config_t*",
-          "description": "Configuration for the request."
-        },
-        {
-          "name": "response",
-          "type": "dp_response_t*",
-          "description": "Pointer to a response structure to be filled."
-        }
-      ]
-    },
-    {
-      "name": "dp_perform_streaming_completion",
-      "description": "Performs a streaming completion request, providing text tokens to the callback. For Anthropic, it extracts text from detailed events. For OpenAI, `request_config->stream` must be true.",
-      "returnType": "int",
-      "returnDescription": "0 if streaming was successful, -1 on setup error.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context."
-        },
-        {
-          "name": "request_config",
-          "type": "const dp_request_config_t*",
-          "description": "Configuration for the request."
-        },
-        {
-          "name": "callback",
-          "type": "dp_stream_callback_t",
-          "description": "Generic callback function to handle received text tokens/chunks."
-        },
-        {
-          "name": "user_data",
-          "type": "void*",
-          "description": "User-defined data to be passed to the callback."
-        },
-        {
-          "name": "response",
-          "type": "dp_response_t*",
-          "description": "Pointer to a response structure for final status/initial errors."
-        }
-      ]
-    },
-    {
-      "name": "dp_perform_anthropic_streaming_completion",
-      "description": "Performs a streaming completion request specifically for Anthropic, providing detailed SSE events to the callback. `request_config->stream` must be true.",
-      "returnType": "int",
-      "returnDescription": "0 if streaming was successful, -1 on setup error or if provider is not Anthropic.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context (must be for DP_PROVIDER_ANTHROPIC)."
-        },
-        {
-          "name": "request_config",
-          "type": "const dp_request_config_t*",
-          "description": "Configuration for the request."
-        },
-        {
-          "name": "anthropic_callback",
-          "type": "dp_anthropic_stream_callback_t",
-          "description": "Anthropic-specific callback function to handle detailed SSE events."
-        },
-        {
-          "name": "user_data",
-          "type": "void*",
-          "description": "User-defined data to be passed to the callback."
-        },
-        {
-          "name": "response",
-          "type": "dp_response_t*",
-          "description": "Pointer to a response structure for final status/initial errors."
-        }
-      ]
-    },
-    {
-      "name": "dp_list_models",
-      "description": "Lists available models from the configured LLM provider.",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context."
-        },
-        {
-          "name": "model_list_out",
-          "type": "dp_model_list_t**",
-          "description": "Pointer to a dp_model_list_t pointer to be populated."
-        }
-      ]
-    },
-    {
-      "name": "dp_count_tokens",
-      "description": "Counts the number of tokens in a request configuration for supported providers (Google Gemini and Anthropic).",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context."
-        },
-        {
-          "name": "request_config",
-          "type": "const dp_request_config_t*",
-          "description": "Configuration for the request to count tokens for."
-        },
-        {
-          "name": "token_count_out",
-          "type": "size_t*",
-          "description": "Output pointer to store the token count."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_model_list",
-      "description": "Frees the memory allocated for a dp_model_list_t structure and its contents.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "model_list",
-          "type": "dp_model_list_t*",
-          "description": "The model list structure to be freed."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_response_content",
-      "description": "Frees the content of a dp_response_t structure.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "response",
-          "type": "dp_response_t*",
-          "description": "The response structure whose content is to be freed."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_messages",
-      "description": "Frees the content of an array of dp_message_t, including their parts.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "messages",
-          "type": "dp_message_t*",
-          "description": "Array of messages."
-        },
-        {
-          "name": "num_messages",
-          "type": "size_t",
-          "description": "Number of messages in the array."
-        }
-      ]
-    },
-    {
-      "name": "dp_upload_file",
-      "description": "Uploads a file to the LLM provider (currently only supported for Google Gemini).",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "context",
-          "type": "dp_context_t*",
-          "description": "Initialized client context (must be for DP_PROVIDER_GOOGLE_GEMINI)."
-        },
-        {
-          "name": "file_path",
-          "type": "const char*",
-          "description": "Absolute path to the file to upload."
-        },
-        {
-          "name": "mime_type",
-          "type": "const char*",
-          "description": "MIME type of the file (e.g., \"image/png\", \"text/plain\")."
-        },
-        {
-          "name": "file_out",
-          "type": "dp_file_t**",
-          "description": "Output for the allocated dp_file_t structure."
-        }
-      ]
-    },
-    {
-      "name": "dp_free_file",
-      "description": "Frees the memory allocated for a dp_file_t structure.",
-      "returnType": "void",
-      "parameters": [
-        {
-          "name": "file",
-          "type": "dp_file_t*",
-          "description": "The file structure to be freed."
-        }
-      ]
-    },
-    {
-      "name": "dp_message_add_text_part",
-      "description": "Adds a text part to a message.",
-      "returnType": "bool",
-      "returnDescription": "true on success, false on failure.",
-      "parameters": [
-        {
-          "name": "message",
-          "type": "dp_message_t*",
-          "description": "The message to modify."
-        },
-        {
-          "name": "text",
-          "type": "const char*",
-          "description": "The text content."
-        }
-      ]
-    },
-    {
-      "name": "dp_message_add_image_url_part",
-      "description": "Adds an image URL part to a message.",
-      "returnType": "bool",
-      "returnDescription": "true on success, false on failure.",
-      "parameters": [
-        {
-          "name": "message",
-          "type": "dp_message_t*",
-          "description": "The message to modify."
-        },
-        {
-          "name": "image_url",
-          "type": "const char*",
-          "description": "The URL of the image."
-        }
-      ]
-    },
-    {
-      "name": "dp_message_add_base64_image_part",
-      "description": "Adds a base64 encoded image part to a message.",
-      "returnType": "bool",
-      "returnDescription": "true on success, false on failure.",
-      "parameters": [
-        {
-          "name": "message",
-          "type": "dp_message_t*",
-          "description": "The message to modify."
-        },
-        {
-          "name": "mime_type",
-          "type": "const char*",
-          "description": "The MIME type of the image."
-        },
-        {
-          "name": "base64_data",
-          "type": "const char*",
-          "description": "The base64 encoded image data."
-        }
-      ]
-    },
-    {
-      "name": "dp_message_add_file_data_part",
-      "description": "Adds a base64 encoded file data part to a message.",
-      "returnType": "bool",
-      "returnDescription": "true on success, false on failure.",
-      "parameters": [
-        {
-          "name": "message",
-          "type": "dp_message_t*",
-          "description": "The message to modify."
-        },
-        {
-          "name": "mime_type",
-          "type": "const char*",
-          "description": "The MIME type of the file."
-        },
-        {
-          "name": "base64_data",
-          "type": "const char*",
-          "description": "The base64 encoded file data."
-        },
-        {
-          "name": "filename",
-          "type": "const char*",
-          "description": "Optional filename for the file (can be NULL)."
-        }
-      ]
-    },
-    {
-      "name": "dp_serialize_messages_to_json_str",
-      "description": "Serializes an array of messages to a JSON string.",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "messages",
-          "type": "const dp_message_t*",
-          "description": "Array of messages."
-        },
-        {
-          "name": "num_messages",
-          "type": "size_t",
-          "description": "Number of messages."
-        },
-        {
-          "name": "json_str_out",
-          "type": "char**",
-          "description": "Output for the allocated JSON string."
-        }
-      ]
-    },
-    {
-      "name": "dp_deserialize_messages_from_json_str",
-      "description": "Deserializes a JSON string into an array of messages.",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "json_str",
-          "type": "const char*",
-          "description": "The JSON string to parse."
-        },
-        {
-          "name": "messages_out",
-          "type": "dp_message_t**",
-          "description": "Output for the allocated array of messages."
-        },
-        {
-          "name": "num_messages_out",
-          "type": "size_t*",
-          "description": "Output for the number of messages."
-        }
-      ]
-    },
-    {
-      "name": "dp_serialize_messages_to_file",
-      "description": "Serializes an array of messages to a file.",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "messages",
-          "type": "const dp_message_t*",
-          "description": "Array of messages."
-        },
-        {
-          "name": "num_messages",
-          "type": "size_t",
-          "description": "Number of messages."
-        },
-        {
-          "name": "path",
-          "type": "const char*",
-          "description": "File path to save the JSON to."
-        }
-      ]
-    },
-    {
-      "name": "dp_deserialize_messages_from_file",
-      "description": "Deserializes an array of messages from a file.",
-      "returnType": "int",
-      "returnDescription": "0 on success, -1 on failure.",
-      "parameters": [
-        {
-          "name": "path",
-          "type": "const char*",
-          "description": "File path to read the JSON from."
-        },
-        {
-          "name": "messages_out",
-          "type": "dp_message_t**",
-          "description": "Output for the allocated array of messages."
-        },
-        {
-          "name": "num_messages_out",
-          "type": "size_t*",
-          "description": "Output for the number of messages."
-        }
+        { "name": "context", "type": "dp_context_t*" },
+        { "name": "request_config", "type": "const dp_request_config_t*" },
+        { "name": "callback", "type": "dp_detailed_stream_callback_t" },
+        { "name": "user_data", "type": "void*" },
+        { "name": "response", "type": "dp_response_t*" }
       ]
     }
   ]

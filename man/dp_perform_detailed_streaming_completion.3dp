@@ -1,0 +1,33 @@
+.TH DP_PERFORM_DETAILED_STREAMING_COMPLETION 3 "March 13, 2026" "libdisasterparty @DP_VERSION@" "Disaster Party Manual"
+
+.SH NAME
+dp_perform_detailed_streaming_completion \- perform a streaming completion with detailed event handling
+
+.SH SYNOPSIS
+.B #include <disasterparty.h>
+.PP
+.BI "int dp_perform_detailed_streaming_completion(dp_context_t *" context ", const dp_request_config_t *" request_config ", dp_detailed_stream_callback_t " callback ", void *" user_data ", dp_response_t *" response ");"
+
+.SH DESCRIPTION
+The
+.B dp_perform_detailed_streaming_completion()
+function sends a request to the configured LLM provider and streams the response
+via a series of detailed events. It is a cross-provider generalization of the
+original Anthropic-specific streaming function.
+
+The
+.I callback
+is invoked for various SSE events such as start, content deltas, thinking blocks,
+and stop signals.
+
+.SH CALLBACK SIGNATURE
+.nf
+typedef int (*dp_detailed_stream_callback_t)(const dp_stream_event_t* event,
+                                              void* user_data,
+                                              const char* error_during_stream);
+.fi
+
+.SH SEE ALSO
+.BR dp_perform_streaming_completion (3),
+.BR dp_enable_advanced_features (3),
+.BR disasterparty (7)

@@ -8,13 +8,15 @@ This section provides a high-level overview of the project's directory and file 
 ├── src/                  # Main source code for the library
 │   ├── disasterparty.c   # Core logic, payload construction, and response parsing
 │   ├── disasterparty.h   # Public API header
-│   ├── dp_context.c      # Context management (API keys, config)
+│   ├── dp_context.c      # Context management (API keys, config, features)
 │   ├── dp_request.c      # Network request handling (libcurl wrapper)
 │   ├── dp_message.c      # Message and content part manipulation helpers
-│   ├── dp_stream.c       # Streaming response processing logic
+│   ├── dp_stream.c       # Streaming response processing and safety chunking
 │   ├── dp_serialize.c    # Conversation serialization/deserialization
 │   ├── dp_models.c       # Model listing functionality
 │   ├── dp_file.c         # File upload and handling
+│   ├── dp_constants.c    # Provider-specific constants
+│   ├── dp_utils.c        # Common utility functions
 │   └── dp_private.h      # Internal private header
 ├── tests/                # Unit, integration, and fuzz tests
 │   ├── mock-server/      # Mock server for testing without live APIs
@@ -51,41 +53,45 @@ Description: A lightweight, unopinionated C library for interacting with Large L
 Technologies: C11, libcurl, cJSON
 
 Key Modules:
-*   **Context Manager (`dp_context`):** Holds state (API keys, base URLs, provider type).
-*   **Message Builder (`dp_message`):** manages the list of messages and multimodal content parts (text, images, files, tool calls).
-*   **Request Engine (`dp_request`):** Orchestrates the HTTP request lifecycle.
+*   **Context Manager (`dp_context`):** Holds state (API keys, base URLs, provider type) and enabled feature flags.
+*   **Message Builder (`dp_message`):** manages the list of messages and multimodal content parts (text, images, files, tool calls, thinking).
+*   **Request Engine (`dp_request`):** Orchestrates the HTTP request lifecycle, supporting both blocking and streaming.
 *   **Payload Builder (`disasterparty.c`):** Converts internal structs into provider-specific JSON schemas.
 *   **Response Parser (`disasterparty.c`, `dp_stream.c`):** Parses JSON responses and handles Server-Sent Events (SSE) for streaming.
+*   **Safety Layer (`dp_stream.c`):** Implements chunked token delivery (max 256 bytes) to prevent buffer overflows in consumers with fixed limits.
 
-## 4. Data Stores
+## 4. Advanced Features
 
-This project is a client library and does not maintain its own persistent data store. It allows applications to serialize conversation history to files using `dp_serialize`.
+The library supports opt-in advanced features via `dp_enable_advanced_features`.
+
+*   **Thinking Tokens (`DP_FEATURE_THINKING`):** Enables capturing internal model reasoning (e.g., Gemini `thought` parts, OpenAI `reasoning_content`, Anthropic `thinking` blocks). By default, these are filtered out to maintain a clean text baseline.
 
 ## 5. External Integrations / APIs
 
 ### 5.1. OpenAI Compatible API
 Purpose: LLM Chat Completions.
-Integration Method: REST API (`/v1/chat/completions`), SSE for streaming.
+Integration Method: REST API (`/v1/chat/completions`), SSE for streaming. Supports `reasoning_content`.
 
 ### 5.2. Google Gemini API
 Purpose: Multimodal LLM generation.
-Integration Method: REST API (`/v1beta/models/...:generateContent`), SSE for streaming (`streamGenerateContent`).
+Integration Method: REST API (`/v1beta/models/...:generateContent`), SSE for streaming (`streamGenerateContent`). Supports `thought` parts.
 
 ### 5.3. Anthropic API
 Purpose: Claude LLM interaction.
-Integration Method: REST API (`/v1/messages`), custom SSE event format for streaming.
+Integration Method: REST API (`/v1/messages`), custom SSE event format for streaming. Supports `thinking` blocks.
 
 ## 6. Deployment & Infrastructure
 
 Type: Shared Library (`.so`, `.dylib`, `.dll`)
 Build System: GNU Autotools (`autoconf`, `automake`, `libtool`).
-CI: GitHub Actions (implied by typical setup).
+CI: GitHub Actions.
 
 ## 7. Security Considerations
 
-*   **API Keys:** Handled via `dp_context_t`. The library expects the host application to manage the secure storage and retrieval of keys. Keys are resident in memory during the context's lifecycle.
-*   **Transport Security:** Relies on `libcurl` for TLS/SSL encryption to ensure data privacy in transit.
-*   **Memory Management:** The library performs manual memory management. Users must ensure they call corresponding free functions (`dp_free_response_content`, `dp_free_messages`, `dp_destroy_context`) to prevent leaks.
+*   **API Keys:** Handled via `dp_context_t`. The library expects the host application to manage the secure storage and retrieval of keys.
+*   **Transport Security:** Relies on `libcurl` for TLS/SSL encryption.
+*   **Memory Management:** The library performs manual memory management. Users must ensure they call corresponding free functions to prevent leaks.
+*   **Consumer Protection:** Chunked delivery protects against large tokens causing overflows in client applications.
 
 ## 8. Development & Testing Environment
 
@@ -95,15 +101,15 @@ Local Setup:
 3.  `make`
 4.  `make check`
 
-Testing Frameworks: Custom C test harness driven by `automake`'s `check` target. Tests range from simple unit tests to network-bound integration tests (which require API keys in env vars).
-Fuzzing: LLVM libFuzzer support for response parsing (`tests/test_fuzz_response_parser_dp.c`).
+Testing Frameworks: Custom C test harness driven by `automake`'s `check` target.
+Fuzzing: LLVM libFuzzer support for response parsing.
 
 ## 9. Future Considerations / Roadmap
 
 See `docs/ROADMAP.md` for detailed planning.
 *   **Tool Calling:** (Implemented in 0.6.0)
 *   **Thinking Tokens:** (Implemented in 0.6.0)
-*   **Advanced Multimodality:** Ongoing support for new file types and modalities.
+*   **Image Generation:** (Implemented in 0.6.0)
 *   **Real-time Audio:** Potential future expansion.
 
 ## 10. Project Identification
@@ -111,7 +117,7 @@ See `docs/ROADMAP.md` for detailed planning.
 Project Name: Disaster Party
 Repository URL: https://github.com/segin/disasterparty
 Primary Contact/Team: segin2005@gmail.com
-Date of Last Update: 2026-03-07
+Date of Last Update: 2026-03-13
 
 ## 11. Glossary / Acronyms
 
