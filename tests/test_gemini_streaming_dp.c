@@ -36,7 +36,7 @@ int main() {
     }
 
     const char* model_env = getenv("GEMINI_MODEL");
-    const char* model_to_use = model_env ? model_env : "gemini-2.5-flash";
+    const char* model_to_use = model_env ? model_env : "gemini-2.0-flash";
 
     printf("Disaster Party Library Version: %s\n", dp_get_version());
     printf("Using Gemini API Key: ***\n");
@@ -49,16 +49,11 @@ int main() {
     }
     printf("Disaster Party Context Initialized for Streaming Test.\n");
 
-    // Enable thinking feature
-    dp_enable_advanced_features(context, DP_FEATURE_THINKING, 0);
-
     dp_request_config_t request_config = {0};
     request_config.model = model_to_use;
     request_config.temperature = 0.8;
     request_config.max_tokens = 2048; 
     request_config.stream = true;
-    request_config.thinking.enabled = true;
-    request_config.thinking.budget_tokens = 1024;
 
     dp_message_t messages[1];
     memset(messages, 0, sizeof(messages));

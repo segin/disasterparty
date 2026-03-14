@@ -37,16 +37,11 @@ int main() {
     }
     printf("Disaster Party Context Initialized.\n");
 
-    // Enable thinking feature
-    dp_enable_advanced_features(context, DP_FEATURE_THINKING, 0);
-
     dp_request_config_t request_config = {0};
     request_config.model = model_to_use;
     request_config.temperature = 0.7;
     request_config.max_tokens = 250;
     request_config.stream = false; 
-    request_config.thinking.enabled = true;
-    request_config.thinking.budget_tokens = 1024;
 
     dp_message_t messages[1];
     memset(messages, 0, sizeof(messages));

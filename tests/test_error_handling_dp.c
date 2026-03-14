@@ -79,7 +79,7 @@ int main() {
     }
     if (gemini_key) {
         tests_run++;
-        if (!run_test("Gemini Bad API Key", DP_PROVIDER_GOOGLE_GEMINI, fake_key, "gemini-2.5-flash", 400)) all_tests_passed = false;
+        if (!run_test("Gemini Bad API Key", DP_PROVIDER_GOOGLE_GEMINI, fake_key, "gemini-2.0-flash", 400)) all_tests_passed = false;
     }
     if (anthropic_key) {
         tests_run++;

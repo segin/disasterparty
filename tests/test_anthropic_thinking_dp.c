@@ -38,6 +38,9 @@ int main() {
         return EXIT_FAILURE;
     }
 
+    // Enable thinking feature
+    dp_enable_advanced_features(context, DP_FEATURE_THINKING, 0);
+
     // --- Prepare Request ---
     dp_message_t messages[1];
     memset(messages, 0, sizeof(messages));

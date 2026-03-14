@@ -24,7 +24,7 @@ int main() {
     // Test 1: Basic token counting
     printf("\n=== Test 1: Basic token counting ===\n");
     
-    const char* model_to_use = "gemini-2.5-flash-exp";
+    const char* model_to_use = "gemini-2.0-flash-exp";
 
     dp_request_config_t request_config = {0};
     request_config.model = model_to_use;
@@ -175,9 +175,9 @@ int main() {
     printf("\n=== Test 6: Different Gemini models ===\n");
     
     const char* gemini_models[] = {
-        "gemini-2.5-flash-exp",
-        "gemini-2.5-flash-exp",
-        "gemini-2.5-flash"
+        "gemini-2.0-flash-exp",
+        "gemini-2.0-flash-exp",
+        "gemini-2.0-flash"
     };
     
     dp_message_t model_test_msg = {0};
@@ -217,7 +217,7 @@ int main() {
     request_config.messages = &multimodal_msg;
     request_config.num_messages = 1;
     request_config.system_prompt = NULL;
-    request_config.model = "gemini-2.5-flash-exp";
+    request_config.model = "gemini-2.0-flash-exp";
     
     size_t multimodal_count = 0;
     result = dp_count_tokens(context, &request_config, &multimodal_count);
