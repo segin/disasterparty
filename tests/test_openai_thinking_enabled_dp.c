@@ -17,8 +17,8 @@ int main() {
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    // Default to a model known to support reasoning_content (e.g. DeepSeek or o1)
-    const char* model_to_use = model_env ? model_env : "deepseek-reasoner";
+    // Default to a model known to support reasoning_content
+    const char* model_to_use = model_env ? model_env : "gpt-5.4";
     const char* key_to_use = api_key ? api_key : "ollama";
 
     dp_context_t* context = dp_init_context(DP_PROVIDER_OPENAI_COMPATIBLE, key_to_use, base_url);
@@ -46,7 +46,6 @@ int main() {
     printf("---\nStreaming Response:\n");
 
     dp_response_t response = {0};
-    int reasoning_tokens_count = 0;
     int content_tokens_count = 0;
 
     auto int stream_cb(const char* token, void* user_data, bool is_final, const char* err) {

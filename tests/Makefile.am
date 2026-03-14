@@ -59,6 +59,7 @@ check_PROGRAMS = \
     test_gemini_thinking_enabled_dp \
     test_openai_thinking_enabled_dp \
     test_anthropic_thinking_enabled_dp \
+    test_anthropic_opus_advanced_dp \
     test_detailed_streaming_advanced_dp
 
 # Sources for each test program
@@ -121,6 +122,7 @@ test_anthropic_image_generation_dp_SOURCES = test_anthropic_image_generation_dp.
 test_gemini_thinking_enabled_dp_SOURCES = test_gemini_thinking_enabled_dp.c
 test_openai_thinking_enabled_dp_SOURCES = test_openai_thinking_enabled_dp.c
 test_anthropic_thinking_enabled_dp_SOURCES = test_anthropic_thinking_enabled_dp.c
+test_anthropic_opus_advanced_dp_SOURCES = test_anthropic_opus_advanced_dp.c
 test_detailed_streaming_advanced_dp_SOURCES = test_detailed_streaming_advanced_dp.c
 
 

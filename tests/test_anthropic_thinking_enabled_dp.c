@@ -16,7 +16,7 @@ int main() {
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    const char* model_to_use = model_env ? model_env : "claude-3-7-sonnet-20250219";
+    const char* model_to_use = model_env ? model_env : "claude-4-6-sonnet-20260215";
 
     dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, api_key, NULL);
     if (!context) {

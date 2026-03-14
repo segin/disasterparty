@@ -6,41 +6,42 @@
 #include <stdbool.h>
 
 int main() {
-    const char* api_key = getenv("GEMINI_API_KEY");
+    const char* api_key = getenv("ANTHROPIC_API_KEY");
+    const char* model_env = getenv("ANTHROPIC_MODEL");
+
     if (!api_key) {
-        printf("GEMINI_API_KEY not set, skipping test.\n");
-        return 0;
+        printf("SKIP: ANTHROPIC_API_KEY not set.\n");
+        return 77;
     }
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    dp_context_t* context = dp_init_context(DP_PROVIDER_GOOGLE_GEMINI, api_key, NULL);
+    const char* model_to_use = model_env ? model_env : "claude-4-6-opus-20260301";
+
+    printf("Testing Anthropic Opus (Advanced Mode)...\n");
+    dp_context_t* context = dp_init_context(DP_PROVIDER_ANTHROPIC, api_key, NULL);
     if (!context) {
-        fprintf(stderr, "Failed to initialize Disaster Party context.\n");
+        fprintf(stderr, "Failed to initialize context.\n");
         return 1;
     }
 
     // ENABLE THINKING FEATURE
-    printf("Enabling thinking feature...\n");
     dp_enable_advanced_features(context, DP_FEATURE_THINKING, 0);
 
     dp_message_t* messages = calloc(1, sizeof(dp_message_t));
     messages[0].role = DP_ROLE_USER;
-    dp_message_add_text_part(&messages[0], "Think before you answer. Tell me about the band MAGIC GIANT.");
+    dp_message_add_text_part(&messages[0], "Analyze the structural integrity of a Dyson sphere around a red dwarf. Think very deeply.");
 
     dp_request_config_t request_config = {
-        .model = getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-flash-latest",
+        .model = model_to_use,
         .messages = messages,
         .num_messages = 1,
         .stream = true
     };
-
-    // Add thinking config to payload
     request_config.thinking.enabled = true;
-    request_config.thinking.budget_tokens = 1024;
+    request_config.thinking.budget_tokens = 4096;
 
-    printf("Sending streaming request with thinking ENABLED to Gemini model: %s\n", request_config.model);
-    printf("Thinking parts should be interleaved in the output.\n");
+    printf("Sending streaming request to model: %s\n", model_to_use);
     printf("---\nStreaming Response:\n");
 
     dp_response_t response = {0};
@@ -60,9 +61,9 @@ int main() {
 
     printf("\n---\n");
     if (res == 0) {
-        printf("Gemini Streaming completed successfully.\n");
+        printf("Opus Streaming completed successfully.\n");
     } else {
-        printf("Gemini Streaming failed: %s\n", response.error_message ? response.error_message : "Unknown error");
+        printf("Opus Streaming failed: %s\n", response.error_message ? response.error_message : "Unknown error");
     }
 
     dp_free_response_content(&response);

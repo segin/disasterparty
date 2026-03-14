@@ -59,9 +59,9 @@ void run_detailed_test(dp_provider_type_t provider, const char* api_key, const c
 int main() {
     curl_global_init(CURL_GLOBAL_ALL);
     
-    run_detailed_test(DP_PROVIDER_GOOGLE_GEMINI, getenv("GEMINI_API_KEY"), getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-2.5-flash");
-    run_detailed_test(DP_PROVIDER_ANTHROPIC, getenv("ANTHROPIC_API_KEY"), getenv("ANTHROPIC_MODEL") ? getenv("ANTHROPIC_MODEL") : "claude-3-7-sonnet-20250219");
-    run_detailed_test(DP_PROVIDER_OPENAI_COMPATIBLE, getenv("OPENAI_API_KEY"), getenv("OPENAI_MODEL") ? getenv("OPENAI_MODEL") : "deepseek-reasoner");
+    run_detailed_test(DP_PROVIDER_GOOGLE_GEMINI, getenv("GEMINI_API_KEY"), getenv("GEMINI_MODEL") ? getenv("GEMINI_MODEL") : "gemini-flash-latest");
+    run_detailed_test(DP_PROVIDER_ANTHROPIC, getenv("ANTHROPIC_API_KEY"), getenv("ANTHROPIC_MODEL") ? getenv("ANTHROPIC_MODEL") : "claude-4-6-sonnet-20260215");
+    run_detailed_test(DP_PROVIDER_OPENAI_COMPATIBLE, getenv("OPENAI_API_KEY"), getenv("OPENAI_MODEL") ? getenv("OPENAI_MODEL") : "gpt-5.4");
     
     curl_global_cleanup();
     return 0;
