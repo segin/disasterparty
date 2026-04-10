@@ -6,6 +6,23 @@
 #include <string.h>
 #include <stdbool.h>
 
+static int content_tokens_count = 0;
+
+static int stream_cb(const char* token, void* user_data, bool is_final, const char* err) {
+    if (err) {
+        fprintf(stderr, "\nStream Error: %s\n", err);
+        return -1;
+    }
+    if (token) {
+        // In interleaved mode, we just see the text.
+        // If it's reasoning content delivered as tokens, we'll see it here.
+        printf("%s", token);
+        fflush(stdout);
+        content_tokens_count++;
+    }
+    return 0;
+}
+
 int main() {
     load_env_file();
     const char* api_key = getenv("ANTHROPIC_API_KEY");
@@ -47,17 +64,6 @@ int main() {
     printf("---\nStreaming Response:\n");
 
     dp_response_t response = {0};
-    auto int stream_cb(const char* token, void* user_data, bool is_final, const char* err) {
-        if (err) {
-            fprintf(stderr, "\nStream Error: %s\n", err);
-            return -1;
-        }
-        if (token) {
-            printf("%s", token);
-            fflush(stdout);
-        }
-        return 0;
-    }
 
     int res = dp_perform_streaming_completion(context, &request_config, stream_cb, NULL, &response);
 

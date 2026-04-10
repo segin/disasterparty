@@ -338,6 +338,7 @@ int dp_perform_detailed_streaming_completion(dp_context_t* context,
         anthro_processor.buffer = malloc(anthro_processor.buffer_capacity);
         if (!anthro_processor.buffer) { 
             response->error_message = dpinternal_strdup("Anthro processor buffer alloc failed.");
+            free(processor.buffer);
             free(json_payload_str); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; 
         }
         anthro_processor.buffer[0] = '\0';

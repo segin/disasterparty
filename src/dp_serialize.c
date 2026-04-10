@@ -21,12 +21,13 @@ int dp_serialize_messages_to_json_str(const dp_message_t* messages, size_t num_m
         cJSON* msg_obj = cJSON_CreateObject();
         if (!msg_obj) { cJSON_Delete(root); return -1; }
 
-        const char* role_str = "user"; // default
+        const char* role_str;
         switch(msg->role) {
             case DP_ROLE_SYSTEM: role_str = "system"; break;
             case DP_ROLE_USER: role_str = "user"; break;
             case DP_ROLE_ASSISTANT: role_str = "assistant"; break;
             case DP_ROLE_TOOL: role_str = "tool"; break;
+            default: role_str = "user"; break;
         }
         cJSON_AddStringToObject(msg_obj, "role", role_str);
 

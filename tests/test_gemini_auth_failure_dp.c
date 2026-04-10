@@ -47,12 +47,13 @@ int run_auth_test(dp_context_t* context, const char* test_name) {
         // We expect the function to return non-zero on auth failure
         if (ret != 0) {
             printf("  SUCCESS: %s correctly failed with return code %d.\n", test_name, ret);
+            dp_free_messages(messages, 1);
             return 0;
         } else {
             fprintf(stderr, "  FAILURE: %s did not fail as expected (ret: %d).\n", test_name, ret);
+            dp_free_messages(messages, 1);
             return -1;
         }
-        dp_free_messages(messages, 1);
     } else {
         fprintf(stderr, "  ERROR: Unknown test function %s\n", test_name);
         return -1;

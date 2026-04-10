@@ -86,11 +86,6 @@ int main() {
     config.thinking.enabled = true;
     config.thinking.budget_tokens = 1024;
 
-    auto int stream_cb(const char* token, void* ud, bool final, const char* err) {
-        if (token) printf("%s", token);
-        return 0;
-    }
-
     dp_response_t res = {0};
     dp_perform_streaming_completion(ctx, &config, stream_cb, NULL, &res);
 
@@ -108,6 +103,17 @@ Report bugs at:
 .UE
 
 .SH AUTHOR
+Kirn Gill II <segin2005@gmail.com>
+
+.SH SEE ALSO
+.BR dp_init_context (3),
+.BR dp_enable_advanced_features (3),
+.BR dp_perform_completion (3),
+.BR dp_perform_streaming_completion (3),
+.BR dp_perform_detailed_streaming_completion (3),
+.BR dp_list_models (3),
+.BR dp_serialize (3)
+HOR
 Kirn Gill II <segin2005@gmail.com>
 
 .SH SEE ALSO

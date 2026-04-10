@@ -937,8 +937,25 @@ bool dpinternal_parse_response_content(const dp_context_t* context, const char* 
     }
 
     cJSON_Delete(root);
-    *parts_out = parts;
-    *num_parts_out = num_parts;
+    if (parts_out) {
+        *parts_out = parts;
+    } else if (parts) {
+        for (size_t i = 0; i < num_parts; ++i) {
+            free(parts[i].text);
+            if (parts[i].type == DP_CONTENT_PART_TOOL_CALL) {
+                free(parts[i].tool_call.id);
+                free(parts[i].tool_call.function_name);
+                free(parts[i].tool_call.arguments_json);
+            } else if (parts[i].type == DP_CONTENT_PART_THINKING) {
+                free(parts[i].thinking.thinking);
+                free(parts[i].thinking.signature);
+            }
+        }
+        free(parts);
+    }
+    if (num_parts_out) {
+        *num_parts_out = num_parts;
+    }
     return true;
 }
 

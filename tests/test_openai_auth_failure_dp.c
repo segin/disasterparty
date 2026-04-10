@@ -49,12 +49,13 @@ int run_auth_test(dp_context_t* context, const char* test_name) {
         // We expect the function to return non-zero indicating failure/not supported
         if (ret != 0) {
             printf("  SUCCESS: dp_count_tokens correctly returned error for OpenAI (ret: %d).\n", ret);
+            dp_free_messages(messages, 1);
             return 0;
         } else {
             fprintf(stderr, "  FAILURE: dp_count_tokens did not return error for OpenAI (ret: %d).\n", ret);
+            dp_free_messages(messages, 1);
             return -1;
         }
-        dp_free_messages(messages, 1);
     } else {
         fprintf(stderr, "  ERROR: Unknown test function %s\n", test_name);
         return -1;

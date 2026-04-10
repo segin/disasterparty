@@ -117,7 +117,7 @@ int dp_list_models(dp_context_t* context, dp_model_list_t** model_list_out) {
                              if (!display_name_item && context->provider == DP_PROVIDER_ANTHROPIC) { 
                                 display_name_item = cJSON_GetObjectItemCaseSensitive(model_json, "display_name");
                             }
-                            if (cJSON_IsString(display_name_item) && display_name_item->valuestring) {
+                            if (display_name_item && cJSON_IsString(display_name_item) && display_name_item->valuestring) {
                                 info->display_name = dpinternal_strdup(display_name_item->valuestring);
                             }
                             
