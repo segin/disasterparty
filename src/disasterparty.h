@@ -1,6 +1,10 @@
 #ifndef DISASTERPARTY_H 
 #define DISASTERPARTY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h> 
 #include <stdbool.h> 
 
@@ -359,6 +363,10 @@ void dp_free_file(dp_file_t* file);
 
 int dp_generate_image(dp_context_t* context, const dp_image_generation_config_t* config, dp_image_generation_response_t* response);
 void dp_free_image_generation_response(dp_image_generation_response_t* response);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DISASTERPARTY_H
 
