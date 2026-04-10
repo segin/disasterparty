@@ -49,7 +49,7 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
         char* new_buf = realloc(processor->buffer, new_capacity);
         if (!new_buf) {
             const char* err_msg = "Stream buffer memory re-allocation failed";
-            processor->user_callback(NULL, processor->user_data, true, err_msg);
+            if (processor->user_callback) processor->user_callback(NULL, processor->user_data, true, err_msg);
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup(err_msg);
             return 0;
         }
@@ -88,7 +88,7 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
         char* event_data_segment = malloc(event_len + 1);
         if (!event_data_segment) { 
             const char* err_msg = "Event segment memory allocation failed";
-             processor->user_callback(NULL, processor->user_data, true, err_msg);
+            if (processor->user_callback) processor->user_callback(NULL, processor->user_data, true, err_msg);
             if (!processor->accumulated_error_during_stream) processor->accumulated_error_during_stream = dpinternal_strdup(err_msg);
             processor->stop_streaming_signal = true; 
             break; 
@@ -301,8 +301,10 @@ size_t dpinternal_streaming_write_callback(void* contents, size_t size, size_t n
             free(extracted_token_str);
             extracted_token_str = NULL; 
         } else if (is_final_for_this_event) { 
-            if (processor->user_callback(NULL, processor->user_data, true, processor->accumulated_error_during_stream) != 0) {
-                processor->stop_streaming_signal = true;
+            if (processor->user_callback) {
+                if (processor->user_callback(NULL, processor->user_data, true, processor->accumulated_error_during_stream) != 0) {
+                    processor->stop_streaming_signal = true;
+                }
             }
         }
         if (is_final_for_this_event) processor->stop_streaming_signal = true; 
